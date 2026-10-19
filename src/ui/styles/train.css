@@ -1,0 +1,142 @@
+/* Training screen: weekly plan slots, focus map picker, individual focus, expected effect, activity picker. Prefixed tr-. */
+.tr-head-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.tr-head-cost { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-lg); }
+.tr-done { padding: 10px 14px; border-radius: var(--r); background: var(--t-soft); border: 1px solid var(--t-dim); font-size: var(--fs-sm); color: var(--ink-2); }
+.tr-done b { color: var(--t); font-weight: 600; }
+.tr-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (min-width: 1024px) {
+  main > .tr-col { gap: 16px; }
+  .tr-side .tr-effect { position: sticky; top: 28px; }
+}
+
+/* Session slots */
+.tr-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
+.tr-slots.one { grid-template-columns: 1fr; }
+.tr-slot {
+  position: relative; display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 12px; min-height: 132px; border-radius: var(--r); color: var(--ink);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--t) 9%, var(--panel-2)), var(--panel-2) 60%); border: 1px solid var(--line);
+  box-shadow: inset 0 2px 0 var(--t-dim);
+  transition: border-color var(--fast), transform var(--fast) var(--ease), box-shadow var(--med) var(--ease);
+}
+.tr-slot:hover:not(:disabled) { border-color: var(--t); transform: translateY(-1px); box-shadow: inset 0 2px 0 var(--t), var(--shadow-2); }
+.tr-slot:active:not(:disabled) { transform: none; }
+.tr-slot:disabled { opacity: 0.6; }
+.tr-slot-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 20px; }
+.tr-slot-name { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-lg); line-height: 1.15; }
+.tr-slot-fx { color: var(--ink-2); line-height: 1.35; }
+.tr-slot-foot { margin-top: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: var(--fs-xs); }
+.tr-slot-edit { margin-left: auto; font-family: var(--font-display); font-size: var(--fs-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); transition: color var(--fast); }
+.tr-slot:hover:not(:disabled) .tr-slot-edit { color: var(--t); }
+.tr-fat { font-family: var(--font-data); font-size: var(--fs-xs); color: var(--ink-2); }
+.tr-fat.hi { color: var(--bad); }
+.tr-fat.rec { color: var(--good); }
+@media (max-width: 560px) {
+  .tr-slots { grid-template-columns: 1fr; }
+  .tr-slot { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; }
+  .tr-slot-top { grid-column: 1 / -1; }
+  .tr-slot-name { font-size: var(--fs-md); }
+  .tr-slot-fx { grid-column: 1; }
+  .tr-slot-foot { grid-column: 2; grid-row: 2 / 4; margin: 0; flex-direction: column; align-items: flex-end; justify-content: center; gap: 4px; }
+  .tr-slot-edit { margin: 0; }
+}
+
+/* Focus map picker */
+.tr-maps { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.tr-map {
+  display: grid; grid-template-columns: 1fr auto; gap: 6px 4px; align-items: center; padding: 8px 10px; border-radius: var(--r-sm); text-align: left; color: var(--ink-2);
+  background: var(--panel-2); border: 1px solid var(--line-soft); transition: border-color var(--fast), color var(--fast), background var(--fast);
+}
+.tr-map .bar { grid-column: 1 / -1; height: 4px; }
+.tr-map-name { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sm); }
+.tr-map-v { font-size: var(--fs-xs); color: var(--ink-3); }
+.tr-map:hover:not(:disabled) { border-color: var(--line-strong); color: var(--ink); }
+.tr-map[aria-checked='true'] { border-color: var(--t); color: var(--ink); background: color-mix(in srgb, var(--t) 8%, var(--panel-2)); }
+.tr-map[aria-checked='true'] .tr-map-v { color: var(--t); }
+.tr-map:disabled { opacity: 0.55; }
+/* Seven maps: one even row when there is room, otherwise 4 + 3, never a lone orphan tile. */
+.tr-mappick { container-type: inline-size; }
+@container (min-width: 600px) { .tr-maps { grid-template-columns: repeat(7, minmax(0, 1fr)); } .tr-map { padding: 8px; } }
+@container (max-width: 599px) { .tr-maps { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@container (max-width: 380px) {
+  .tr-map { padding: 7px 8px; gap: 3px 6px; }
+  .tr-map-name { grid-column: 1 / -1; }
+  .tr-map .bar { grid-column: 1; grid-row: 2; }
+  .tr-map-v { grid-column: 2; grid-row: 2; font-size: 0.66rem; }
+}
+
+/* Individual focus */
+.tr-players { display: grid; }
+.tr-player { display: grid; grid-template-columns: 36px minmax(0, 1fr) 120px 150px; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
+.tr-player:last-child { border-bottom: 0; padding-bottom: 0; }
+.tr-player:first-child { padding-top: 0; }
+.tr-player .avatar { border-radius: 8px; }
+.tr-player-id { display: flex; flex-direction: column; min-width: 0; }
+.tr-player-name { font-family: var(--font-display); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-player-fat { display: grid; gap: 4px; }
+.tr-player-fat .bar { height: 4px; }
+.tr-player select.inline { width: 100%; }
+@media (max-width: 560px) {
+  .tr-player { grid-template-columns: 36px minmax(0, 1fr) 132px; row-gap: 6px; }
+  .tr-player-fat { grid-column: 2; grid-row: 2; }
+  .tr-player select.inline { grid-column: 3; grid-row: 1 / 3; }
+  .tr-player .avatar { grid-row: 1 / 3; }
+}
+
+/* Expected effect */
+.tr-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2); }
+.tr-kpis .stat { padding: 10px; border-radius: var(--r-sm); background: var(--panel-2); }
+.tr-kpis .stat .v { font-size: var(--fs-xl); }
+.tr-kpis .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 420px) { .tr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tr-out { display: grid; }
+.tr-out-row { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) 2.2rem; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+.tr-out-name { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-out-gains { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--ink-2); }
+.tr-out-gains b { font-weight: 500; }
+.tr-out-fat { text-align: right; }
+.tr-out-legend { display: flex; justify-content: space-between; padding-top: 6px; font-size: var(--fs-xs); }
+.tr-compare { display: grid; gap: 8px; padding: 12px; border-radius: var(--r); background: var(--panel-2); border: 1px solid var(--line-soft); }
+.tr-actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: var(--s2); }
+
+/* Activity picker */
+.tr-acts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s2); }
+.tr-act {
+  display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 12px; border-radius: var(--r); background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
+  transition: border-color var(--fast), background var(--fast), transform var(--fast) var(--ease);
+}
+.tr-act.wide { grid-column: 1 / -1; background: linear-gradient(120deg, color-mix(in srgb, var(--legend) 10%, var(--panel-2)), var(--panel-2) 60%); }
+.tr-act:hover { border-color: var(--line-strong); background: var(--panel-3); }
+.tr-act:active { transform: translateY(1px); }
+.tr-act[aria-pressed='true'] { border-color: var(--t); box-shadow: inset 0 0 0 1px var(--t); }
+.tr-act-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.tr-act-top strong { font-family: var(--font-display); font-weight: 600; }
+.tr-act-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.tr-act-tags .chip { text-transform: none; letter-spacing: 0.02em; }
+@media (max-width: 560px) { .tr-head-meta { flex-direction: row; align-items: baseline; gap: 8px; } }
+
+/* Phone, tablet and narrow desktop (where Expected effect stacks under the plan): the run action sits in a bar
+ * pinned to the bottom (above the phone tab bar) so it is always in reach. The Expected effect panel keeps
+ * "Pin to compare"; its own run button only shows on wide desktop where the panel is sticky beside the plan. */
+.tr-runbar { display: none; }
+@media (max-width: 1239px) {
+  .tr-side { padding-bottom: 76px; }
+  .tr-actions { grid-template-columns: 1fr; }
+  .tr-actions .tr-run { display: none; }
+  .tr-runbar {
+    position: fixed; z-index: 25; left: 0; right: 0; bottom: calc(57px + env(safe-area-inset-bottom, 0px));
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px;
+    max-width: 600px; margin: 0 auto; padding: 10px 16px;
+    background: color-mix(in srgb, var(--panel) 92%, transparent); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line-soft); box-shadow: 0 -14px 28px -18px rgba(0, 0, 0, 0.9);
+    animation: rise-in 260ms var(--ease) both;
+  }
+  .tr-runbar-info { display: grid; gap: 1px; min-width: 0; }
+  .tr-runbar-info > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tr-runbar-kpis { display: flex; align-items: center; gap: 4px; white-space: nowrap; color: var(--ink-2); }
+  .tr-runbar .btn { min-width: 132px; }
+}
+@media (min-width: 1024px) and (max-width: 1239px) {
+  .tr-runbar { left: var(--sidebar); bottom: 0; max-width: none; padding: 12px 32px; }
+  .tr-runbar-info { grid-auto-flow: column; justify-content: start; align-items: center; gap: 16px; }
+  .tr-runbar .btn { min-width: 180px; }
+}

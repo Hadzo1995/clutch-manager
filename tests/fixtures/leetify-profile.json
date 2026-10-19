@@ -1,0 +1,16 @@
+{
+  "_note": "Hand-written fixture shaped like the documented Leetify /v3/profile response. Values are made up for testing, not a real player.",
+  "steam64_id": "76561190000000001",
+  "name": "fixture-player",
+  "total_matches": 412,
+  "winrate": 0.53,
+  "rating": { "aim": 71.2, "positioning": 58.4, "utility": 49.9, "clutch": 0.12, "opening": 0.03, "ct_leetify": 0.02, "t_leetify": 0.01 },
+  "stats": {
+    "accuracy_head": 21.5,
+    "reaction_time_ms": 512,
+    "preaim": 9.1,
+    "ct_opening_duel_success_percentage": 54,
+    "t_opening_duel_success_percentage": 48,
+    "trade_kills_success_percentage": 40
+  }
+}

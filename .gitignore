@@ -1,0 +1,7 @@
+node_modules
+dist
+dist-*
+scratch/audit*/
+scratch/shots/
+__pycache__/
+tools/realdata/pc-fetch/contact.txt

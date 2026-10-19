@@ -1,0 +1,136 @@
+/* Cases: case tiles with odds bars, and the unboxing reel. Prefixed cs-. --cc is the case colour, --rc the revealed rarity. */
+.cs-balance { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: var(--fs-lg); }
+.page-head .sub { max-width: 64ch; }
+
+.cs-case { --cc: var(--ct); position: relative; overflow: hidden; gap: 14px; transition: border-color var(--med) var(--ease), transform var(--med) var(--ease); }
+.cs-case::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 120px; background: radial-gradient(80% 120% at 0% 0%, color-mix(in srgb, var(--cc) 16%, transparent), transparent 70%); pointer-events: none; }
+.cs-case > * { position: relative; }
+.cs-case:hover { border-color: color-mix(in srgb, var(--cc) 35%, transparent); }
+.cs-top { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; align-items: center; }
+.cs-info { display: grid; gap: 4px; min-width: 0; }
+.cs-info h2 { font-size: var(--fs-xl); }
+
+/* CSS crate: body, lid seam, latch, slow sheen on hover */
+.cs-art {
+  position: relative; width: 88px; height: 64px; border-radius: 8px; overflow: hidden;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--cc) 85%, white 10%), color-mix(in srgb, var(--cc) 55%, var(--ground)) 70%);
+  border: 1px solid color-mix(in srgb, var(--cc) 70%, black); box-shadow: 0 10px 22px -12px var(--cc), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.cs-art::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 7px, rgba(0, 0, 0, 0.1) 7px 8px); }
+.cs-art::after { content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent); transform: skewX(-15deg); transition: left 700ms var(--ease); }
+.cs-case:hover .cs-art::after { left: 130%; }
+.cs-lid { position: absolute; left: 0; right: 0; top: 34%; height: 3px; background: rgba(0, 0, 0, 0.35); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15); }
+.cs-latch { position: absolute; left: 50%; top: calc(34% - 5px); width: 16px; height: 13px; margin-left: -8px; border-radius: 3px; background: rgba(10, 14, 19, 0.75); border: 1px solid rgba(255, 255, 255, 0.2); }
+
+.cs-odds { display: grid; gap: 8px; }
+.cs-odds-bar { display: flex; gap: 2px; height: 8px; border-radius: 4px; overflow: hidden; }
+.cs-odds-bar i { display: block; flex-basis: 0; min-width: 3px; }
+.cs-odds-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-xs); color: var(--ink-2); }
+.cs-odds-legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.cs-odds-legend span.zero { opacity: 0.4; }
+.cs-odds-legend i { width: 8px; height: 8px; border-radius: 2px; }
+.cs-odds-legend b { font-weight: 500; color: var(--ink); }
+.cs-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.cs-foot .btn { min-width: 150px; }
+.cs-foot .btn .coins { color: inherit; }
+.cs-foot .btn:not(.primary) .coins { color: var(--gold); }
+@media (max-width: 420px) { .cs-top { grid-template-columns: 64px minmax(0, 1fr); gap: 12px; } .cs-art { width: 64px; height: 48px; } .cs-info h2 { font-size: var(--fs-lg); } }
+
+/* Reveal: centred modal on all sizes */
+.overlay.cs-overlay { align-items: center; justify-content: center; padding: 16px; }
+.cs-reveal {
+  --cc: var(--t); --rc: var(--silver);
+  width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 16px; padding: 18px; border-radius: var(--r-lg);
+  background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow-2); animation: cs-pop 260ms var(--ease);
+  transition: box-shadow 600ms var(--ease), border-color 600ms var(--ease);
+}
+.cs-reveal.done { border-color: color-mix(in srgb, var(--rc) 45%, var(--line)); box-shadow: var(--shadow-2), 0 0 60px -30px var(--rc); }
+@keyframes cs-pop { from { opacity: 0; transform: scale(0.97); } }
+.cs-reveal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 34px; }
+.reel-wrap.cs-reel { padding: 14px 0; background: var(--ground-2); border-color: var(--line-soft); }
+.cs-reel::before, .cs-reel::after { content: ''; position: absolute; top: 0; bottom: 0; width: 22%; z-index: 1; pointer-events: none; }
+.cs-reel::before { left: 0; background: linear-gradient(90deg, var(--ground-2), transparent); }
+.cs-reel::after { right: 0; background: linear-gradient(270deg, var(--ground-2), transparent); }
+.reel-marker.cs-marker { background: var(--cc); box-shadow: 0 0 12px var(--cc); width: 2px; margin-left: -1px; }
+.cs-marker::before, .cs-marker::after { content: ''; position: absolute; left: -6px; border: 7px solid transparent; }
+.cs-marker::before { top: 0; border-top-color: var(--cc); }
+.cs-marker::after { bottom: 0; border-bottom-color: var(--cc); }
+.cs-cell { width: 120px; flex: none; transition: opacity 500ms var(--ease), transform 500ms var(--ease); }
+.cs-cell .pcard { width: 100%; }
+.cs-reveal.done .cs-cell:not(.win) { opacity: 0.35; }
+.cs-cell.win { transform: scale(1.05); }
+.cs-cell.win .pcard { box-shadow: 0 0 0 2px var(--rc), 0 10px 30px -10px var(--rc); }
+.cs-result { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; animation: rise-in 360ms var(--ease) both; }
+.cs-rarity { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xs); letter-spacing: 0.22em; text-transform: uppercase; color: var(--rc); padding: 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--rc) 14%, transparent); }
+.cs-result-name { color: var(--ink); font-size: var(--fs-2xl); }
+.cs-result-name .num { color: var(--rc); font-weight: 700; }
+.cs-result p { max-width: 52ch; }
+.cs-result-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; max-width: 360px; margin-top: 8px; }
+.cs-opening { text-align: center; color: var(--ink-2); min-height: 1.5em; }
+.cs-dots { display: inline-flex; gap: 3px; margin-left: 4px; }
+.cs-dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.3; animation: cs-dot 1s infinite; }
+.cs-dots i:nth-child(2) { animation-delay: 0.15s; } .cs-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes cs-dot { 40% { opacity: 1; } }
+.cs-reveal.done .cs-marker { opacity: 0.35; transition: opacity 400ms var(--ease); }
+@media (max-width: 560px) { .cs-balance { flex-direction: row; align-items: baseline; gap: 8px; font-size: var(--fs-md); } }
+
+/* Phone: odds legend as an even five-column scale (name over value) instead of a ragged wrap */
+@media (max-width: 560px) {
+  .cs-odds-legend { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  .cs-odds-legend span { display: grid; grid-template-columns: 8px minmax(0, 1fr); column-gap: 5px; row-gap: 1px; white-space: nowrap; }
+  .cs-odds-legend i { grid-row: 1; align-self: center; }
+  .cs-odds-legend b { grid-column: 1 / -1; font-size: var(--fs-sm); }
+  .cs-foot .btn { min-width: 140px; }
+}
+
+/* CS2-style opening: crate unlock, horizontal reel with a centre line, reveal burst */
+.cs-unlock { display: grid; place-items: center; height: 214px; }
+.cs-crate { position: relative; width: 170px; height: 112px; animation: cs-shake 0.9s var(--ease) both; }
+.cs-crate i { position: absolute; left: 0; right: 0; display: block; border-radius: 8px; }
+.cs-crate-body { top: 30px; bottom: 0; background: linear-gradient(160deg, color-mix(in srgb, var(--cc) 80%, white 8%), color-mix(in srgb, var(--cc) 45%, var(--ground)) 75%); border: 1px solid color-mix(in srgb, var(--cc) 70%, black); box-shadow: 0 18px 40px -18px var(--cc); }
+.cs-crate-body::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: repeating-linear-gradient(135deg, transparent 0 9px, rgba(0, 0, 0, 0.12) 9px 10px); }
+.cs-crate-lid { top: 0; height: 34px; z-index: 2; background: linear-gradient(180deg, color-mix(in srgb, var(--cc) 90%, white 15%), color-mix(in srgb, var(--cc) 60%, var(--ground))); border: 1px solid color-mix(in srgb, var(--cc) 70%, black); transform-origin: 8% 100%; animation: cs-lid 0.5s 0.65s cubic-bezier(0.3, 1.4, 0.6, 1) both; }
+.cs-crate-light { top: 26px; height: 10px; z-index: 1; border-radius: 50%; background: radial-gradient(closest-side, #fff, color-mix(in srgb, var(--cc) 60%, white), transparent); opacity: 0; filter: blur(2px); animation: cs-light 0.5s 0.7s ease-out both; }
+@keyframes cs-shake { 0%, 100% { transform: none; } 12% { transform: rotate(-3deg) scale(1.02); } 24% { transform: rotate(3deg); } 36% { transform: rotate(-2deg); } 48% { transform: rotate(2deg); } 60% { transform: scale(1.04); } }
+@keyframes cs-lid { to { transform: translate(-6px, -26px) rotate(-24deg); } }
+@keyframes cs-light { 0% { opacity: 0; transform: scaleY(1); } 50% { opacity: 1; transform: scaleY(5); } 100% { opacity: 0.7; transform: scaleY(14) scaleX(1.2); } }
+
+.cs-reel2 { position: relative; overflow: hidden; height: 214px; border-radius: 10px; background: radial-gradient(120% 90% at 50% 50%, #1a222c, #0c1015); border: 1px solid var(--line-soft); }
+.cs-reel2::before, .cs-reel2::after { content: ''; position: absolute; top: 0; bottom: 0; width: 18%; z-index: 2; pointer-events: none; }
+.cs-reel2::before { left: 0; background: linear-gradient(90deg, #0c1015, transparent); }
+.cs-reel2::after { right: 0; background: linear-gradient(270deg, #0c1015, transparent); }
+.cs-strip { position: absolute; top: 20px; left: 0; display: flex; gap: 6px; will-change: transform; }
+.cs-line { position: absolute; top: 6px; bottom: 6px; left: 50%; width: 2px; margin-left: -1px; z-index: 3; background: #f4c34e; box-shadow: 0 0 10px #f4c34e, 0 0 2px #fff; }
+.cs-line::before, .cs-line::after { content: ''; position: absolute; left: -6px; border: 7px solid transparent; }
+.cs-line::before { top: -2px; border-top-color: #f4c34e; }
+.cs-line::after { bottom: -2px; border-bottom-color: #f4c34e; }
+
+.cs-item {
+  --rc: var(--silver); position: relative; flex: none; width: 132px; height: 172px; border-radius: 4px; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 10px 8px 14px;
+  background: radial-gradient(90% 70% at 50% 40%, color-mix(in srgb, var(--rc) 28%, #26303b), #161c23 80%);
+  border: 1px solid color-mix(in srgb, var(--rc) 22%, #2a333d);
+}
+.cs-item.bronze { --rc: var(--bronze); } .cs-item.silver { --rc: var(--silver); } .cs-item.gold { --rc: var(--gold); } .cs-item.elite { --rc: var(--elite); } .cs-item.legend { --rc: var(--legend); }
+.cs-item-face img { display: block; border-radius: 50%; box-shadow: 0 6px 18px -8px #000; }
+.cs-item-text { display: grid; gap: 2px; text-align: center; min-width: 0; width: 100%; }
+.cs-item-text b { font-family: var(--font-display); font-size: 0.92rem; color: #eef2f6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-item-text span { font-size: 0.7rem; color: #9aa6b2; }
+.cs-item-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: var(--rc); box-shadow: 0 0 12px var(--rc); }
+.cs-item.lit { border-color: color-mix(in srgb, var(--rc) 60%, transparent); }
+
+.cs-reveal.stage-reveal { border-color: color-mix(in srgb, var(--rc) 45%, var(--line)); box-shadow: var(--shadow-2), 0 0 70px -28px var(--rc); }
+.cs-result { position: relative; overflow: hidden; padding-top: 6px; }
+.cs-burst { position: absolute; left: 50%; top: 120px; width: 0; height: 0; pointer-events: none; }
+.cs-burst i { position: absolute; left: -260px; top: -260px; width: 520px; height: 520px; border-radius: 50%; opacity: 0.55;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rc) 55%, transparent) 0deg 8deg, transparent 8deg 22deg);
+  -webkit-mask: radial-gradient(closest-side, #000 20%, transparent); mask: radial-gradient(closest-side, #000 20%, transparent);
+  animation: cs-rays 14s linear infinite, cs-rays-in 600ms var(--ease) both; }
+@keyframes cs-rays { to { transform: rotate(360deg); } }
+@keyframes cs-rays-in { from { opacity: 0; transform: scale(0.4); } }
+.cs-won { position: relative; width: 170px; animation: cs-won 520ms cubic-bezier(0.2, 1.5, 0.4, 1) both; }
+.cs-won .pcard { width: 100%; box-shadow: 0 0 0 2px var(--rc), 0 18px 48px -12px var(--rc); }
+@keyframes cs-won { from { opacity: 0; transform: scale(0.5) translateY(20px); } }
+.cs-result > :not(.cs-burst) { position: relative; }
+@media (max-width: 480px) { .cs-reel2, .cs-unlock { height: 196px; } .cs-strip { top: 12px; } }
+@media (prefers-reduced-motion: reduce) { .cs-burst i, .cs-won, .cs-crate, .cs-crate-lid, .cs-crate-light { animation: none; } }

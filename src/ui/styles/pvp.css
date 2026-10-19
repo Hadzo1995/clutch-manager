@@ -1,0 +1,65 @@
+/* PvP lobby and room */
+.pvp-note { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line-soft); color: var(--ink-2); font-size: var(--fs-sm); }
+.pvp-note.bad { background: var(--bad-soft); border-color: color-mix(in srgb, var(--bad) 40%, transparent); color: var(--bad); }
+.pvp-errors { margin: 0; padding-left: 18px; color: var(--bad); font-size: var(--fs-sm); display: grid; gap: 2px; }
+.pvp-errors.muted { color: var(--ink-2); }
+.pvp-offline h2 { margin: 0; }
+
+.pvp-or { display: flex; align-items: center; gap: 10px; color: var(--ink-3); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em; }
+.pvp-or::before, .pvp-or::after { content: ''; flex: 1; height: 1px; background: var(--line-soft); }
+.pvp-code-field { flex: 1 1 160px; }
+.pvp-code-field input { font-family: var(--font-data); letter-spacing: 0.3em; text-transform: uppercase; font-size: 1.05rem; }
+
+.pvp-maps { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.pvp-map {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 9px 10px; min-height: 52px; border-radius: 9px;
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-2); font-family: var(--font-display); font-weight: 500; text-align: left;
+  transition: border-color var(--fast), background var(--fast), color var(--fast);
+}
+.pvp-map b { font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--t); font-weight: 500; }
+.pvp-map:hover:not(:disabled) { border-color: var(--line-strong); color: var(--ink); }
+.pvp-map.on { border-color: var(--t); background: var(--t-soft); color: var(--ink); }
+.pvp-map:disabled { opacity: 0.45; }
+
+.pvp-team { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.pvp-team.empty { min-height: 160px; justify-content: center; align-items: center; border: 1px dashed var(--line); border-radius: 10px; }
+.pvp-team-name { font-family: var(--font-display); font-size: 1.1rem; }
+.pvp-tag { font-family: var(--font-data); font-size: 0.8rem; padding: 1px 6px; border-radius: 5px; background: var(--panel-3); color: var(--ink-2); margin-right: 4px; }
+.pvp-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pvp-kpis > div { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 9px; background: var(--panel-2); min-width: 0; }
+.pvp-kpis b { font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pvp-roster td:first-child, .pvp-roster th:first-child, .pvp-roster td:nth-child(2), .pvp-roster th:nth-child(2),
+.pvp-history td, .pvp-history th, .pvp-board td:first-child, .pvp-board th:first-child, .pvp-board td:nth-child(2), .pvp-board th:nth-child(2) { text-align: left; }
+.pvp-history td.num, .pvp-history th.num { text-align: right; }
+.pvp-history td.up { color: var(--good); }
+.pvp-history td.down { color: var(--bad); }
+.pvp-team .up, .pvp-compare .up { color: var(--good); }
+
+.pvp-code {
+  font-family: var(--font-data); font-size: inherit; letter-spacing: 0.18em; padding: 2px 12px; border-radius: 10px;
+  background: var(--panel-2); border: 1px dashed var(--line-strong); color: var(--ink); cursor: copy;
+}
+.pvp-code:hover { border-color: var(--t); }
+
+.pvp-confirm { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 10px; border: 1px solid var(--t-dim); background: var(--t-soft); }
+.pvp-confirm p { margin: 0; }
+
+.pvp-score { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 8px 0; }
+.pvp-score b { font-size: 2.4rem; line-height: 1; }
+.pvp-score-team { font-family: var(--font-display); font-size: 1.1rem; color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.pvp-compare { display: grid; gap: 8px; }
+.pvp-cmp-row { display: grid; grid-template-columns: 40px 1fr minmax(90px, auto) 1fr 40px; align-items: center; gap: 10px; }
+.pvp-cmp-row > span.small { text-align: center; }
+.pvp-cmp-row b:last-child { text-align: right; }
+.pvp-cmp-bar { height: 6px; border-radius: 3px; background: var(--panel-3); display: flex; justify-content: flex-end; overflow: hidden; }
+.pvp-cmp-bar.r { justify-content: flex-start; }
+.pvp-cmp-bar i { display: block; height: 100%; background: var(--t); border-radius: 3px; }
+.pvp-cmp-bar.r i { background: var(--ct); }
+
+@media (max-width: 520px) {
+  .pvp-cmp-row { grid-template-columns: 32px 1fr 32px; }
+  .pvp-cmp-row > span.small { grid-column: 1 / -1; grid-row: 1; }
+  .pvp-cmp-bar.r { display: none; }
+  .pvp-score b { font-size: 1.9rem; }
+}
