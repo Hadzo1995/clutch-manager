@@ -1,7 +1,8 @@
 /**
  * PvP: challenge another manager's career team through a room code.
  *
- * Online only. Rooms live in the hosted page's shared database (ui/pvp/net.ts);
+ * Online only. Rooms live in the claude.ai page's shared database (ui/pvp/net.ts) or,
+ * on the hosted site, in the game's Supabase project (ui/pvp/netSupa.ts);
  * the rules (validation, seed, result fingerprints) are in engine/pvp.ts. Both
  * browsers simulate the same series from the same seed and publish a result
  * fingerprint; the room completes only when the two agree. Results never touch
@@ -19,8 +20,10 @@ import type { SeriesResult, TeamIdx } from '../../engine/match';
 import type { TeamSnapshot } from '../../engine/team';
 import { MAPS, ROLE_LABEL } from '../../engine/types';
 import type { MapName } from '../../engine/types';
+import { onAuth, onlineAvailable, signIn, signUp } from '../../online/supa';
 import { useGame } from '../common';
 import { connectPvp, errorText } from '../pvp/net';
+import { connectSupaPvp } from '../pvp/netSupa';
 import type { PvpNet, Side } from '../pvp/net';
 import { Live, Report } from './Match';
 import '../styles/pvp.css';
@@ -45,10 +48,20 @@ function useMyEntry(net: PvpNet | null) {
 export function Pvp() {
   const [net, setNet] = useState<PvpNet | null | undefined>(undefined);
   const [code, setCode] = useState<string | null>(null);
-  useEffect(() => { let live = true; void connectPvp().then((n) => { if (live) setNet(n); }); return () => { live = false; }; }, []);
+  useEffect(() => {
+    let live = true, stopAuth: (() => void) | null = null;
+    // The claude.ai page's own rooms first; on the hosted site, the game's server with the player's account.
+    const connect = () => connectPvp()
+      .then((n) => n ?? (onlineAvailable() ? connectSupaPvp() : null))
+      .catch(() => null)
+      .then((n) => { if (live) setNet(n); });
+    void connect();
+    if (onlineAvailable()) void onAuth(() => { void connect(); }).then((u) => { if (live) stopAuth = u; else u(); });
+    return () => { live = false; stopAuth?.(); };
+  }, []);
 
   if (net === undefined) return <><Head /><section className="panel"><p className="muted">Connecting to the shared room list…</p></section></>;
-  if (net === null) return <><Head /><Offline /></>;
+  if (net === null) return <><Head />{onlineAvailable() ? <SignIn /> : <Offline />}</>;
   if (code) return <RoomView key={code} net={net} code={code} onExit={() => setCode(null)} onOpen={setCode} />;
   return <Lobby net={net} onOpen={setCode} />;
 }
@@ -68,9 +81,49 @@ function Head({ sub }: { sub?: string }) {
 function Offline() {
   return (
     <section className="panel pvp-offline">
-      <h2>Online play needs the hosted page</h2>
-      <p className="muted">PvP rooms are stored in the shared database of the published Clutch Manager page on claude.ai. This copy can’t reach it: it may be a saved file, the development server, or you may be signed out.</p>
-      <p className="muted small">Open the game from its claude.ai link while signed in. Your opponent needs the same link, shared with them as Contributor (same organization) or Editor, so their browser may write to the room.</p>
+      <h2>Online play needs the online version</h2>
+      <p className="muted">This copy of the game isn’t connected to a game server, so it can’t create or join rooms. Career mode works as normal.</p>
+      <p className="muted small">Open the game from the link you were sent to play your friends.</p>
+    </section>
+  );
+}
+
+/** Sign in or create an account on the game's server (the same account as the beta tournament). */
+function SignIn() {
+  const [mode, setMode] = useState<'in' | 'up'>('in');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ bad: boolean; text: string } | null>(null);
+  const submit = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      if (mode === 'in') {
+        const r = await signIn(email, password);
+        if (!r.ok) setMsg({ bad: true, text: r.reason });
+      } else {
+        const r = await signUp(email, password);
+        if (!r.ok) setMsg({ bad: true, text: r.reason });
+        else if (r.needsConfirm) setMsg({ bad: false, text: 'Account created. Check your inbox for the confirmation link, then sign in here.' });
+      }
+    } catch (e) {
+      setMsg({ bad: true, text: (e as Error).message });
+    } finally { setBusy(false); }
+  };
+  return (
+    <section className="panel pvp-signin" style={{ maxWidth: 460 }}>
+      <div className="seg" role="group" aria-label="Account">
+        <button type="button" aria-pressed={mode === 'in'} onClick={() => setMode('in')}>Sign in</button>
+        <button type="button" aria-pressed={mode === 'up'} onClick={() => setMode('up')}>Create account</button>
+      </div>
+      <h2>{mode === 'in' ? 'Sign in to play online' : 'Create your account'}</h2>
+      <p className="small muted">You and your opponent each need a free account on this site to share a room. It’s the same account as the beta tournament. Other managers never see your email.</p>
+      <form className="stack" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+        <label className="field"><span className="label">Email</span><input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+        <label className="field"><span className="label">Password</span><input type="password" autoComplete={mode === 'in' ? 'current-password' : 'new-password'} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+        <button type="submit" className={`btn primary${busy ? ' loading' : ''}`} disabled={busy}>{mode === 'in' ? 'Sign in' : 'Create account'}</button>
+      </form>
+      {msg && <p className={`small ${msg.bad ? 'bad' : 'good'}`} role="alert">{msg.text}</p>}
     </section>
   );
 }

@@ -9,3 +9,8 @@ with `stub.sql` standing in for the parts of Supabase the schema uses
     ./rls.sh   # expects the server on /tmp port 5433; edit P= at the top otherwise
 
 Every line should start with PASS.
+
+The PvP rooms have their own file and check:
+
+    psql -d sb -f ../../supabase/pvp.sql
+    ./pvp-rls.sh
