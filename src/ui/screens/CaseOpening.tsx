@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { cloneElement, isValidElement, memo, useEffect, useMemo, useRef, useState } from 'react';
 import { playerJersey } from '../../engine/data/realTeams';
 import type { CSSProperties, ReactNode } from 'react';
 import { CASES, caseTable, rollPlayer } from '../../engine/cases';
@@ -31,7 +31,9 @@ const soundOn = () => { try { return localStorage.getItem(SOUND_KEY) !== 'off'; 
 // A fast start and a long glide to a stop, like CS2's strip.
 const spinEase = (x: number) => 1 - Math.pow(1 - x, 4);
 
-type Stage = 'inspect' | 'spin' | 'reveal';
+type Stage = 'inspect' | 'open' | 'spin' | 'reveal';
+/** The latches pop and the lid lifts before the strip starts (the drop is already decided). */
+const OPEN_MS = 900;
 
 const ReelItem = memo(function ReelItem({ profile }: { profile: PlayerProfile }) {
   return (
@@ -131,8 +133,15 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, onUnlock, on
     const o = onUnlock();
     if (!o) return;
     setOutcome(o);
-    setStage(reduced ? 'reveal' : 'spin');
+    setStage(reduced ? 'reveal' : 'open');
   };
+
+  useEffect(() => {
+    if (stage !== 'open') return;
+    play((a) => a.tick(0.8));
+    const t = window.setTimeout(() => setStage('spin'), OPEN_MS);
+    return () => window.clearTimeout(t);
+  }, [stage]);
 
   // The roll, driven frame by frame so each player crossing the line ticks.
   useEffect(() => {
@@ -152,6 +161,8 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, onUnlock, on
       if (finished) return;
       finished = true; cancelAnimationFrame(raf); place(target);
       play((a) => a.land());
+      // The winning tile lights up in its rarity colour before the reveal.
+      stripRef.current?.children[WIN_INDEX]?.classList.add('won');
       window.setTimeout(() => setStage('reveal'), 700);
     };
     const frame = (now: number) => {
@@ -180,13 +191,13 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, onUnlock, on
       <div className="co-box" role="dialog" aria-label={`${def.name}: ${stage === 'inspect' ? 'unlock' : stage === 'spin' ? 'opening' : 'item received'}`}>
         <header className="co-head">
           <div className="co-title">
-            <span className="co-kicker">{stage === 'reveal' ? 'Item received' : stage === 'spin' ? 'Unlocking container' : 'Container'}</span>
+            <span className="co-kicker">{stage === 'reveal' ? 'Item received' : stage === 'spin' || stage === 'open' ? 'Unlocking container' : 'Container'}</span>
             <h2>{def.name}</h2>
           </div>
           <div className="co-tools">
             <button className="btn small ghost" onClick={toggleSound} aria-pressed={sound}>{sound ? 'Sound on' : 'Muted'}</button>
             {stage === 'spin' && <button className="btn small ghost" onClick={() => skip.current()}>Skip</button>}
-            {stage !== 'spin' && <button className="btn small ghost" onClick={onClose} aria-label="Close">✕</button>}
+            {stage !== 'spin' && stage !== 'open' && <button className="btn small ghost" onClick={onClose} aria-label="Close">✕</button>}
           </div>
         </header>
 
@@ -202,6 +213,13 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, onUnlock, on
                 {caseId === 'daily' ? 'Unlock container' : <>Unlock container · <Coin amount={def.price} /></>}
               </button>
             </div>
+          </div>
+        )}
+
+        {stage === 'open' && (
+          <div className="co-unlocking" aria-hidden="true">
+            <div className="co-unlock-beam" />
+            {isValidElement(crate) ? cloneElement(crate as React.ReactElement<{ open?: boolean }>, { open: true }) : crate}
           </div>
         )}
 

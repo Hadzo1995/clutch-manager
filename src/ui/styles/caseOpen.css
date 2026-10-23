@@ -115,3 +115,24 @@
   .co-result.rare::before { width: 420px; height: 420px; margin: -210px 0 0 -210px; }
 }
 @media (prefers-reduced-motion: reduce) { .co-result.rare::before { animation: none; } }
+
+/* Unlock beat: latches pop, the lid lifts, light spills out; then the strip rolls. */
+.co-unlocking { position: relative; height: 196px; display: grid; place-items: center; overflow: hidden; border-radius: 3px;
+  background: radial-gradient(60% 90% at 50% 100%, color-mix(in srgb, var(--cc) 18%, transparent), transparent 70%), #0b0e12; }
+.co-unlocking .crate { width: 200px; height: auto; position: relative; z-index: 1; animation: co-shake 360ms 80ms linear both; }
+.co-unlocking .crate .cr-latch { animation: co-latch 140ms 260ms ease-out both; }
+.co-unlocking .crate .cr-lid { animation: co-lid 520ms 380ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.co-unlocking .crate .cr-leak { opacity: 1; animation: co-leak 600ms 300ms ease-in both; }
+.co-unlock-beam { position: absolute; left: 50%; bottom: 40%; width: 140px; height: 260px; margin-left: -70px; pointer-events: none; opacity: 0;
+  background: linear-gradient(0deg, color-mix(in srgb, var(--cc) 70%, #fff), color-mix(in srgb, var(--cc) 25%, transparent) 60%, transparent);
+  clip-path: polygon(25% 100%, 75% 100%, 100% 0, 0 0); filter: blur(5px); transform-origin: 50% 100%; animation: co-beam 600ms 420ms ease-out both; }
+@keyframes co-shake { 0%, 100% { rotate: 0deg; } 25% { rotate: -1.6deg; } 50% { rotate: 1.6deg; } 75% { rotate: -1deg; } }
+@keyframes co-latch { to { transform: rotateX(70deg) translateY(3px); opacity: 0.5; } }
+@keyframes co-lid { to { transform: translate(-8px, -34px) rotate(-16deg); } }
+@keyframes co-leak { from { opacity: 0; } to { opacity: 1; } }
+@keyframes co-beam { from { opacity: 0; transform: scaleY(0.15); } to { opacity: 0.85; transform: none; } }
+
+/* The winning tile on the strip glows in its rarity colour as the strip stops. */
+.co-item.won { box-shadow: inset 0 0 0 2px var(--rc), 0 0 22px -2px var(--rc); animation: co-won-tile 700ms ease-out both; }
+@keyframes co-won-tile { 0% { filter: brightness(1); } 30% { filter: brightness(1.6); } 100% { filter: brightness(1.15); } }
+@media (prefers-reduced-motion: reduce) { .co-unlocking .crate, .co-unlocking .crate *, .co-unlock-beam, .co-item.won { animation: none !important; } }
