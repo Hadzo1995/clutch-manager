@@ -20,7 +20,8 @@ import type { SurfaceSet } from './materials';
 import { buildProps } from './props';
 import { PostFX, wantsPostFx } from './postfx';
 import type { PropAnim } from './props';
-import { CARRY, buildSoldier, gunClassOf, poseSoldier, setDead, setGun, soldierKit } from './models';
+import { CARRY, addRim, buildSoldier, gunClassOf, poseSoldier, setDead, setGun, soldierKit } from './models';
+import { driveHuman, humanReady, loadHuman, makeHuman, type Human } from './human';
 import type { Gait } from './models';
 import type { Soldier, SoldierKit } from './models';
 import type { PlayerTrack, RoundTimeline, UtilityObject, Vec } from './timeline';
@@ -88,6 +89,8 @@ interface Rig {
   root: THREE.Group;
   body: THREE.Group;
   soldier: Soldier;
+  /** The skinned soldier figure, once loaded (the procedural one stays as its pose skeleton and gun). */
+  human?: Human | null;
   isDead: boolean;
   helmet: THREE.Object3D;
   legL: THREE.Object3D;
@@ -241,6 +244,7 @@ export class Viewer3D {
     this.scene.fog = new THREE.Fog(new THREE.Color(this.style.sky[1]), this.style.fog[0], this.style.fog[1]);
 
     this.initShared();
+    void loadHuman();
     this.buildLights();
     this.buildMap();
     this.scene.add(this.mapGroup, this.dynGroup);
@@ -690,6 +694,7 @@ export class Viewer3D {
       this.dynGroup.remove(r.root, r.label, r.glow, r.dot, r.cone, r.soundDisc, ...r.ripples); (r.dot.material as THREE.Material).dispose();
       for (const m of [r.soundDisc, ...r.ripples]) (m.material as THREE.Material).dispose();
       r.cone.geometry.dispose(); (r.cone.material as THREE.Material).dispose();
+      if (r.human) { r.human.mixer.stopAllAction(); r.body.remove(r.human.root); for (const m of r.human.meshes) if (m.material !== r.mat) (m.material as THREE.Material).dispose(); }
       r.mat.dispose(); r.labelTex.dispose(); (r.label.material as THREE.SpriteMaterial).dispose();
       (r.ring.material as THREE.Material).dispose(); (r.hpArc.material as THREE.Material).dispose(); r.hpArc.geometry.dispose();
       (r.glow.material as THREE.Material).dispose();
@@ -704,6 +709,38 @@ export class Viewer3D {
       });
     }
     this.rigs = []; this.rigById.clear(); this.utils = [];
+  }
+
+  /**
+   * Swap a rig's procedural body for the skinned soldier figure. The procedural parts stay in
+   * the scene graph (hidden) so poses, the gun and the grenade hand keep working.
+   */
+  private attachHuman(rig: Rig) {
+    const team = this.teamColor(rig.track);
+    const h = makeHuman(rig.track.side, (m) => addRim(m, team));
+    rig.human = h;
+    if (!h) return;
+    const sd = rig.soldier;
+    for (const m of sd.meshes) if (m !== sd.gun) m.visible = false;
+    // The model faces -z; the rig faces +z.
+    h.root.rotation.y = Math.PI;
+    sd.body.add(h.root);
+    // Deaths grey out the figure; hit flashes tint its body.
+    sd.meshes.push(...h.meshes);
+    sd.originals.push(...h.meshes.map((m) => m.material as THREE.Material));
+    rig.mat = h.body;
+  }
+
+  /** World positions of the gun's grip and handguard for the figure's hands (none while throwing). */
+  private holdFor(sd: Soldier) {
+    if (!sd.gun.visible) return { grip: null, guard: null, right: new THREE.Vector3() };
+    sd.body.updateMatrixWorld(true);
+    const pistol = sd.gunClass === 'pistol';
+    // Gun geometry is relative to the waist joint (0.98 m up).
+    const grip = sd.gun.localToWorld(new THREE.Vector3(pistol ? 0.05 : 0.075, (pistol ? 1.25 : 1.24) - 0.98, pistol ? 0.44 : 0.1));
+    const guard = sd.gun.localToWorld(new THREE.Vector3(pistol ? 0.04 : 0.065, (pistol ? 1.27 : 1.29) - 0.98, pistol ? 0.46 : sd.gunClass === 'smg' ? 0.36 : 0.46));
+    const right = new THREE.Vector3(-1, 0, 0).applyQuaternion(sd.body.getWorldQuaternion(new THREE.Quaternion()));
+    return { grip, guard, right };
   }
 
   private teamColor(track: PlayerTrack): THREE.Color { return track.side === 'T' ? this.colors.t : this.colors.ct; }
@@ -1000,6 +1037,7 @@ export class Viewer3D {
         continue;
       }
       if (rig.isDead) { setDead(rig.soldier, null); rig.isDead = false; }
+      if (rig.human === undefined && humanReady()) this.attachHuman(rig);
       rig.body.rotation.x = 0; rig.body.position.y = 0;
       const heading = aimAt(tr, t);
       const spotted = isSpotted(tr, t);
@@ -1040,6 +1078,7 @@ export class Viewer3D {
       sd.armL.rotation.x = lead + (moving ? Math.sin(rig.stride + rig.phase) * 0.05 : 0);
       if (arm !== 0) sd.carry.rotation.x *= 0.3; // throwing: shoulders square up
       sd.gun.visible = !holding && Math.abs(arm) < 0.5;
+      if (rig.human) driveHuman(rig.human, { gait, dt: Math.max(0, Math.min(0.1, step)), throwArm: arm, dead: false, hold: this.holdFor(sd) });
       rig.ring.visible = true; rig.hpArc.visible = true;
       // Pace ring: small around a walker, out to 20 m (how far the steps carry) around a runner,
       // with one slow ripple. Kept faint: enough to read the pace, not to cover the map.

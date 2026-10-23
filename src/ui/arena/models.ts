@@ -332,7 +332,7 @@ export function buildSoldier(kit: SoldierKit, side: 'T' | 'CT', team: THREE.Colo
  * A soft team-coloured rim light (fresnel) so figures separate from the map at any camera angle,
  * the way broadcast lighting picks players out.
  */
-function addRim(mat: THREE.MeshStandardMaterial, team: THREE.Color) {
+export function addRim(mat: THREE.MeshStandardMaterial, team: THREE.Color) {
   const rim = team.clone().lerp(new THREE.Color(0xffffff), 0.35);
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.rimColor = { value: rim };
