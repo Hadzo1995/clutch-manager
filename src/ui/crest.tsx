@@ -5,7 +5,11 @@
  */
 import { memo, useSyncExternalStore } from 'react';
 import type { CSSProperties } from 'react';
-import { orgGlow, realTeamByName, type RealTeamMeta } from '../engine/data/realTeams';
+import { REAL_TEAMS, orgGlow, realTeamByName, type RealTeamMeta } from '../engine/data/realTeams';
+import { TEAM_LOGOS } from './teamLogos.generated';
+
+/** Real logo (data URL) by org display name. */
+const LOGO_BY_NAME = new Map(Object.entries(REAL_TEAMS).flatMap(([key, m]) => (TEAM_LOGOS[key] ? [[m.name, TEAM_LOGOS[key]!] as const] : [])));
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -121,6 +125,23 @@ function OrgBadge({ org, size, className }: { org: RealTeamMeta; size: number; c
   const label = org.tag.toUpperCase();
   const fs = label.length >= 4 ? 25 : label.length === 3 ? 31 : 40;
   const plate = 'M20 6 H80 L94 20 V80 L80 94 H20 L6 80 V20 Z';
+  const logo = LOGO_BY_NAME.get(org.name);
+  if (logo) {
+    // The real logo on a dark plate edged in the org's colour.
+    return (
+      <svg className={`crest org-badge org-logo ${className}`} width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
+        <defs>
+          <radialGradient id={`${id}p`} cx="0.5" cy="0.35" r="0.8">
+            <stop offset="0" stopColor={org.primary} stopOpacity="0.45" />
+            <stop offset="1" stopColor="#0b0e13" stopOpacity="1" />
+          </radialGradient>
+        </defs>
+        <path d={plate} fill={`url(#${id}p)`} />
+        <path d={plate} fill="none" stroke={org.accent} strokeOpacity="0.55" strokeWidth="2.5" />
+        <image href={logo} x="14" y="14" width="72" height="72" preserveAspectRatio="xMidYMid meet" />
+      </svg>
+    );
+  }
   return (
     <svg className={`crest org-badge ${className}`} width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
       <defs>
