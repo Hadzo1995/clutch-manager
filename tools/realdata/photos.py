@@ -54,8 +54,14 @@ def norm(s):
     return re.sub(r'[^a-z0-9]', '', (s or '').lower())
 
 
+# Names Liquipedia uses for the same organisation (checked: the whole roster carries over).
+TEAM_ALIASES = {'innercircle': ['icesports'], '1win': ['1wteam'], 'gamerlegion': ['gl'], '3dmax': ['envy'], 'virtuspro': ['vp'], 'wbt': ['whitebitteam']}
+
+
 def same_team(page_team, ours):
     a, b = norm(page_team), norm(ours)
+    if a in TEAM_ALIASES.get(b, []):
+        return True
     return bool(a) and bool(b) and (a == b or a.startswith(b) or b.startswith(a) or b in a)
 
 

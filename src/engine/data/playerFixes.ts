@@ -4,7 +4,7 @@
  * Applied in realPlayers.ts on top of the generated snapshot, so regenerating the snapshot
  * never loses them and adding a fix is one line here.
  */
-export interface PlayerFix { country?: string; source: string }
+export interface PlayerFix { country?: string; source: string; note?: string }
 
 const HLTV = 'HLTV.org stats page saved 2026-10-23';
 
@@ -18,4 +18,10 @@ export const PLAYER_FIXES: Record<string, PlayerFix> = {
   Tatu: { country: 'BR', source: `${HLTV} (id 24089, paiN Academy)` },
   z4KR: { country: 'CN', source: `${HLTV} (id 18744, Lynn Vision)` },
   alpha: { country: 'RU', source: `${HLTV} (id 20430, CYBERSHOKE)` },
+  // The snapshot took these from a same-named player's Liquipedia page; HLTV shows the
+  // player on our team with a different flag. Age and roles from that page are unverified.
+  ryu: { country: 'LT', source: `${HLTV} (id 21217, Astralis)`, note: 'age and roles unverified' },
+  mizu: { country: 'RU', source: `${HLTV} (id 21385, HOTU)`, note: 'age and roles unverified' },
+  alex: { country: 'ES', source: `${HLTV} (id 8371, Iberian Soul)`, note: 'age and roles unverified' },
+  Zero: { country: 'CN', source: `${HLTV} (id 24857, TYLOO)`, note: 'age and roles unverified' },
 };

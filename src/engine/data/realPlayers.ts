@@ -25,7 +25,7 @@ export function realDataset(): Dataset | null {
     ...r.dataset,
     id: REAL_DATASET_ID,
     label: `Real pros (Valve standings ${REAL_SNAPSHOT_DATE})`,
-    players: r.dataset.players.map((p) => ({ ...p, ...(PLAYER_FIXES[p.handle]?.country && (!/^[A-Z]{2}$/.test(p.country) || p.country === 'UN') ? { country: PLAYER_FIXES[p.handle]!.country! } : {}), team: teamOf.get(p.handle), id: `pro-${p.handle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, provenance: { ...p.provenance, source: REAL_SOURCE, kind: 'public' } })),
+    players: r.dataset.players.map((p) => ({ ...p, ...(PLAYER_FIXES[p.handle]?.country ? { country: PLAYER_FIXES[p.handle]!.country! } : {}), team: teamOf.get(p.handle), id: `pro-${p.handle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, provenance: { ...p.provenance, source: REAL_SOURCE, kind: 'public' } })),
   };
   return cached;
 }
