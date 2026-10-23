@@ -150,7 +150,7 @@ export const ACHIEVEMENTS: Record<string, { name: string; description: string }>
   'ten-cases': { name: 'Collector', description: 'Open 10 cases.' },
   champion: { name: 'Champions', description: 'Win a season final.' },
   promoted: { name: 'Moving up', description: 'Earn promotion.' },
-  'elite-series': { name: 'The big stage', description: 'Reach the Elite Series.' },
+  'elite-series': { name: 'The big stage', description: 'Reach the ESL Pro League.' },
   'cup-winner': { name: 'Cup run', description: 'Win the Clutch Cup.' },
   'clean-sheet': { name: 'Flawless', description: 'Win a map conceding 3 rounds or fewer.' },
   'five-stars': { name: 'Maxed out', description: 'Get any card to 5 stars.' },

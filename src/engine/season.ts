@@ -25,7 +25,7 @@ export const DIVISIONS: Division[] = [
   { id: 0, name: 'Open Circuit', rankRange: [120, 200], aiSharpness: 62, winReward: 350, prizes: [2500, 1600, 1100, 1100, 500, 400, 300, 200] },
   { id: 1, name: 'Challenger Series', rankRange: [70, 170], aiSharpness: 72, winReward: 450, prizes: [3500, 2200, 1500, 1500, 700, 500, 400, 300] },
   { id: 2, name: 'Pro League', rankRange: [30, 120], aiSharpness: 86, winReward: 600, prizes: [5000, 3000, 2000, 2000, 1000, 800, 600, 400] },
-  { id: 3, name: 'Elite Series', rankRange: [1, 70], aiSharpness: 98, winReward: 800, prizes: [8000, 5000, 3200, 3200, 1500, 1200, 900, 600] },
+  { id: 3, name: 'ESL Pro League', rankRange: [1, 70], aiSharpness: 98, winReward: 800, prizes: [8000, 5000, 3200, 3200, 1500, 1200, 900, 600] },
 ];
 
 const ORG_NAMES: [string, string][] = [
