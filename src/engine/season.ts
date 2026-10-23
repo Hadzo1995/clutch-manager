@@ -98,6 +98,10 @@ export const PLAYOFF_END = 9;
 export const CUP_START = 10;
 export const SEASON_WEEKS = 12;
 export const CUP_NAME = 'Clutch Cup';
+/** The cup's name in a division: the top tier plays a real S-tier event. */
+export function cupName(division: number): string {
+  return division === DIVISIONS.length - 1 ? 'IEM Cologne' : CUP_NAME;
+}
 /** Cup prize as a multiple of the division's win reward: winner, finalist, semifinal, quarterfinal. */
 export const CUP_PRIZE = [6, 3, 1.5, 0.5];
 

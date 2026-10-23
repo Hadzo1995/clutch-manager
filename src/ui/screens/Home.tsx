@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { runRecoveryWeek, starterFatigue } from '../../engine/career';
 import { planCost } from '../../engine/training';
 import { completeMatchday, humanFixture, lineupValidation, runTrainingWeek, teamName, teamTag, aiTeamById, humanSnapshot, aiSnapshot, ordinal } from '../../engine/career';
-import { HUMAN_ID, standings, DIVISIONS, CUP_NAME, CUP_START, STAGE_LABEL, isCup } from '../../engine/season';
+import { HUMAN_ID, standings, DIVISIONS, cupName, CUP_START, STAGE_LABEL, isCup } from '../../engine/season';
 import { teamStrength } from '../../engine/team';
 import { ATTRIBUTE_LABEL } from '../../engine/types';
 import type { Attribute } from '../../engine/types';
@@ -29,7 +29,7 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
   const oppPos = opponentId ? table.findIndex((r) => r.teamId === opponentId) + 1 : 0;
   const oppRow = opponentId ? table.find((r) => r.teamId === opponentId) : undefined;
   const div = DIVISIONS[c.season.division]!;
-  const stageLabel = fixture ? (fixture.stage === 'league' ? `League · Week ${fixture.week}` : `${isCup(fixture.stage) ? `${CUP_NAME} · ` : ''}${STAGE_LABEL[fixture.stage].replace(/^Cup (.)/, (_m, ch: string) => ch.toUpperCase())}`) : '';
+  const stageLabel = fixture ? (fixture.stage === 'league' ? `League · Week ${fixture.week}` : `${isCup(fixture.stage) ? `${cupName(c.season.division)} · ` : ''}${STAGE_LABEL[fixture.stage].replace(/^Cup (.)/, (_m, ch: string) => ch.toUpperCase())}`) : '';
   const last = c.matches[0];
   const wages = weeklyWages(world, c);
   const upkeep = facilityUpkeep(c.facilities ?? NO_FACILITIES);
@@ -108,7 +108,7 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
           </>
         ) : (
           <>
-            <div className="hm-hero-top"><span className="label">{c.season.week >= CUP_START ? CUP_NAME : c.season.week > 7 ? 'Playoffs' : 'Bye week'}</span></div>
+            <div className="hm-hero-top"><span className="label">{c.season.week >= CUP_START ? cupName(c.season.division) : c.season.week > 7 ? 'Playoffs' : 'Bye week'}</span></div>
             <div className="hm-bye">
               <h2>{c.season.week >= CUP_START ? 'You are out of the cup' : 'No match for you this week'}</h2>
               <p className="muted small">The other teams play on. You still train, and idle cards still lose sharpness.</p>

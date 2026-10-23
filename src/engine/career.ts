@@ -19,7 +19,7 @@ import type { FacilityId, Facilities } from './economy';
 import type { Contract, LedgerEntry, LedgerKind, OfferResult, OfferTerms, Sponsor } from './economy';
 import { buildProfiles, cardOvr, effectiveOvr } from './ratings';
 import {
-  DIVISIONS, HUMAN_ID, LEAGUE_WEEKS, SEASON_WEEKS, CUP_START, CUP_NAME, PLAYOFF_END, CUP_PRIZE, allAiTeams, advanceCup, cupResult, generateAiTeams, scheduleCupQuarterfinals, finalPlacements, newSeason, schedulePlayoffs, seriesToFixtureResult,
+  DIVISIONS, HUMAN_ID, LEAGUE_WEEKS, SEASON_WEEKS, CUP_START, cupName, PLAYOFF_END, CUP_PRIZE, allAiTeams, advanceCup, cupResult, generateAiTeams, scheduleCupQuarterfinals, finalPlacements, newSeason, schedulePlayoffs, seriesToFixtureResult,
 } from './season';
 import type { AiTeam, Fixture, SeasonState } from './season';
 import { aiToMatchPlayer, cardToMatchPlayer, emptyMapPractice, roleFit, validateLineup } from './team';
@@ -741,7 +741,7 @@ function startCup(world: World, n: Career): void {
   n.season.placement = finalPlacements(season).indexOf(HUMAN_ID) + 1;
   const f = humanFixture(n);
   const opp = f ? (f.home === HUMAN_ID ? f.away : f.home) : null;
-  addNews(n, `${CUP_NAME} draw: four guests from the ${above.name} join the league's best.${opp ? ` You face ${teamName(n, opp)} in the quarterfinal.` : ''}`);
+  addNews(n, `${cupName(season.division)} draw: four guests from the ${above.name} join the league's best.${opp ? ` You face ${teamName(n, opp)} in the quarterfinal.` : ''}`);
 }
 
 function finishSeason(world: World, n: Career): void {
@@ -765,9 +765,9 @@ function finishSeason(world: World, n: Career): void {
   const cup = cupResult(season, HUMAN_ID);
   if (cup) {
     const cupPrize = Math.round(div.winReward * CUP_PRIZE[cup - 1]!);
-    money(n, cupPrize, 'prize', `${CUP_NAME}: ${cup === 1 ? 'winner' : cup === 2 ? 'finalist' : cup === 3 ? 'semifinal' : 'quarterfinal'}`);
+    money(n, cupPrize, 'prize', `${cupName(season.division)}: ${cup === 1 ? 'winner' : cup === 2 ? 'finalist' : cup === 3 ? 'semifinal' : 'quarterfinal'}`);
     if (cup === 1) { n.totals.titles++; unlock(n, 'cup-winner'); n.reputation = clamp(n.reputation + 5, 0, 100); }
-    addNews(n, `${CUP_NAME}: ${cup === 1 ? 'you won it!' : cup === 2 ? 'beaten in the final.' : cup === 3 ? 'out in the semifinals.' : 'out in the quarterfinals.'} Prize ${cupPrize} coins.`);
+    addNews(n, `${cupName(season.division)}: ${cup === 1 ? 'you won it!' : cup === 2 ? 'beaten in the final.' : cup === 3 ? 'out in the semifinals.' : 'out in the quarterfinals.'} Prize ${cupPrize} coins.`);
   }
   n.reputation = clamp(n.reputation + (placement === 1 ? 8 : 0) + (movement === 'promoted' ? 6 : 0) - (movement === 'relegated' ? 6 : 0) + (4.5 - placement), 0, 100);
   if (nextDiv === 3) unlock(n, 'elite-series');

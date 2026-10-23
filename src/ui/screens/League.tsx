@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ACHIEVEMENTS, aiTeamById, ordinal, teamName, teamTag } from '../../engine/career';
-import { CUP_NAME, CUP_PRIZE, CUP_START, DIVISIONS, HUMAN_ID, allAiTeams, standings } from '../../engine/season';
+import { CUP_PRIZE, cupName, CUP_START, DIVISIONS, HUMAN_ID, allAiTeams, standings } from '../../engine/season';
 import { realTeamMeta } from '../../engine/data/realTeams';
 import { REAL_SNAPSHOT_DATE } from '../../engine/data/realPlayers';
 import type { PlayerProfile } from '../../engine/types';
@@ -18,10 +18,10 @@ function weekName(w: number): string {
   return w === CUP_START ? 'Cup QF' : w === CUP_START + 1 ? 'Cup SF' : 'Cup final';
 }
 
-function weekTitle(w: number): string {
+function weekTitle(w: number, division: number): string {
   if (w <= 7) return `League · Week ${w}`;
   if (w <= 9) return `Playoffs · ${w === 8 ? 'Semifinals' : 'Final'}`;
-  return `${CUP_NAME} · ${w === CUP_START ? 'Quarterfinals' : w === CUP_START + 1 ? 'Semifinals' : 'Final'}`;
+  return `${cupName(division)} · ${w === CUP_START ? 'Quarterfinals' : w === CUP_START + 1 ? 'Semifinals' : 'Final'}`;
 }
 
 export function League() {
@@ -56,7 +56,7 @@ export function League() {
     <>
       <header className="page-head lg-head">
         <div className="stack" style={{ gap: 4 }}>
-          <span className="label">Season {c.season.number} · {c.season.week > 12 ? 'Finished' : weekTitle(c.season.week)}</span>
+          <span className="label">Season {c.season.number} · {c.season.week > 12 ? 'Finished' : weekTitle(c.season.week, c.season.division)}</span>
           <h1>{div.name}</h1>
         </div>
         <ol className="lg-ladder" aria-label="Divisions, lowest to highest">
@@ -105,7 +105,7 @@ export function League() {
       </section>
 
       <section className="panel lg-o3" aria-label="Fixtures">
-        <div className="panel-head"><h2>Fixtures</h2><span className="small muted">{weekTitle(shownWeek)}</span></div>
+        <div className="panel-head"><h2>Fixtures</h2><span className="small muted">{weekTitle(shownWeek, c.season.division)}</span></div>
         <div className="lg-weeks" role="group" aria-label="Choose a week">
           {weeks.map((w) => (
             <button key={w} aria-pressed={w === shownWeek} className={`${w === c.season.week ? 'now' : ''} ${w < c.season.week ? 'done' : ''}`} onClick={() => setWeek(w)}>
@@ -146,10 +146,10 @@ export function League() {
           )}
           <dl className="lg-rules">
             <div><dt>1st place</dt><dd className="num">{div.prizes[0]!.toLocaleString('en-US')}</dd></div>
-            <div><dt>{CUP_NAME} winner</dt><dd className="num">{Math.round(div.winReward * CUP_PRIZE[0]!).toLocaleString('en-US')}</dd></div>
+            <div><dt>{cupName(c.season.division)} winner</dt><dd className="num">{Math.round(div.winReward * CUP_PRIZE[0]!).toLocaleString('en-US')}</dd></div>
             <div><dt>Win / loss</dt><dd className="num">{div.winReward} / {Math.round(div.winReward * 0.4)}</dd></div>
           </dl>
-          <p className="small faint">Top 4 reach the Bo3 playoffs. Weeks {CUP_START}-{CUP_START + 2} are the {CUP_NAME}: the top teams and you against 4 guests from {canUp ? `the ${DIVISIONS[c.season.division + 1]!.name}` : 'the ESL Pro League'}.{canUp ? ' Top 2 are promoted.' : ''}{canDown ? ' Bottom 2 are relegated.' : ''}</p>
+          <p className="small faint">Top 4 reach the Bo3 playoffs. Weeks {CUP_START}-{CUP_START + 2} are the {cupName(c.season.division)}: the top teams and you against 4 guests from {canUp ? `the ${DIVISIONS[c.season.division + 1]!.name}` : 'the ESL Pro League'}.{canUp ? ' Top 2 are promoted.' : ''}{canDown ? ' Bottom 2 are relegated.' : ''}</p>
         </section>
 
         <section className="panel lg-o4" aria-label="Map record">
