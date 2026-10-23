@@ -216,14 +216,14 @@ export function buildOvrCalibration(rows: { attrs: Attributes; role: Role }[]): 
 // ---------- Tiers and caps ----------
 
 /** Tiers, best first, with the share of the player pool in each (cumulative) and the hard OVR cap. */
-export const TIERS: { tier: Tier; upTo: number; cap: number; start: number }[] = [
-  { tier: 'S+++', upTo: 0.01, cap: 100, start: 86 },
-  { tier: 'S++', upTo: 0.03, cap: 97, start: 84 },
-  { tier: 'S+', upTo: 0.08, cap: 94, start: 82 },
-  { tier: 'S', upTo: 0.16, cap: 91, start: 80 },
-  { tier: 'A', upTo: 0.38, cap: 87, start: 78 },
-  { tier: 'B', upTo: 0.7, cap: 83, start: 75 },
-  { tier: 'C', upTo: 1, cap: 79, start: 72 },
+export const TIERS: { tier: Tier; cap: number; start: number }[] = [
+  { tier: 'S+++', cap: 100, start: 86 },
+  { tier: 'S++', cap: 97, start: 84 },
+  { tier: 'S+', cap: 94, start: 82 },
+  { tier: 'S', cap: 91, start: 80 },
+  { tier: 'A', cap: 87, start: 78 },
+  { tier: 'B', cap: 83, start: 75 },
+  { tier: 'C', cap: 79, start: 72 },
 ];
 /**
  * Starting OVR comes from the tier (plus a little of the player's current level within it), so
@@ -236,26 +236,28 @@ const START_SPREAD = 0.35;
 export const TIER_CAP = Object.fromEntries(TIERS.map((t) => [t.tier, t.cap])) as Record<Tier, number>;
 
 /**
- * How good a player really is, for tiering: the HLTV all-time rating where we have it, pulled
- * toward 1.00 for small samples (a 1.30 over 40 maps is not a 1.30 over 1,500), otherwise the
+ * How good a player really is, for tiering: the HLTV rating over the last 12 months where we have it, pulled
+ * toward 1.00 for small samples (a 1.30 over 20 maps is not a 1.30 over 200), otherwise the
  * dataset's own rating. HLTV is only the reference; its numbers are not shown in the game.
  */
 function tierScore(p: PlayerRecord): number {
   const h = HLTV_STATS[p.handle];
   if (h && h.maps > 0) {
-    const k = 120;
+    const k = 40;
     return (h.rating * h.maps + 1.0 * k) / (h.maps + k);
   }
   return 1 + (p.stats.rating - 1) * 0.8;
 }
 
-/** How many players of each role go in the top tiers; the rest of each role is split by share. */
-export const TOP_PER_ROLE: Partial<Record<Tier, number>> = { 'S+++': 1, 'S++': 2 };
+/**
+ * Players per role in each tier, doubling down the ladder (5, 10, 20, 40, 80 across the five
+ * roles); everyone else in a role is B. C is unused for now.
+ */
+export const PER_ROLE: Partial<Record<Tier, number>> = { 'S+++': 1, 'S++': 2, 'S+': 4, S: 8, A: 16 };
 
 /**
  * Tier per player id, decided per role: within each role players are ranked by HLTV (the
- * reference), the best one goes to S+++, the next two to S++, and the rest of that role is
- * split into the lower tiers by share. Every role ends up with the same tier spread.
+ * reference) and handed out by PER_ROLE, best first. Every role gets the same tier ladder.
  */
 function assignTiers(records: PlayerRecord[]): Map<string, Tier> {
   const out = new Map<string, Tier>();
@@ -264,20 +266,12 @@ function assignTiers(records: PlayerRecord[]): Map<string, Tier> {
     const ranked = records.filter((r) => r.primaryRole === role).sort((a, b) => tierScore(b) - tierScore(a) || a.rank - b.rank);
     let i = 0;
     for (const t of TIERS) {
-      const k = TOP_PER_ROLE[t.tier];
+      const k = PER_ROLE[t.tier];
       if (k === undefined) continue;
       for (const r of ranked.slice(i, i + k)) out.set(r.id, t.tier);
       i += k;
     }
-    const rest = ranked.slice(i);
-    const lower = TIERS.filter((t) => TOP_PER_ROLE[t.tier] === undefined);
-    const from = TIERS.find((t) => TOP_PER_ROLE[t.tier] === undefined)!;
-    const prevShare = TIERS[TIERS.indexOf(from) - 1]?.upTo ?? 0;
-    rest.forEach((r, j) => {
-      // Shares of the lower tiers, rescaled to what is left of the role.
-      const f = prevShare + ((j + 1) / rest.length) * (1 - prevShare);
-      out.set(r.id, lower.find((t) => f <= t.upTo)!.tier);
-    });
+    for (const r of ranked.slice(i)) out.set(r.id, 'B');
   }
   for (const r of records) if (TIER_OVERRIDES[r.handle]) out.set(r.id, TIER_OVERRIDES[r.handle]!);
   return out;

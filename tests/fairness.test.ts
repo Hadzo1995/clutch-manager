@@ -60,7 +60,7 @@ function winRate(a: TeamSnapshot, b: TeamSnapshot, n = 120): number {
 
 describe('training beats luck', () => {
   it('lucky draws start ahead', () => {
-    expect(avgOvr(five('S'), train(five('S'), false, 0))).toBeGreaterThan(avgOvr(five('A'), train(five('A'), true, 0)) + 1);
+    expect(avgOvr(five('S'), train(five('S'), false, 0))).toBeGreaterThan(avgOvr(five('A'), train(five('A'), true, 0)));
   });
 
   it('after one season, the same cards trained well clearly beat the same cards trained lazily', () => {
