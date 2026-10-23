@@ -69,6 +69,8 @@ export const ATTRIBUTE_ORIGIN: Record<Attribute, 'observed' | 'inferred' | 'fict
 };
 
 export type Rarity = 'bronze' | 'silver' | 'gold' | 'elite' | 'legend';
+/** Career tier: how good a player can ever become. Sets the hard OVR cap (TIER_CAP in ratings.ts). */
+export type Tier = 'S+++' | 'S++' | 'S+' | 'S' | 'A' | 'B' | 'C';
 export const RARITIES: Rarity[] = ['bronze', 'silver', 'gold', 'elite', 'legend'];
 
 /** Where a statistic came from. Every imported stat block carries one. */
@@ -137,6 +139,9 @@ export interface PlayerProfile {
   mapSkill: Record<MapName, number>;
   ovr: number;
   rarity: Rarity;
+  /** Career tier from real-world performance (HLTV as the reference where available). */
+  tier: Tier;
+  /** Hard OVR ceiling: the tier's cap, never below today's OVR. */
   potential: number;
   /** Per-role OVR calibration of the dataset this profile came from. */
   calib: Record<Role, { mean: number; sd: number }>;

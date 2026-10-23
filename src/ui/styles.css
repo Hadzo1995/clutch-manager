@@ -752,3 +752,11 @@ select.inline { width: auto; min-height: 34px; padding: 4px 8px; font-size: 0.85
 .cc-tag { display: inline-block; font: 600 0.62rem/1 var(--font-data); letter-spacing: 0.05em; padding: 2px 4px 1px; border: 1px solid var(--line-strong, var(--line)); border-radius: 3px; color: var(--ink-3); vertical-align: 1px; }
 .org-tag { display: inline-flex; align-items: center; gap: 4px; font: 600 0.62rem/1 var(--font-data); letter-spacing: 0.04em; padding: 1px 5px 1px 1px; border-radius: 4px; color: var(--ink-2); background: color-mix(in srgb, var(--org) 22%, transparent); border: 1px solid color-mix(in srgb, var(--org-accent) 35%, transparent); vertical-align: middle; white-space: nowrap; }
 .org-tag .crest { flex: none; filter: none; }
+/* Career tiers. */
+.tier-chip { display: inline-block; font: 800 0.66rem/1 var(--font-display); letter-spacing: 0.04em; padding: 3px 6px 2px; border-radius: 4px; border: 1px solid var(--line); color: var(--ink-2); background: rgba(255, 255, 255, 0.04); vertical-align: middle; }
+.tier-chip.tier-s { color: #ffd27a; border-color: rgba(240, 163, 58, 0.55); background: rgba(240, 163, 58, 0.12); }
+.tier-chip.tier-s.top { color: #1a1206; background: linear-gradient(135deg, #ffe39a, #f0a33a 55%, #ffcf6b); border-color: #ffd27a; box-shadow: 0 0 10px rgba(240, 163, 58, 0.45); }
+.tier-chip.tier-a { color: #b9a6ff; border-color: rgba(150, 120, 255, 0.45); background: rgba(150, 120, 255, 0.1); }
+.tier-chip.tier-b { color: #8fd0ff; border-color: rgba(90, 169, 230, 0.4); }
+.tier-chip.tier-c { color: var(--ink-3); }
+.pc-ovr .tier-chip { margin-top: 3px; font-size: 0.58rem; padding: 2px 4px 1px; }

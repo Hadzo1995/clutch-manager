@@ -14,7 +14,8 @@
  *     and clearly marked as such.
  */
 import { Rng, clamp, hashString } from './rng';
-import type { Attribute, Attributes, Dataset, MapName, OwnedCard, PlayerProfile, PlayerRecord, Rarity, Role } from './types';
+import type { Attribute, Attributes, Dataset, MapName, OwnedCard, PlayerProfile, PlayerRecord, Rarity, Role, Tier } from './types';
+import { HLTV_STATS } from './data/hltvStats.generated';
 import { ATTRIBUTES, MAPS } from './types';
 
 export const RATING_CONFIG = {
@@ -194,9 +195,9 @@ export function rawOvr(attrs: Attributes, role: Role): number {
  * AWPer look better than every IGL. Each role's raw scores are mapped onto the
  * same scale (center 76, spread 6 per standard deviation).
  */
-export function ovrFor(attrs: Attributes, role: Role, calib: OvrCalibration): number {
+export function ovrFor(attrs: Attributes, role: Role, calib: OvrCalibration, max = 99): number {
   const c = calib[role];
-  return Math.round(clamp(76 + 6 * ((rawOvr(attrs, role) - c.mean) / c.sd), 40, 99));
+  return Math.round(clamp(76 + 6 * ((rawOvr(attrs, role) - c.mean) / c.sd), 40, max));
 }
 
 export type OvrCalibration = Record<Role, { mean: number; sd: number }>;
@@ -212,16 +213,69 @@ export function buildOvrCalibration(rows: { attrs: Attributes; role: Role }[]): 
   return out;
 }
 
-function potentialFor(p: PlayerRecord, ovr: number): number {
-  const rng = new Rng(hashString(p.id + ':pot'));
-  const a = p.age;
-  let extra: number;
-  if (a <= 19) extra = rng.int(8, 13);
-  else if (a <= 22) extra = rng.int(5, 9);
-  else if (a <= 25) extra = rng.int(2, 5);
-  else if (a <= 28) extra = rng.int(1, 3);
-  else extra = rng.int(0, 1);
-  return Math.min(99, ovr + extra);
+// ---------- Tiers and caps ----------
+
+/** Tiers, best first, with the share of the player pool in each (cumulative) and the hard OVR cap. */
+export const TIERS: { tier: Tier; upTo: number; cap: number }[] = [
+  { tier: 'S+++', upTo: 0.01, cap: 100 },
+  { tier: 'S++', upTo: 0.03, cap: 97 },
+  { tier: 'S+', upTo: 0.08, cap: 94 },
+  { tier: 'S', upTo: 0.16, cap: 91 },
+  { tier: 'A', upTo: 0.38, cap: 87 },
+  { tier: 'B', upTo: 0.7, cap: 83 },
+  { tier: 'C', upTo: 1, cap: 79 },
+];
+export const TIER_CAP = Object.fromEntries(TIERS.map((t) => [t.tier, t.cap])) as Record<Tier, number>;
+
+/**
+ * How good a player really is, for tiering: the HLTV all-time rating where we have it, pulled
+ * toward 1.00 for small samples (a 1.30 over 40 maps is not a 1.30 over 1,500), otherwise the
+ * dataset's own rating. HLTV is only the reference; its numbers are not shown in the game.
+ */
+function tierScore(p: PlayerRecord): number {
+  const h = HLTV_STATS[p.handle];
+  if (h && h.maps > 0) {
+    const k = 120;
+    return (h.rating * h.maps + 1.0 * k) / (h.maps + k);
+  }
+  return 1 + (p.stats.rating - 1) * 0.8;
+}
+
+/**
+ * Tier per player id. Ratings are compared within each primary role first (an IGL's or support's
+ * rating runs lower than an AWPer's for the same impact), then everyone is ranked together.
+ */
+function assignTiers(records: PlayerRecord[]): Map<string, Tier> {
+  const byRole = new Map<string, number[]>();
+  for (const r of records) { const l = byRole.get(r.primaryRole) ?? []; l.push(tierScore(r)); byRole.set(r.primaryRole, l); }
+  const stat = new Map([...byRole].map(([role, v]) => {
+    const mean = v.reduce((x, y) => x + y, 0) / v.length;
+    const sd = Math.sqrt(v.reduce((x, y) => x + (y - mean) ** 2, 0) / v.length) || 0.05;
+    return [role, { mean, sd }] as const;
+  }));
+  // Current level (the dataset's rating, from this season's standings) keeps the tiers honest
+  // about who is good now: HLTV career counts for two thirds, today's level for one third.
+  const cur = records.map((r) => r.stats.rating);
+  const cMean = cur.reduce((x, y) => x + y, 0) / cur.length;
+  const cSd = Math.sqrt(cur.reduce((x, y) => x + (y - cMean) ** 2, 0) / cur.length) || 0.05;
+  const z = (r: PlayerRecord) => { const st = stat.get(r.primaryRole)!; return (2 / 3) * ((tierScore(r) - st.mean) / st.sd) + (1 / 3) * ((r.stats.rating - cMean) / cSd); };
+  const ranked = [...records].sort((a, b) => z(b) - z(a) || a.rank - b.rank);
+  const n = ranked.length;
+  const out = new Map<string, Tier>();
+  ranked.forEach((r, i) => {
+    const f = (i + 1) / n;
+    // At least the very best player is S+++, however small the pool.
+    out.set(r.id, TIER_OVERRIDES[r.handle] ?? (i === 0 ? 'S+++' : TIERS.find((t) => f <= t.upTo)!.tier));
+  });
+  return out;
+}
+
+/** Hand-set tiers by handle, applied after the ranking (for the cases the numbers get wrong). */
+export const TIER_OVERRIDES: Record<string, Tier> = {};
+
+/** Hard ceiling: the tier's cap, and never below today's OVR. */
+function potentialFor(tier: Tier, ovr: number): number {
+  return Math.max(ovr, TIER_CAP[tier]);
 }
 
 export function buildProfiles(dataset: Dataset): Map<string, PlayerProfile> {
@@ -235,6 +289,7 @@ export function buildProfiles(dataset: Dataset): Map<string, PlayerProfile> {
     ovr: ovrFor(base, record.primaryRole, calib),
     calib,
   }));
+  const tiers = assignTiers(dataset.players);
   const sorted = [...prelim].sort((a, b) => b.ovr - a.ovr || a.record.rank - b.record.rank);
   const cut = RATING_CONFIG.rarityCutoffs;
   const n = sorted.length;
@@ -242,7 +297,8 @@ export function buildProfiles(dataset: Dataset): Map<string, PlayerProfile> {
   sorted.forEach((pr, i) => {
     const f = (i + 1) / n;
     const rarity: Rarity = f <= cut.legend ? 'legend' : f <= cut.elite ? 'elite' : f <= cut.gold ? 'gold' : f <= cut.silver ? 'silver' : 'bronze';
-    out.set(pr.record.id, { ...pr, rarity, potential: potentialFor(pr.record, pr.ovr) });
+    const tier = tiers.get(pr.record.id) ?? 'C';
+    out.set(pr.record.id, { ...pr, rarity, tier, potential: potentialFor(tier, pr.ovr) });
   });
   return out;
 }
@@ -270,7 +326,8 @@ export function cardRole(profile: PlayerProfile, card: OwnedCard): Role {
 }
 
 export function cardOvr(profile: PlayerProfile, card: OwnedCard): number {
-  return ovrFor(cardAttributes(profile, card), profile.record.primaryRole, profile.calib);
+  // The tier cap is hard: training, coach and synergy can take a player up to it, never past.
+  return Math.min(profile.potential, ovrFor(cardAttributes(profile, card), profile.record.primaryRole, profile.calib, 100));
 }
 
 /**

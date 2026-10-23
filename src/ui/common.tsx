@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import type { Career, World } from '../engine/career';
 import { profileOf } from '../engine/career';
 import { cardOvr, effectiveOvr } from '../engine/ratings';
-import type { OwnedCard, PlayerProfile, Rarity, Role } from '../engine/types';
+import type { OwnedCard, PlayerProfile, Rarity, Role, Tier } from '../engine/types';
 import { ROLE_LABEL } from '../engine/types';
 import { realTeamMeta } from '../engine/data/realTeams';
 import { Crest } from './crest';
@@ -113,6 +113,12 @@ export function OvrBadge({ value, rarity, size = 'md', label = 'OVR' }: { value:
   );
 }
 
+/** Career tier chip: S+++ down to C. The tier sets how high the player can ever be developed. */
+export function TierChip({ tier, cap }: { tier: Tier; cap?: number }) {
+  const cls = tier.startsWith('S') ? 's' : tier.toLowerCase();
+  return <span className={`tier-chip tier-${cls}${tier === 'S+++' ? ' top' : ''}`} title={cap ? `Tier ${tier}: can be developed up to ${cap} OVR` : `Tier ${tier}`}>{tier}</span>;
+}
+
 export function RarityChip({ rarity }: { rarity: Rarity }) {
   return <span className={`rarity-chip ${rarity}`}>{RARITY_LABEL[rarity]}</span>;
 }
@@ -131,6 +137,7 @@ export function PlayerCard({ world, card, profile, compact = false, selected = f
         <div className="pc-ovr">
           <span className="ovr">{ovr}</span>
           <span className="rarity-label">{RARITY_LABEL[p.rarity]}</span>
+          <TierChip tier={p.tier} cap={p.potential} />
           <span className="pc-role" title={ROLE_LABEL[role]}><RoleIcon role={role} /></span>
         </div>
         <div className="pcard-face"><Avatar seed={p.record.id} size={compact ? 64 : 76} accent="#f0a33a" /></div>

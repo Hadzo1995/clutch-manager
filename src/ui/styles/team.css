@@ -627,10 +627,3 @@ button.pcard.pc:focus-visible { outline: 2px solid var(--t); outline-offset: 2px
 
 /* Compare: game-value marker on group headings */
 .cmp-gv { margin-left: 8px; padding: 1px 6px; border-radius: 4px; border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); color: var(--warn); font-size: 0.58rem; letter-spacing: 0.1em; vertical-align: 1px; }
-
-/* HLTV career strip on the player sheet. */
-.ps-hltv { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; margin-top: 12px; padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: linear-gradient(90deg, rgba(43, 108, 196, 0.16), transparent 70%); }
-.ps-hltv-brand { display: grid; place-content: center; padding: 0 12px; border-radius: 7px; background: #2b6cc4; color: #fff; font: 800 0.95rem/1 var(--font-display); letter-spacing: 0.04em; text-decoration: none; text-align: center; }
-.ps-hltv-brand small { display: block; font: 600 0.55rem/1.4 var(--font-data); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
-.ps-hltv-kpi { display: grid; gap: 2px; padding: 4px 10px; min-width: 64px; }
-.ps-hltv-kpi b { font-size: 1.05rem; }
