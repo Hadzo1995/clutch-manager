@@ -681,7 +681,7 @@ export function Report({ series, teams, humanIdx, onContinue, pvp }: { series: S
             </span>
             <div className="mx-result-team right">
               <Crest name={teams[oppIdx].name} tag={teams[oppIdx].tag} size={56} className="mx-crest" />
-              <span className="mx-card-tag ct-col">{teams[oppIdx].tag}</span>
+              <span className="mx-card-tag ct-col" style={orgTextStyle(teams[oppIdx].name)}>{teams[oppIdx].tag}</span>
               <span className="mx-card-name">{oppName}</span>
             </div>
           </div>
