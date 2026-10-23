@@ -7,6 +7,7 @@
 import type { Dataset } from '../types';
 import { importCsv } from './importer';
 import { REAL_PLAYERS_CSV, REAL_SNAPSHOT_DATE } from './realPlayers.generated';
+import { PLAYER_FIXES } from './playerFixes';
 
 export const REAL_DATASET_ID = `real-pros-${REAL_SNAPSHOT_DATE}`;
 export const REAL_SOURCE = 'Valve Regional Standings + Liquipedia; ratings by Clutch Manager';
@@ -24,7 +25,7 @@ export function realDataset(): Dataset | null {
     ...r.dataset,
     id: REAL_DATASET_ID,
     label: `Real pros (Valve standings ${REAL_SNAPSHOT_DATE})`,
-    players: r.dataset.players.map((p) => ({ ...p, team: teamOf.get(p.handle), id: `pro-${p.handle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, provenance: { ...p.provenance, source: REAL_SOURCE, kind: 'public' } })),
+    players: r.dataset.players.map((p) => ({ ...p, ...(PLAYER_FIXES[p.handle]?.country && (!/^[A-Z]{2}$/.test(p.country) || p.country === 'UN') ? { country: PLAYER_FIXES[p.handle]!.country! } : {}), team: teamOf.get(p.handle), id: `pro-${p.handle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, provenance: { ...p.provenance, source: REAL_SOURCE, kind: 'public' } })),
   };
   return cached;
 }

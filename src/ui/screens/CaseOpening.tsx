@@ -1,13 +1,14 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { playerJersey } from '../../engine/data/realTeams';
 import type { CSSProperties, ReactNode } from 'react';
-import { CASES, rollPlayer } from '../../engine/cases';
+import { CASES, caseTable, rollPlayer } from '../../engine/cases';
+import type { CaseRow } from '../../engine/cases';
 import type { CaseId, CaseOutcome } from '../../engine/cases';
 import { Rng } from '../../engine/rng';
-import { RARITIES, ROLE_LABEL } from '../../engine/types';
-import type { PlayerProfile, Rarity } from '../../engine/types';
+import { ROLE_LABEL } from '../../engine/types';
+import type { PlayerProfile, Rarity, Role } from '../../engine/types';
 import { Avatar } from '../avatar/Avatar';
-import { Coin, OrgTag, PlayerCard, RARITY_LABEL } from '../common';
+import { Coin, OrgTag, PlayerCard, RARITY_LABEL, TierChip } from '../common';
 import { TIER, caseAudio, prefersReducedMotion } from './caseFx';
 import type { CaseAudio } from './caseFx';
 import '../styles/caseOpen.css';
@@ -42,20 +43,50 @@ const ReelItem = memo(function ReelItem({ profile }: { profile: PlayerProfile })
   );
 });
 
-/** A few players of each rarity the case can drop, lowest rarity first, as CS2 lists a case's contents. */
-function sampleContents(caseId: CaseId, pool: PlayerProfile[]): PlayerProfile[] {
-  const def = CASES[caseId];
-  const out: PlayerProfile[] = [];
-  for (const r of RARITIES as readonly Rarity[]) {
-    if (!def.odds[r]) continue;
-    const of = pool.filter((p) => p.rarity === r).sort((a, b) => b.ovr - a.ovr);
-    out.push(...of.slice(0, r === 'legend' ? 1 : 2));
-  }
-  return out.sort((a, b) => TIER[a.rarity] - TIER[b.rarity]);
+/** Which tiers make up each rarity (see RARITY_OF_TIER in ratings.ts). */
+const RARITY_TIERS: Record<Rarity, string> = { legend: 'S+++ / S++', elite: 'S+', gold: 'S', silver: 'A', bronze: 'B' };
+
+/** A probability for people: "3%", "0.5%", "0.033%". */
+export function pct(x: number): string {
+  if (x >= 10) return `${Math.round(x * 10) / 10}%`;
+  if (x >= 1) return `${Math.round(x * 100) / 100}%`;
+  const digits = Math.max(2, 1 - Math.floor(Math.log10(x)));
+  return `${x.toFixed(digits).replace(/0+$/, '').replace(/\.$/, '')}%`;
 }
 
-export function CaseOpening({ caseId, pool, crate, caseColor, onUnlock, onClose, onView }: {
+/** "Contains one of the following": every rarity, its exact chance, and each player's own chance. */
+function Contents({ table, total }: { table: CaseRow[]; total: number }) {
+  const [all, setAll] = useState(false);
+  const rows = [...table].sort((a, b) => TIER[b.rarity] - TIER[a.rarity]);
+  return (
+    <div className="co-table">
+      {rows.map((r) => (
+        <div key={r.rarity} className={`co-row r-${r.rarity}`}>
+          <div className="co-row-head">
+            <span className="co-row-name"><i aria-hidden="true" />{RARITY_LABEL[r.rarity]} <small>{RARITY_TIERS[r.rarity]}</small></span>
+            <b className="num">{pct(r.chance)}</b>
+            <span className="co-row-sub small faint">{r.players.length} players · {pct(r.perPlayer)} each</span>
+          </div>
+          <div className="co-row-faces">
+            {(all ? r.players : r.players.slice(0, 6)).map((p) => (
+              <span key={p.record.id} className="co-face" title={`${p.record.handle} · ${ROLE_LABEL[p.record.primaryRole]} · ${p.tier} · ${pct(r.perPlayer)}`}>
+                <Avatar seed={p.record.id} size={34} accent="#f0a33a" jersey={playerJersey(p.record.team)} />
+                {all && <small>{p.record.handle}</small>}
+              </span>
+            ))}
+            {!all && r.players.length > 6 && <span className="co-more small faint">+{r.players.length - 6}</span>}
+          </div>
+        </div>
+      ))}
+      <button className="btn small ghost co-all" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${total} players`}</button>
+    </div>
+  );
+}
+
+export function CaseOpening({ caseId, pool, role, crate, caseColor, onUnlock, onClose, onView }: {
   caseId: CaseId;
+  /** The chosen role, for a role case: the contents, odds and strip only show that role. */
+  role?: Role;
   /** The case's colour (CSS), used by the case artwork. */
   caseColor: string;
   pool: PlayerProfile[];
@@ -81,14 +112,18 @@ export function CaseOpening({ caseId, pool, crate, caseColor, onUnlock, onClose,
 
   useEffect(() => () => audio.current?.close(), []);
 
-  const contents = useMemo(() => sampleContents(caseId, pool), [caseId, pool]);
+  // The same table the roll uses (engine/cases.ts), so the odds shown are the odds played.
+  const table = useMemo(() => caseTable(def, pool, role), [def, pool, role]);
+  const total = table.reduce((s, r) => s + r.players.length, 0);
   const reel = useMemo(() => {
     if (!outcome) return [];
+    // The strip is filler drawn with the case's own odds, so it never shows rare players more
+    // often than they really drop. The drop itself was decided before the strip starts.
     const rng = new Rng(Date.now() & 0xffffffff);
-    const items = Array.from({ length: REEL_LENGTH }, () => rollPlayer(rng, def, pool));
+    const items = Array.from({ length: REEL_LENGTH }, () => rollPlayer(rng, def, pool, role));
     items[WIN_INDEX] = outcome.profile;
     return items;
-  }, [outcome, def, pool]);
+  }, [outcome, def, pool, role]);
 
   const unlock = () => {
     // Audio needs a user gesture on phones, so it starts here rather than on mount.
@@ -159,26 +194,8 @@ export function CaseOpening({ caseId, pool, crate, caseColor, onUnlock, onClose,
           <div className="co-inspect">
             <div className="co-case" aria-hidden="true">{crate}</div>
             <div className="co-contents">
-              <span className="co-label">Contains one of the following:</span>
-              <div className="co-grid">
-                {contents.map((c) => (
-                  <div key={c.record.id} className={`co-mini r-${c.rarity}`}>
-                    <Avatar seed={c.record.id} size={40} accent="#f0a33a" jersey={playerJersey(c.record.team)} />
-                    <b>{c.record.handle}</b>
-                    <span>{RARITY_LABEL[c.rarity]}</span>
-                    <i className="co-item-bar" aria-hidden="true" />
-                  </div>
-                ))}
-                <div className="co-mini co-any">
-                  <span className="co-star" aria-hidden="true">★</span>
-                  <b>or any of the {pool.length} players</b>
-                </div>
-              </div>
-              <div className="co-odds">
-                {[...RARITIES].reverse().filter((r) => def.odds[r] > 0).map((r) => (
-                  <span key={r} className={`r-${r}`}><i />{RARITY_LABEL[r]} <b className="num">{def.odds[r]}%</b></span>
-                ))}
-              </div>
+              <span className="co-label">Contains one of the following{role ? ` (${ROLE_LABEL[role]}s only)` : ''}:</span>
+              <Contents table={table} total={total} />
             </div>
             <div className="co-unlock-row">
               <button className="btn primary co-unlock" onClick={unlock}>
@@ -198,13 +215,14 @@ export function CaseOpening({ caseId, pool, crate, caseColor, onUnlock, onClose,
         )}
 
         {stage === 'reveal' && outcome && p && (
-          <div className="co-result" role="status">
+          <div className={`co-result${p.rarity === 'legend' || p.rarity === 'elite' ? ' rare' : ''}`} role="status">
             <div className="co-glow" aria-hidden="true" />
             <div className="co-won"><PlayerCard profile={p} /></div>
             <div className="co-name">
-              <span className="co-rarity">{RARITY_LABEL[p.rarity]}</span>
+              <span className="co-rarity">{RARITY_LABEL[p.rarity]} <TierChip tier={p.tier} cap={p.potential} /></span>
               <h1>{p.record.handle} <span className="num">{p.ovr}</span></h1>
-              <span className="co-sub">{ROLE_LABEL[p.record.primaryRole]} <OrgTag team={p.record.team} full /></span>
+              <span className="co-sub">{ROLE_LABEL[p.record.primaryRole]} <OrgTag team={p.record.team} full /> · max cap <b className="num">{p.potential}</b></span>
+              <span className="co-chance small faint">{(() => { const row = table.find((x) => x.rarity === p.rarity); return row ? `${RARITY_LABEL[p.rarity]} chance ${pct(row.chance)} · this player ${pct(row.perPlayer)}` : ''; })()}</span>
             </div>
             <p className="muted small">
               {outcome.pendingFull

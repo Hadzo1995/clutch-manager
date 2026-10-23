@@ -760,3 +760,5 @@ select.inline { width: auto; min-height: 34px; padding: 4px 8px; font-size: 0.85
 .tier-chip.tier-b { color: #8fd0ff; border-color: rgba(90, 169, 230, 0.4); }
 .tier-chip.tier-c { color: var(--ink-3); }
 .pc-ovr .tier-chip { margin-top: 3px; font-size: 0.58rem; padding: 2px 4px 1px; }
+/* Real player photos: event portraits cropped to the face and shoulders. */
+.avatar.photo { object-fit: cover; object-position: 50% 18%; background: linear-gradient(180deg, color-mix(in srgb, var(--ava-accent, #f0a33a) 18%, #10141b), #0a0d12); }

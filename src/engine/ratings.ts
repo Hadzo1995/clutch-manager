@@ -42,8 +42,6 @@ export const RATING_CONFIG = {
     lurker: { positioning: 0.2, clutch: 0.2, gameSense: 0.2, aim: 0.2, consistency: 0.1, trading: 0.1 },
     igl: { leadership: 0.3, gameSense: 0.25, utility: 0.1, aim: 0.1, teamwork: 0.15, consistency: 0.1 },
   } as Record<Role, Partial<Record<Attribute, number>>>,
-  /** Rarity by rank of OVR within the dataset (fractions of the pool). */
-  rarityCutoffs: { legend: 0.05, elite: 0.2, gold: 0.5, silver: 0.8 },
 };
 
 type StatKey =
@@ -233,20 +231,50 @@ export const TIERS: { tier: Tier; cap: number; start: number }[] = [
 const TIER_START = Object.fromEntries(TIERS.map((t) => [t.tier, t.start])) as Record<Tier, number>;
 const START_SPREAD = 0.35;
 
+/**
+ * Card rarity follows the tier, so a case's rarity odds are odds on real quality:
+ * Legend = S+++ and S++ (15 players), Elite = S+ (20), Gold = S (40), Silver = A (80), Bronze = B.
+ */
+export const RARITY_OF_TIER: Record<Tier, Rarity> = { 'S+++': 'legend', 'S++': 'legend', 'S+': 'elite', S: 'gold', A: 'silver', B: 'bronze', C: 'bronze' };
+
 export const TIER_CAP = Object.fromEntries(TIERS.map((t) => [t.tier, t.cap])) as Record<Tier, number>;
 
 /**
- * How good a player really is, for tiering: the HLTV rating over the last 12 months where we have it, pulled
- * toward 1.00 for small samples (a 1.30 over 20 maps is not a 1.30 over 200), otherwise the
- * dataset's own rating. HLTV is only the reference; its numbers are not shown in the game.
+ * How good a player really is, for tiering. Players with HLTV numbers (last 12 months, big
+ * events) rank by that rating, pulled toward 1.00 for small samples (a 1.30 over 20 maps is not
+ * a 1.30 over 200), and always above players HLTV has no big-event numbers for, who follow by
+ * the dataset's own rating. HLTV is only the reference; its numbers are not shown in the game.
  */
 function tierScore(p: PlayerRecord): number {
-  const h = HLTV_STATS[p.handle];
-  if (h && h.maps > 0) {
+  const h = HLTV_STATS[p.id];
+  if (h && h.maps > 0 && h.rating !== null) {
     const k = 40;
-    return (h.rating * h.maps + 1.0 * k) / (h.maps + k);
+    return 10 + (h.rating * h.maps + 1.0 * k) / (h.maps + k);
   }
-  return 1 + (p.stats.rating - 1) * 0.8;
+  return p.stats.rating;
+}
+
+/**
+ * Skills from HLTV's attribute scores (0..100, big events, last 12 months) where we have them:
+ * entry from the entrying score, AWP from the share of kills with a sniper, utility from the
+ * flashbang score. Blended with the rating-based value so one number never decides a skill.
+ */
+function applyHltvSkills(id: string, base: Attributes): Attributes {
+  const h = HLTV_STATS[id];
+  if (!h) return base;
+  const c = RATING_CONFIG;
+  const out = { ...base };
+  const fromScore = (score: number) => 35 + 0.6 * clamp(score, 0, 100);
+  const mix = (cur: number, target: number) => Math.round(clamp(0.4 * cur + 0.6 * target, c.attributeMin, c.attributeMax));
+  if (h.entry?.score != null) out.entry = mix(base.entry, fromScore(h.entry.score));
+  if (h.flash?.score != null) out.utility = mix(base.utility, fromScore(h.flash.score));
+  if (h.sniping?.killShare != null) {
+    // Same curve as computeBaseAttributes uses for an AWP kill share.
+    const share = h.sniping.killShare;
+    const rating = h.rating ?? 1;
+    out.awp = Math.round(clamp(33 + 58 * (clamp(share, 0, 0.8) / 0.7) * clamp(0.9 + 0.7 * (rating - 1.0), 0.65, 1.15), c.attributeMin, c.attributeMax));
+  }
+  return out;
 }
 
 /**
@@ -294,7 +322,7 @@ function potentialFor(tier: Tier, ovr: number): number {
 
 export function buildProfiles(dataset: Dataset): Map<string, PlayerProfile> {
   const ctx = buildRatingContext(dataset.players);
-  const withBase = dataset.players.map((record) => ({ record, base: computeBaseAttributes(ctx, record) }));
+  const withBase = dataset.players.map((record) => ({ record, base: applyHltvSkills(record.id, computeBaseAttributes(ctx, record)) }));
   const calib = buildOvrCalibration(withBase.map((r) => ({ attrs: r.base, role: r.record.primaryRole })));
   const prelim = withBase.map(({ record, base }) => ({
     record,
@@ -305,18 +333,15 @@ export function buildProfiles(dataset: Dataset): Map<string, PlayerProfile> {
   }));
   const tiers = assignTiers(dataset.players);
   const sorted = [...prelim].sort((a, b) => b.ovr - a.ovr || a.record.rank - b.record.rank);
-  const cut = RATING_CONFIG.rarityCutoffs;
-  const n = sorted.length;
   const out = new Map<string, PlayerProfile>();
   const tierMean = new Map<Tier, number>();
   for (const t of TIERS) {
     const v = prelim.filter((x) => tiers.get(x.record.id) === t.tier).map((x) => x.ovr);
     tierMean.set(t.tier, v.length ? v.reduce((x, y) => x + y, 0) / v.length : 76);
   }
-  sorted.forEach((pr, i) => {
-    const f = (i + 1) / n;
-    const rarity: Rarity = f <= cut.legend ? 'legend' : f <= cut.elite ? 'elite' : f <= cut.gold ? 'gold' : f <= cut.silver ? 'silver' : 'bronze';
+  sorted.forEach((pr) => {
     const tier = tiers.get(pr.record.id) ?? 'C';
+    const rarity = RARITY_OF_TIER[tier];
     const target = Math.round(clamp(TIER_START[tier] + (pr.ovr - tierMean.get(tier)!) * START_SPREAD, 55, TIER_CAP[tier] - 5));
     const base = shiftAttributes(pr.base, ((pr.ovr - target) * calib[pr.record.primaryRole].sd) / 6);
     const ovr = ovrFor(base, pr.record.primaryRole, calib);

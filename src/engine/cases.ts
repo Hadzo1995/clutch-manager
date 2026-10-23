@@ -2,6 +2,11 @@
  * Case openings. Odds are fixed per case, always shown to the player before
  * opening, and verified by tests. In the prototype every case costs in-game
  * coins only; there are no real-money purchases.
+ *
+ * Odds model: each case sets a chance per rarity, and rarity follows the player's tier
+ * (ratings.ts RARITY_OF_TIER: Legend = S+++/S++, Elite = S+, Gold = S, Silver = A, Bronze = B).
+ * Within a rarity every player is equally likely. caseTable() turns that into exact per-player
+ * odds; the case screen shows that table and rollPlayer() draws from it.
  */
 import type { Rng } from './rng';
 import { MAX_STARS } from './ratings';
@@ -26,7 +31,8 @@ export const CASES: Record<CaseId, CaseDef> = {
     description: 'One free case per day.',
   },
   standard: {
-    id: 'standard', name: 'Scout Case', price: 600, needsRole: false,
+    // Priced about 12% above what an average pull sells for straight away, so cases are never a coin loop.
+    id: 'standard', name: 'Scout Case', price: 700, needsRole: false,
     odds: { legend: 1, elite: 6, gold: 23, silver: 35, bronze: 35 },
     description: 'Any player from the full pool.',
   },
@@ -49,17 +55,45 @@ export function rollRarity(rng: Rng, odds: Record<Rarity, number>): Rarity {
   return rng.weighted(RARITIES, (r) => odds[r]);
 }
 
-/** Picks a player for a case. Falls back to the nearest rarity if a role filter empties a tier. */
-export function rollPlayer(rng: Rng, def: CaseDef, profiles: PlayerProfile[], role?: Role): PlayerProfile {
+/** One rarity row of a case: its chance, the players it can give, and each player's chance. */
+export interface CaseRow { rarity: Rarity; chance: number; players: PlayerProfile[]; perPlayer: number }
+
+/**
+ * Exactly what a case can drop and with what probability (percent). The rarity odds come from
+ * the case; within a rarity every player is equally likely. If a rarity has no players (a role
+ * case and a thin role), its share goes to the other rarities in proportion to their odds, so
+ * the table always sums to 100. rollPlayer draws from this same table, so what the case screen
+ * shows is what the roll does.
+ */
+export function caseTable(def: CaseDef, profiles: PlayerProfile[], role?: Role): CaseRow[] {
   const pool = def.needsRole && role ? profiles.filter((p) => p.record.primaryRole === role) : profiles;
-  if (pool.length === 0) throw new Error('No players available for this case');
-  const rarity = rollRarity(rng, def.odds);
-  const order = [rarity, ...RARITIES.filter((r) => r !== rarity).sort((a, b) => Math.abs(RARITIES.indexOf(a) - RARITIES.indexOf(rarity)) - Math.abs(RARITIES.indexOf(b) - RARITIES.indexOf(rarity)))];
-  for (const r of order) {
-    const tier = pool.filter((p) => p.rarity === r);
-    if (tier.length) return rng.pick(tier);
+  const rows = RARITIES.filter((r) => def.odds[r] > 0).map((r) => ({ rarity: r, odds: def.odds[r], players: pool.filter((p) => p.rarity === r) }));
+  const live = rows.filter((r) => r.players.length > 0);
+  if (!live.length) throw new Error(`${def.name} has no players to give${role ? ` for ${role}` : ''}`);
+  const sum = live.reduce((s, r) => s + r.odds, 0);
+  return live.map((r) => {
+    const chance = (r.odds / sum) * 100;
+    return { rarity: r.rarity, chance, players: [...r.players].sort((a, b) => b.ovr - a.ovr), perPlayer: chance / r.players.length };
+  });
+}
+
+/** Picks a player for a case from caseTable: a rarity by its chance, then any player in it. */
+export function rollPlayer(rng: Rng, def: CaseDef, profiles: PlayerProfile[], role?: Role): PlayerProfile {
+  const table = caseTable(def, profiles, role);
+  const row = rng.weighted(table, (r) => r.chance);
+  return rng.pick(row.players);
+}
+
+/** Problems with the case definitions (odds that don't add up, negative odds); empty when fine. */
+export function validateCases(): string[] {
+  const out: string[] = [];
+  for (const def of Object.values(CASES)) {
+    const sum = RARITIES.reduce((s, r) => s + def.odds[r], 0);
+    if (Math.abs(sum - 100) > 1e-9) out.push(`${def.name}: odds add up to ${sum}%, not 100%`);
+    for (const r of RARITIES) if (!(def.odds[r] >= 0)) out.push(`${def.name}: ${r} odds ${def.odds[r]} are invalid`);
+    if (def.price < 0) out.push(`${def.name}: negative price`);
   }
-  return rng.pick(pool);
+  return out;
 }
 
 export interface CaseOutcome {

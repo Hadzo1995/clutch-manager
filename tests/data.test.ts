@@ -52,9 +52,10 @@ describe('stat to attribute conversion', () => {
       expect(p.base[a]).toBeLessThanOrEqual(99);
     }
   });
-  it('assigns rarities by OVR rank: 10 legend, 30 elite, 60 gold, 60 silver, 40 bronze', () => {
+  it('rarity follows tier: per role 3 legend (S+++ 1, S++ 2), 4 elite, 8 gold, 16 silver, the rest bronze', () => {
     const count = (r: string) => profiles.filter((p) => p.rarity === r).length;
-    expect([count('legend'), count('elite'), count('gold'), count('silver'), count('bronze')]).toEqual([10, 30, 60, 60, 40]);
+    expect([count('legend'), count('elite'), count('gold'), count('silver')]).toEqual([15, 20, 40, 80]);
+    expect(count('bronze')).toBe(profiles.length - 155);
   });
   it('does not let one role dominate the top of the ratings', () => {
     const top40 = [...profiles].sort((a, b) => b.ovr - a.ovr).slice(0, 40);

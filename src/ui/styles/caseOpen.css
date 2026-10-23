@@ -83,3 +83,35 @@
   .co-glow { width: 300px; margin-left: -150px; }
 }
 @media (prefers-reduced-motion: reduce) { .co-result, .co-won { animation: none; } }
+
+/* Exact contents table (CaseOpening Contents): one row per rarity, best first. */
+.co-table { display: grid; gap: 6px; }
+.co-row { display: grid; grid-template-columns: minmax(170px, 230px) 1fr; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 4px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 14%, #1b2027), #161a20 70%); border-left: 3px solid var(--rc); }
+.co-row-head { display: grid; grid-template-columns: 1fr auto; gap: 1px 8px; align-items: baseline; }
+.co-row-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--rc); letter-spacing: 0.04em; }
+.co-row-name i { width: 8px; height: 8px; border-radius: 2px; background: var(--rc); box-shadow: 0 0 8px var(--rc); }
+.co-row-name small { font-weight: 600; color: #8b97a3; letter-spacing: 0.06em; }
+.co-row-head > b { font-size: 1.05rem; color: #eef2f6; }
+.co-row-sub { grid-column: 1 / -1; }
+.co-row-faces { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; }
+.co-face { display: inline-grid; justify-items: center; gap: 2px; }
+.co-face img { border-radius: 50%; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--rc) 70%, transparent); }
+.co-face small { font-size: 0.6rem; color: #b8c2cc; max-width: 54px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.co-more { padding-left: 4px; }
+.co-all { justify-self: start; }
+.co-chance { position: relative; }
+.co-rarity .tier-chip { margin-left: 6px; vertical-align: 1px; }
+
+/* Rare drops: slow light rays behind the card (Elite and Legend only). */
+.co-result.rare::before { content: ''; position: absolute; left: 50%; top: 120px; width: 620px; height: 620px; margin: -310px 0 0 -310px; pointer-events: none; opacity: 0.55;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rc) 40%, transparent) 0deg 6deg, transparent 6deg 22deg);
+  -webkit-mask: radial-gradient(closest-side, #000 20%, transparent 72%); mask: radial-gradient(closest-side, #000 20%, transparent 72%);
+  animation: co-rays 18s linear infinite; }
+@keyframes co-rays { to { transform: rotate(360deg); } }
+
+@media (max-width: 560px) {
+  .co-row { grid-template-columns: 1fr; gap: 6px; }
+  .co-result.rare::before { width: 420px; height: 420px; margin: -210px 0 0 -210px; }
+}
+@media (prefers-reduced-motion: reduce) { .co-result.rare::before { animation: none; } }

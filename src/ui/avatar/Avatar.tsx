@@ -1,7 +1,10 @@
+import { useState } from 'react';
+import { PLAYER_PHOTOS } from '../../engine/data/playerPhotos.generated';
 import { avatarDataUrl } from './portrait';
 import type { AvatarKind } from './portrait';
 
 export interface AvatarProps {
+  /** The player's stable id (pro-<handle> for real players); also seeds the drawn portrait. */
   seed: string;
   size?: number;
   kind?: AvatarKind;
@@ -10,20 +13,38 @@ export interface AvatarProps {
   jersey?: string;
   className?: string;
   title?: string;
+  /** Draw the procedural portrait even when a photo exists (e.g. a coach). */
+  drawn?: boolean;
 }
 
-export function Avatar({ seed, size = 48, kind, accent, jersey, className, title }: AvatarProps) {
+/** URL of a real player's photo (served from public/players), or undefined. */
+export function playerPhotoUrl(id: string): string | undefined {
+  const p = PLAYER_PHOTOS[id];
+  return p ? p.src : undefined;
+}
+
+/**
+ * A player's picture: the real photo when we have one, otherwise the drawn portrait.
+ * A photo that fails to load (offline single-file build, missing file) falls back to the
+ * drawn portrait, so a card never shows a broken image.
+ */
+export function Avatar({ seed, size = 48, kind, accent, jersey, className, title, drawn }: AvatarProps) {
+  const photo = drawn || kind === 'coach' ? undefined : playerPhotoUrl(seed);
+  const [failed, setFailed] = useState<string | null>(null);
+  const usePhoto = !!photo && failed !== photo;
   return (
     <img
-      src={avatarDataUrl(seed, { kind, accent, jersey })}
+      src={usePhoto ? photo : avatarDataUrl(seed, { kind, accent, jersey })}
       width={size}
       height={size}
       alt={title ?? ''}
       title={title}
       draggable={false}
-      className={`avatar ${className ?? ''}`}
+      className={`avatar${usePhoto ? ' photo' : ''} ${className ?? ''}`}
       loading="lazy"
       decoding="async"
+      onError={usePhoto ? () => setFailed(photo!) : undefined}
+      style={usePhoto && accent ? { ['--ava-accent' as string]: accent } : undefined}
     />
   );
 }

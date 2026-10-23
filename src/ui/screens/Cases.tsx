@@ -82,7 +82,7 @@ export function Cases() {
         );
       })}
       {c.pendingPull && !opening && <PullChoice />}
-      {opening && <CaseOpening caseId={opening} caseColor={CASE_COLOR[opening]} pool={world.profileList} crate={<Crate variant={opening} role={CASES[opening].needsRole ? role : undefined} />} onUnlock={() => unlock(opening)} onClose={() => setOpening(null)} onView={view} />}
+      {opening && <CaseOpening caseId={opening} caseColor={CASE_COLOR[opening]} pool={world.profileList} role={CASES[opening].needsRole ? role : undefined} crate={<Crate variant={opening} role={CASES[opening].needsRole ? role : undefined} />} onUnlock={() => unlock(opening)} onClose={() => setOpening(null)} onView={view} />}
     </>
   );
 }
