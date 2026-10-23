@@ -162,7 +162,13 @@ function outfitParts(side: 'T' | 'CT', variant: number, accent: string): Part[] 
   // Neck and head.
   P.push({ joint: 'waist', geo: G.cyl(0.055, 0.06, 0.1, 8), color: o.head === 'balaclava' ? o.headColor : o.skin, at: [0, 1.6, 0] });
   const headCol = o.head === 'balaclava' ? o.headColor : o.skin;
-  P.push({ joint: 'waist', geo: G.sphere(0.115), color: headCol, at: [0, 1.73, 0.01], scale: [0.95, 1.08, 1] });
+  // Skull a touch smaller and longer than a ball, with a jaw, chin and ears: a head, not a bead.
+  P.push({ joint: 'waist', geo: G.sphere(0.108), color: headCol, at: [0, 1.745, 0.0], scale: [0.92, 1.06, 1.02] });
+  P.push({ joint: 'waist', geo: G.box(0.135, 0.08, 0.14, 0.5), color: headCol, at: [0, 1.67, 0.03] });
+  P.push({ joint: 'waist', geo: G.sphere(0.035, 10, 8), color: headCol, at: [0, 1.645, 0.09], scale: [1.2, 0.8, 0.9] });
+  if (o.head !== 'balaclava') for (const sx of [-1, 1]) P.push({ joint: 'waist', geo: G.sphere(0.028, 8, 6), color: o.skin, at: [sx * 0.1, 1.735, -0.005], scale: [0.45, 1, 0.8] });
+  // Mouth line.
+  if (o.head !== 'balaclava') P.push({ joint: 'waist', geo: G.box(0.05, 0.01, 0.01), color: '#5a3a2c', at: [0, 1.672, 0.116] });
   if (o.head === 'balaclava') P.push({ joint: 'waist', geo: G.box(0.15, 0.04, 0.05), color: o.skin, at: [0, 1.75, 0.095] });
   // Eyes and brow, so faces have a direction even from the tactical camera.
   for (const sx of [-1, 1]) P.push({ joint: 'waist', geo: G.box(0.03, 0.018, 0.02), color: '#15130f', at: [sx * 0.04, 1.75, 0.112] });
@@ -201,7 +207,7 @@ function outfitParts(side: 'T' | 'CT', variant: number, accent: string): Part[] 
     P.push({ joint: arm, geo: G.sphere(0.05, 10, 8), color: o.gloves, at: [hand[0], hand[1], hand[2]], scale: [0.9, 0.8, 1.25] });
     // Armband in team colour.
     const along = (k: number): [number, number, number] => [sh[0] + (el[0] - sh[0]) * k, sh[1] + (el[1] - sh[1]) * k, sh[2] + (el[2] - sh[2]) * k];
-    P.push(limb(arm, along(0.3), along(0.46), ct ? 0.074 : 0.07, accent, 0.066));
+    P.push(limb(arm, along(0.3), along(0.46), ct ? 0.079 : 0.075, accent, 0.07));
     if (ct) P.push({ joint: arm, geo: G.box(0.13, 0.05, 0.14), color: o.vest!, at: [sh[0], sh[1] + 0.02, sh[2]] });
   }
   // A grenade in the throwing hand (shown during a throw).
