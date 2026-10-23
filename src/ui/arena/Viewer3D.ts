@@ -925,8 +925,8 @@ export class Viewer3D {
   private perf = { n: 0, sum: 0, ratio: Math.min(window.devicePixelRatio || 1, 2), lowShadow: false, frames: 0 };
   private adaptQuality(gap: number) {
     const P = this.perf;
-    // Skip start-up (map build, shader compile) and stalls such as a hidden tab.
-    if (++P.frames <= 30 || gap <= 0 || gap > 1000 || document.hidden) return;
+    // Skip start-up (map build, shader compile) and stalls such as a hidden or throttled tab (frames over 250 ms).
+    if (++P.frames <= 30 || gap <= 0 || gap > 250 || document.hidden) return;
     P.n++; P.sum += gap;
     if (P.n < 90 && (P.sum < 3000 || P.n < 5)) return;
     const avg = P.sum / P.n;
