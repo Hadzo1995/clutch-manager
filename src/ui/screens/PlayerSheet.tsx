@@ -8,6 +8,7 @@ import { roleFit } from '../../engine/team';
 import type { LineupSlot } from '../../engine/team';
 import { ATTRIBUTES, ATTRIBUTE_LABEL, ATTRIBUTE_ORIGIN, MAPS, ROLES, ROLE_LABEL } from '../../engine/types';
 import type { Attribute, CardStats, OwnedCard, PlayerRecord } from '../../engine/types';
+import { HLTV_STATS } from '../../engine/data/hltvStats.generated';
 import { OvrBadge, RarityChip, RoleIcon, Stars, fmt, useGame, CountryTag, OrgTag } from '../common';
 import { AttributeRadar, FormPills, KPI, Meter, RatingBar, TrendChart } from '../charts';
 import { ContractPanel, TransferPanel } from './Transfer';
@@ -98,10 +99,11 @@ export function PlayerSheet({ cardId, playerId, onClose }: { cardId: string | nu
             </> : <>
               <KPI label="Age" value={p.record.age} />
               <KPI label="Value" value={fmt(marketValue(p))} tip="Game market value in coins, not a real-world fee." />
-              <KPI label="Rating" value={p.record.stats.rating.toFixed(2)} tip="Source rating from the active dataset." />
+              <KPI label="Game rating" value={p.record.stats.rating.toFixed(2)} tip="Clutch Manager's own rating from the active dataset (HLTV figures are below)." />
               <KPI label="Maps" value={p.record.provenance.sampleMaps} tip="Sample size behind the source stats." />
             </>}
           </div>
+          <HltvStrip handle={p.record.handle} />
         </section>
 
         <div className="ps-tabs" role="tablist" aria-label="Profile sections">
@@ -358,6 +360,25 @@ function DataTab({ profileId }: { profileId: string }) {
         {p.record.provenance.kind === 'synthetic' && ' This player and these numbers are fictional.'}
         {p.record.provenance.kind === 'public' && ' The rating is our own game number, not an official statistic.'}
       </p>
+    </div>
+  );
+}
+
+/** The player's real HLTV.org numbers (all-time career), shown beside the game's own ratings. */
+function HltvStrip({ handle }: { handle: string }) {
+  const h = HLTV_STATS[handle];
+  if (!h) return null;
+  const items: [string, string, string?][] = [
+    ['Rating', h.rating.toFixed(2), h.rating >= 1.1 ? 'good' : h.rating < 0.95 ? 'bad' : ''],
+    ['K/D', h.kd.toFixed(2)],
+    ['K-D diff', `${h.diff > 0 ? '+' : ''}${h.diff.toLocaleString('en-US')}`, h.diff >= 0 ? 'good' : 'bad'],
+    ['Maps', h.maps.toLocaleString('en-US')],
+    ['Rounds', h.rounds.toLocaleString('en-US')],
+  ];
+  return (
+    <div className="ps-hltv" aria-label="HLTV career statistics">
+      <a className="ps-hltv-brand" href={`https://www.hltv.org/stats/players/${h.id}/${encodeURIComponent(handle.toLowerCase())}`} target="_blank" rel="noreferrer" title="Open on HLTV.org">HLTV<small>all-time</small></a>
+      {items.map(([k, v, tone]) => <div key={k} className="ps-hltv-kpi"><span className="label">{k}</span><b className={`num ${tone ?? ''}`}>{v}</b></div>)}
     </div>
   );
 }

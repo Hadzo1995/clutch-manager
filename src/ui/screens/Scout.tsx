@@ -12,19 +12,20 @@ import { marketValue } from '../../engine/economy';
 import { allAiTeams } from '../../engine/season';
 import { ROLES, ROLE_LABEL } from '../../engine/types';
 import type { PlayerProfile, Role } from '../../engine/types';
+import { HLTV_STATS } from '../../engine/data/hltvStats.generated';
 import { Coin, PlayerCard, RoleIcon, useGame, CountryTag, OrgTag } from '../common';
 import { ratingTone } from '../charts';
 import { CompareSheet } from './Compare';
 
 type Owner = 'all' | 'free' | 'ai' | 'shortlist' | 'you';
-type SortKey = 'ovr' | 'potential' | 'value' | 'rating' | 'adr' | 'opening' | 'clutch' | 'awp' | 'age';
+type SortKey = 'ovr' | 'potential' | 'value' | 'rating' | 'hltv' | 'adr' | 'opening' | 'clutch' | 'awp' | 'age';
 type Dir = 'asc' | 'desc';
 
 const SORT_LABEL: Record<SortKey, string> = {
-  ovr: 'Overall', potential: 'Potential', value: 'Value', rating: 'Rating (source)', adr: 'ADR', opening: 'Opening duels won', clutch: 'Clutch win rate', awp: 'AWP kill share', age: 'Age',
+  ovr: 'Overall', potential: 'Potential', value: 'Value', rating: 'Rating (source)', hltv: 'HLTV rating', adr: 'ADR', opening: 'Opening duels won', clutch: 'Clutch win rate', awp: 'AWP kill share', age: 'Age',
 };
 /** The direction a column sorts in on first click: "best first" for skills, cheapest/youngest first otherwise. */
-const DEFAULT_DIR: Record<SortKey, Dir> = { ovr: 'desc', potential: 'desc', value: 'asc', rating: 'desc', adr: 'desc', opening: 'desc', clutch: 'desc', awp: 'desc', age: 'asc' };
+const DEFAULT_DIR: Record<SortKey, Dir> = { ovr: 'desc', potential: 'desc', value: 'asc', rating: 'desc', hltv: 'desc', adr: 'desc', opening: 'desc', clutch: 'desc', awp: 'desc', age: 'asc' };
 const OWNER_LABEL: Record<Owner, string> = { all: 'Everyone', free: 'Free agents', ai: 'At clubs', shortlist: 'Shortlist', you: 'Your squad' };
 
 const PAGE = 25;
@@ -54,6 +55,7 @@ export function Scout() {
         case 'potential': return p.potential;
         case 'value': return value;
         case 'rating': return s.rating;
+        case 'hltv': return HLTV_STATS[p.record.handle]?.rating ?? null;
         case 'adr': return s.adr ?? null;
         case 'opening': return s.openingSuccess ?? null;
         case 'clutch': return s.clutchWinRate ?? null;
@@ -241,6 +243,7 @@ export function Scout() {
                 {th('ovr', 'OVR', 'c-n')}
                 {th('potential', 'POT', 'c-n')}
                 {th('rating', 'Rtg', 'c-n', 'Source rating')}
+                {th('hltv', 'HLTV', 'c-n', 'HLTV rating, all-time career')}
                 {th('adr', 'ADR', 'c-n')}
                 {th('opening', 'Open%', 'c-n', 'Opening duels won %')}
                 {th('clutch', 'Clu%', 'c-n', 'Clutch win rate %')}
@@ -269,6 +272,7 @@ export function Scout() {
                     <td className="c-n"><span className={`ovr-cell tone-${ratingTone(p.ovr)}`}>{p.ovr}</span></td>
                     <td className="c-n pot">{p.potential}{p.potential > p.ovr && <small className="good">+{p.potential - p.ovr}</small>}</td>
                     <td className={`c-n ${s.rating >= 1.1 ? 'good' : s.rating < 0.95 ? 'faint' : ''}`}>{s.rating.toFixed(2)}</td>
+                    <HltvCell handle={p.record.handle} />
                     <td className="c-n">{s.adr === null || s.adr === undefined ? '—' : s.adr.toFixed(0)}</td>
                     <td className="c-n">{pct(s.openingSuccess)}</td>
                     <td className="c-n">{pct(s.clutchWinRate)}</td>
@@ -286,7 +290,7 @@ export function Scout() {
           {page.map(({ p, st, value }) => {
             const id = p.record.id;
             const interest = interestOf(id, st.owner);
-            const sortedStat = sort === 'rating' ? p.record.stats.rating.toFixed(2) : sort === 'adr' ? (p.record.stats.adr?.toFixed(0) ?? '—') : sort === 'opening' ? pct(p.record.stats.openingSuccess) : sort === 'clutch' ? pct(p.record.stats.clutchWinRate) : sort === 'awp' ? pct(p.record.stats.awpKillShare) : null;
+            const sortedStat = sort === 'rating' ? p.record.stats.rating.toFixed(2) : sort === 'hltv' ? (HLTV_STATS[p.record.handle]?.rating.toFixed(2) ?? '—') : sort === 'adr' ? (p.record.stats.adr?.toFixed(0) ?? '—') : sort === 'opening' ? pct(p.record.stats.openingSuccess) : sort === 'clutch' ? pct(p.record.stats.clutchWinRate) : sort === 'awp' ? pct(p.record.stats.awpKillShare) : null;
             return (
               <div key={id} className={`scout-row${compare.includes(id) ? ' cmp-on' : ''}${st.owner === 'you' ? ' mine' : ''}`}>
                 <button className="scout-main" onClick={() => openPlayer(null, id)}>
@@ -343,4 +347,11 @@ export function Scout() {
       {comparing && compare.length === 2 && <CompareSheet ids={[compare[0]!, compare[1]!]} onClose={() => setComparing(false)} />}
     </>
   );
+}
+
+/** HLTV all-time rating with K/D and maps in the tooltip. */
+function HltvCell({ handle }: { handle: string }) {
+  const h = HLTV_STATS[handle];
+  if (!h) return <td className="c-n faint">—</td>;
+  return <td className={`c-n ${h.rating >= 1.1 ? 'good' : h.rating < 0.95 ? 'faint' : ''}`} title={`HLTV all-time: rating ${h.rating.toFixed(2)}, K/D ${h.kd.toFixed(2)}, ${h.maps.toLocaleString('en-US')} maps`}>{h.rating.toFixed(2)}</td>;
 }
