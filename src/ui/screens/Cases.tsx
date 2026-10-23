@@ -1,12 +1,12 @@
 import { useId, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { benchCards, canClaimDaily, openCase, profileOf, pullSalePrice, resolvePull, salePrice } from '../../engine/career';
-import { CASES } from '../../engine/cases';
+import { CASES, caseTable } from '../../engine/cases';
 import type { CaseId, CaseOutcome } from '../../engine/cases';
 import { RARITIES, ROLES, ROLE_LABEL } from '../../engine/types';
 import type { Role } from '../../engine/types';
 import { Coin, RARITY_LABEL, RoleIcon, today, useGame } from '../common';
-import { CaseOpening } from './CaseOpening';
+import { CaseOpening, pct } from './CaseOpening';
 import '../styles/cases.css';
 
 const CASE_COLOR: Record<CaseId, string> = { daily: 'var(--good)', standard: 'var(--ct)', role: 'var(--t)', premium: 'var(--legend)' };
@@ -40,7 +40,7 @@ export function Cases() {
       <header className="page-head">
         <div>
           <h1>Cases</h1>
-          <p className="sub">Every case draws from all {world.profileList.length} players with fixed, published odds. Duplicates add a star, raising that card's ceiling. Cases cost in-game coins only.</p>
+          <p className="sub">Every case draws from all {world.profileList.length} players with fixed, published odds: rarity follows the player's tier (Legend = S+++/S++, Elite = S+, Gold = S, Silver = A, Bronze = B), and every player within a rarity is equally likely. Duplicates add a star. Cases cost in-game coins only.</p>
         </div>
         <div className="cs-balance"><span className="small faint">Balance</span><Coin amount={c.coins} /></div>
       </header>
@@ -71,6 +71,13 @@ export function Cases() {
                   <span key={r} className={def.odds[r] ? '' : 'zero'}><i style={{ background: `var(--${r})` }} />{RARITY_LABEL[r]} <b className="num">{def.odds[r]}%</b></span>
                 ))}
               </div>
+              {(() => {
+                // The case's best prize, from the same table the roll uses.
+                const t = caseTable(def, world.profileList, def.needsRole ? role : undefined);
+                const top = t.find((x) => x.rarity === 'legend');
+                const n = t.reduce((s, x) => s + x.players.length, 0);
+                return <p className="cs-odds-note small faint">{n} players{def.needsRole ? ` (${ROLE_LABEL[role]}s)` : ''} · {top ? <>any one Legend {pct(top.perPlayer)}</> : 'no Legends'}</p>;
+              })()}
             </div>
             <div className="cs-foot">
               <span className="small faint">{id === 'daily' ? (daily ? 'Free once a day' : 'Already claimed today') : short ? `${short.toLocaleString('en-US')} coins short` : 'Charged when you unlock'}</span>

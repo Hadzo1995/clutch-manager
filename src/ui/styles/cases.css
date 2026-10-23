@@ -134,3 +134,6 @@
 .cs-result > :not(.cs-burst) { position: relative; }
 @media (max-width: 480px) { .cs-reel2, .cs-unlock { height: 196px; } .cs-strip { top: 12px; } }
 @media (prefers-reduced-motion: reduce) { .cs-burst i, .cs-won, .cs-crate, .cs-crate-lid, .cs-crate-light { animation: none; } }
+.cs-odds-note { margin: 4px 0 0; line-height: 1.4; }
+.cs-odds-note .cs-tiers { opacity: 0.8; }
+.cs-foot .btn { white-space: nowrap; }
