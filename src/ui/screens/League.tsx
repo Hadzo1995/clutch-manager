@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ACHIEVEMENTS, aiTeamById, ordinal, teamName, teamTag } from '../../engine/career';
-import { CUP_NAME, CUP_PRIZE, CUP_START, DIVISIONS, HUMAN_ID, standings } from '../../engine/season';
+import { CUP_NAME, CUP_PRIZE, CUP_START, DIVISIONS, HUMAN_ID, allAiTeams, standings } from '../../engine/season';
+import { realTeamMeta } from '../../engine/data/realTeams';
+import { REAL_SNAPSHOT_DATE } from '../../engine/data/realPlayers';
+import type { PlayerProfile } from '../../engine/types';
 import { MAPS, ROLE_LABEL } from '../../engine/types';
 import { cardOvr } from '../../engine/ratings';
 import { RoleIcon, useGame } from '../common';
@@ -185,6 +188,8 @@ export function League() {
           ) : <p className="small faint">Finished seasons will appear here.</p>}
         </section>
 
+        <WorldRanking />
+
         <section className="panel lg-o6" aria-label="Achievements">
           <div className="panel-head"><h2>Achievements</h2><span className="num small muted">{unlocked}/{Object.keys(ACHIEVEMENTS).length}</span></div>
           <div className="lg-ach-bar" aria-hidden="true"><i style={{ width: `${(unlocked / Object.keys(ACHIEVEMENTS).length) * 100}%` }} /></div>
@@ -204,6 +209,47 @@ export function League() {
         </section>
       </div>
     </>
+  );
+}
+
+/**
+ * The real-world pecking order of the snapshot's organisations (strongest rosters first), with
+ * each org's best player and where it sits in your career right now.
+ */
+function WorldRanking() {
+  const { world, career: c, openPlayer } = useGame();
+  const [all, setAll] = useState(false);
+  const orgs = useMemo(() => {
+    const by = new Map<string, PlayerProfile[]>();
+    for (const p of world.profileList) {
+      if (!p.record.team) continue;
+      const list = by.get(p.record.team) ?? [];
+      list.push(p);
+      by.set(p.record.team, list);
+    }
+    return [...by.entries()]
+      .map(([key, ps]) => ({ key, meta: realTeamMeta(key), star: [...ps].sort((a, b) => b.ovr - a.ovr)[0]!, mean: ps.reduce((s2, p) => s2 + p.record.rank, 0) / ps.length }))
+      .sort((a, b) => a.mean - b.mean);
+  }, [world]);
+  if (orgs.length < 8) return null;
+  const here = new Map(allAiTeams(c.season).map((t) => [t.name, t.guestFrom ? 'Cup guest' : 'Your league']));
+  const shown = all ? orgs : orgs.slice(0, 12);
+  return (
+    <section className="panel lg-o6 lg-world" aria-label="World ranking">
+      <div className="panel-head"><h2>World ranking</h2><span className="small muted">Roster strength · Valve standings {REAL_SNAPSHOT_DATE}</span></div>
+      <ol className="lg-world-list">
+        {shown.map((o, i) => (
+          <li key={o.key} className={here.has(o.meta.name) ? 'here' : ''} style={{ ['--org' as string]: o.meta.primary }}>
+            <span className="num lg-world-n">{i + 1}</span>
+            <Crest name={o.meta.name} tag={o.meta.tag} size={22} />
+            <span className="lg-world-name">{o.meta.name}</span>
+            <button className="lg-world-star" onClick={() => openPlayer(null, o.star.record.id)} aria-label={`Open ${o.star.record.handle}'s profile`}>{o.star.record.handle}</button>
+            {here.has(o.meta.name) && <span className="chip small">{here.get(o.meta.name)}</span>}
+          </li>
+        ))}
+      </ol>
+      <button className="btn small ghost" onClick={() => setAll(!all)}>{all ? 'Show top 12' : `Show all ${orgs.length}`}</button>
+    </section>
   );
 }
 

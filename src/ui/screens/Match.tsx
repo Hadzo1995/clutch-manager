@@ -1,4 +1,5 @@
 import { STAGE_LABEL } from '../../engine/season';
+import { orgJersey } from '../../engine/data/realTeams';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { completeMatchday, fixtureSnapshots, humanFixture, seedForFixture, setTactics, teamName } from '../../engine/career';
@@ -20,7 +21,7 @@ import { RoundViewer } from '../arena/RoundViewer';
 import { Avatar } from '../avatar/Avatar';
 import { webglAvailable } from '../arena/Viewer3D';
 import { MAP_HUE, mapArt } from '../mapart';
-import { Crest } from '../crest';
+import { Crest, orgTextStyle } from '../crest';
 import '../styles/match.css';
 
 type Stage = 'prep' | 'live' | 'report';
@@ -145,7 +146,7 @@ function Prep({ teams, humanIdx, opp, veto, setVeto, tactics, setTactics, seedKe
         </div>
         <div className="mx-card-team right">
           <Crest name={opp.name} tag={opp.tag} size={64} className="mx-crest" />
-          <span className="mx-card-tag ct-col">{opp.tag}</span>
+          <span className="mx-card-tag ct-col" style={orgTextStyle(opp.name)}>{opp.tag}</span>
           <span className="mx-card-name">{opp.name}</span>
         </div>
         <div className="mx-card-strength" aria-label={`Team strength ${sMe} against ${sOpp}`}>
@@ -955,5 +956,5 @@ function PlayerTag({ id, handle, teams, team, humanIdx, mvp }: { id: string; han
   const { career, openPlayer } = useGame();
   const mp = teams[team].players.find((p) => p.id === id);
   const open = mp ? () => openPlayer(career.cards.some((x) => x.cardId === mp.id) ? mp.id : null, mp.playerId) : undefined;
-  return <button className="ptag ptag-btn" onClick={open} disabled={!open} aria-label={`Open ${handle}'s profile`}><Avatar seed={mp?.playerId ?? id} size={24} accent={team === humanIdx ? '#f0a33a' : '#5aa9e6'} /><span>{handle}</span>{mvp && <span className="mx-mvp-badge" title="Player of the match">MVP</span>}</button>;
+  return <button className="ptag ptag-btn" onClick={open} disabled={!open} aria-label={`Open ${handle}'s profile`}><Avatar seed={mp?.playerId ?? id} size={24} accent={team === humanIdx ? '#f0a33a' : '#5aa9e6'} jersey={orgJersey(teams[team].name)} /><span>{handle}</span>{mvp && <span className="mx-mvp-badge" title="Player of the match">MVP</span>}</button>;
 }

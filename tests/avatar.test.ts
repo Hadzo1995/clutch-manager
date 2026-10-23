@@ -1,5 +1,5 @@
-import { avatarDataUrl, avatarSvg, avatarTraits } from '../src/ui/avatar/avatar';
-import type { AvatarOptions } from '../src/ui/avatar/avatar';
+import { avatarDataUrl, avatarSvg, avatarTraits } from '../src/ui/avatar/portrait';
+import type { AvatarOptions } from '../src/ui/avatar/portrait';
 
 const seeds = Array.from({ length: 200 }, (_, i) => `player-${i}`);
 

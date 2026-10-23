@@ -4,6 +4,8 @@
  * Pure SVG, no assets. The player's club can pass a fixed hue (amber, the brand colour).
  */
 import { memo, useSyncExternalStore } from 'react';
+import type { CSSProperties } from 'react';
+import { orgGlow, realTeamByName, type RealTeamMeta } from '../engine/data/realTeams';
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -71,6 +73,8 @@ export function crestLook(name: string, hue?: number): CrestLook {
  */
 export const Crest = memo(function Crest({ name, tag, size = 40, hue, mine = false, design, className = '' }: { name: string; tag: string; size?: number; hue?: number; mine?: boolean; design?: CrestDesign; className?: string }) {
   const stored = useSyncExternalStore(subscribe, getMine, getMine);
+  const org = !mine && !design ? realTeamByName(name) : undefined;
+  if (org) return <OrgBadge org={org} size={size} className={className} />;
   const custom = design ?? (mine ? stored : undefined);
   const base0 = crestLook(name, hue ?? (mine ? MY_HUE : undefined));
   const k: CrestLook = custom ? { ...base0, ...custom, sat: 58 } : base0;
@@ -107,6 +111,50 @@ export const Crest = memo(function Crest({ name, tag, size = 40, hue, mine = fal
     </svg>
   );
 });
+
+/**
+ * Badge for a real organisation: its colours on a bevelled plate with the tag as a wordmark.
+ * Deliberately not a copy of any logo; it reads as the org at a glance through colour and tag.
+ */
+function OrgBadge({ org, size, className }: { org: RealTeamMeta; size: number; className: string }) {
+  const id = `ob${hash(org.name).toString(36)}`;
+  const label = org.tag.toUpperCase();
+  const fs = label.length >= 4 ? 25 : label.length === 3 ? 31 : 40;
+  const plate = 'M20 6 H80 L94 20 V80 L80 94 H20 L6 80 V20 Z';
+  return (
+    <svg className={`crest org-badge ${className}`} width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <linearGradient id={`${id}g`} x1="0" y1="0" x2="0.4" y2="1">
+          <stop offset="0" stopColor={org.primary} stopOpacity="1" />
+          <stop offset="1" stopColor={org.primary} stopOpacity="1" />
+        </linearGradient>
+        <linearGradient id={`${id}s`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.28" />
+          <stop offset="0.5" stopColor="#fff" stopOpacity="0.04" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.32" />
+        </linearGradient>
+        <clipPath id={`${id}c`}><path d={plate} /></clipPath>
+      </defs>
+      <g clipPath={`url(#${id}c)`}>
+        <rect width="100" height="100" fill={`url(#${id}g)`} />
+        <path d="M58 0 L100 0 L100 42 Z" fill={org.accent} opacity="0.9" />
+        <path d="M0 74 L26 100 L0 100 Z" fill={org.accent} opacity="0.55" />
+        <rect width="100" height="100" fill={`url(#${id}s)`} />
+      </g>
+      <path d={plate} fill="none" stroke={org.accent} strokeOpacity="0.9" strokeWidth="3" />
+      <path d={plate} fill="none" stroke="#000" strokeOpacity="0.5" strokeWidth="1.2" transform="translate(50 50) scale(0.9) translate(-50 -50)" />
+      <text x="50" y={50 + fs * 0.36} textAnchor="middle" fontFamily="'Chakra Petch', 'Segoe UI', sans-serif" fontWeight="700" fontSize={fs} letterSpacing="-0.5" fill={org.accent} stroke="#000" strokeOpacity="0.35" strokeWidth="1.2" paintOrder="stroke">{label}</text>
+    </svg>
+  );
+}
+
+/** Text colour and glow for a real org's tag (undefined keeps the default CT blue for fictional clubs). */
+export function orgTextStyle(name: string): CSSProperties | undefined {
+  const org = realTeamByName(name);
+  if (!org) return undefined;
+  const c = orgGlow(org);
+  return { color: c, textShadow: `0 0 18px color-mix(in srgb, ${c} 45%, transparent)` };
+}
 
 /** The player's own club is always amber (brand / T colour), opponents keep their own hue. */
 export const MY_HUE = 34;

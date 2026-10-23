@@ -330,11 +330,29 @@ function addRim(mat: THREE.MeshStandardMaterial, team: THREE.Color) {
   const rim = team.clone().lerp(new THREE.Color(0xffffff), 0.35);
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.rimColor = { value: rim };
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vObj;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvObj = position;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 rimColor;')
+      .replace('#include <common>', `#include <common>
+uniform vec3 rimColor;
+varying vec3 vObj;
+float cmHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float cmNoise(vec3 x) {
+  vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(cmHash(i), cmHash(i + vec3(1, 0, 0)), f.x), mix(cmHash(i + vec3(0, 1, 0)), cmHash(i + vec3(1, 1, 0)), f.x), f.y),
+             mix(mix(cmHash(i + vec3(0, 0, 1)), cmHash(i + vec3(1, 0, 1)), f.x), mix(cmHash(i + vec3(0, 1, 1)), cmHash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}`)
+      // Cloth: a fine weave grain plus broad wear and dust patches, so kit reads as fabric, not plastic.
+      .replace('#include <color_fragment>', `#include <color_fragment>
+float weave = cmNoise(vObj * 220.0) * 0.6 + cmNoise(vObj * 90.0) * 0.4;
+float wear = cmNoise(vObj * 7.0 + 3.1);
+diffuseColor.rgb *= 0.9 + 0.16 * weave;
+diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.08, 1.04, 0.96) + 0.025, smoothstep(0.55, 0.85, wear) * 0.5);`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = clamp(roughnessFactor + (cmNoise(vObj * 140.0) - 0.5) * 0.18, 0.3, 1.0);')
       .replace('#include <opaque_fragment>', 'float rimK = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.5);\noutgoingLight += rimColor * rimK * 0.24;\n#include <opaque_fragment>');
   };
-  mat.customProgramCacheKey = () => `rim-${rim.getHexString()}`;
+  mat.customProgramCacheKey = () => `rim-cloth-${rim.getHexString()}`;
 }
 
 /** Swap the gun model when the player's weapon class changes. */

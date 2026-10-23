@@ -4,6 +4,7 @@
  * Desktop shows a sortable data table; phones get compact rows with the same data.
  */
 import { Avatar } from '../avatar/Avatar';
+import { playerJersey } from '../../engine/data/realTeams';
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { demandOf, playerStatus, toggleShortlist } from '../../engine/career';
@@ -11,7 +12,7 @@ import { marketValue } from '../../engine/economy';
 import { allAiTeams } from '../../engine/season';
 import { ROLES, ROLE_LABEL } from '../../engine/types';
 import type { PlayerProfile, Role } from '../../engine/types';
-import { Coin, PlayerCard, RoleIcon, useGame, CountryTag } from '../common';
+import { Coin, PlayerCard, RoleIcon, useGame, CountryTag, OrgTag } from '../common';
 import { ratingTone } from '../charts';
 import { CompareSheet } from './Compare';
 
@@ -258,8 +259,8 @@ export function Scout() {
                     <td className="c-star">{starBtn(id, p.record.handle)}</td>
                     <td className="c-player">
                       <button className="pl-btn" onClick={(e) => { e.stopPropagation(); openPlayer(null, id); }}>
-                        <Avatar seed={id} size={32} accent={st.owner === 'you' ? '#f0a33a' : '#5aa9e6'} className={`ava-ring ${p.rarity}`} />
-                        <span className="pl-id"><strong>{p.record.handle}</strong><span className="faint num"><CountryTag cc={p.record.country} /> #{p.record.rank}</span></span>
+                        <Avatar seed={id} size={32} accent={st.owner === 'you' ? '#f0a33a' : '#5aa9e6'} jersey={st.owner === 'you' ? undefined : playerJersey(p.record.team)} className={`ava-ring ${p.rarity}`} />
+                        <span className="pl-id"><strong>{p.record.handle}</strong><span className="faint num"><CountryTag cc={p.record.country} /> <OrgTag team={p.record.team} /> #{p.record.rank}</span></span>
                       </button>
                     </td>
                     <td className="c-role"><span className="role-tag"><RoleIcon role={p.record.primaryRole} />{ROLE_LABEL[p.record.primaryRole]}</span></td>
@@ -289,7 +290,7 @@ export function Scout() {
             return (
               <div key={id} className={`scout-row${compare.includes(id) ? ' cmp-on' : ''}${st.owner === 'you' ? ' mine' : ''}`}>
                 <button className="scout-main" onClick={() => openPlayer(null, id)}>
-                  <Avatar seed={id} size={38} accent={st.owner === 'you' ? '#f0a33a' : '#5aa9e6'} className={`scout-ava ava-ring ${p.rarity}`} />
+                  <Avatar seed={id} size={38} accent={st.owner === 'you' ? '#f0a33a' : '#5aa9e6'} jersey={st.owner === 'you' ? undefined : playerJersey(p.record.team)} className={`scout-ava ava-ring ${p.rarity}`} />
                   <span className="who">
                     <strong>{p.record.handle} <span className="faint num rk">#{p.record.rank}</span></strong>
                     <span className="small muted"><RoleIcon role={p.record.primaryRole} /> {ROLE_LABEL[p.record.primaryRole]} · {p.record.age}y · <span className={`num ${value > c.coins ? 'faint' : ''}`}>{kfmt(value)}</span></span>

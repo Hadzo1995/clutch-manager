@@ -8,7 +8,7 @@ import { roleFit } from '../../engine/team';
 import type { LineupSlot } from '../../engine/team';
 import { ATTRIBUTES, ATTRIBUTE_LABEL, ATTRIBUTE_ORIGIN, MAPS, ROLES, ROLE_LABEL } from '../../engine/types';
 import type { Attribute, CardStats, OwnedCard, PlayerRecord } from '../../engine/types';
-import { OvrBadge, RarityChip, RoleIcon, Stars, fmt, useGame, CountryTag } from '../common';
+import { OvrBadge, RarityChip, RoleIcon, Stars, fmt, useGame, CountryTag, OrgTag } from '../common';
 import { AttributeRadar, FormPills, KPI, Meter, RatingBar, TrendChart } from '../charts';
 import { ContractPanel, TransferPanel } from './Transfer';
 import { playerStatus } from '../../engine/career';
@@ -67,7 +67,7 @@ export function PlayerSheet({ cardId, playerId, onClose }: { cardId: string | nu
             <div className="stack" style={{ gap: 3, minWidth: 0 }}>
               <h1 className="ps-name">{p.record.handle}</h1>
               <span className="ps-sub">
-                <CountryTag cc={p.record.country} /> · {p.record.age}y · <RoleIcon role={p.record.primaryRole} /> {ROLE_LABEL[p.record.primaryRole]}<span className="faint"> / {ROLE_LABEL[p.record.secondaryRole]}</span>
+                <CountryTag cc={p.record.country} /> <OrgTag team={p.record.team} full /> · {p.record.age}y · <RoleIcon role={p.record.primaryRole} /> {ROLE_LABEL[p.record.primaryRole]}<span className="faint"> / {ROLE_LABEL[p.record.secondaryRole]}</span>
               </span>
             </div>
           </div>

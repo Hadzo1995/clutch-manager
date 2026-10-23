@@ -17,6 +17,7 @@ import { CrestEditor } from './CrestEditor';
 import { TitleScene } from './TitleScene';
 import { music } from './music';
 import { StadiumScene, stadiumOn } from './StadiumScene';
+import { orgGlow, realTeamByName } from '../engine/data/realTeams';
 import { mapArt } from './mapart';
 import { Home } from './screens/Home';
 import { Squad } from './screens/Squad';
@@ -150,7 +151,8 @@ export function App() {
       const opp = f ? aiTeamById(career, f.home === HUMAN_ID ? f.away : f.home) : undefined;
       if (!opp) return undefined;
       const snap = aiSnapshot(world, career, opp);
-      return { tag: snap.tag, five: snap.players.map((p) => ({ id: p.id, handle: p.handle, role: p.role })) };
+      const org = realTeamByName(opp.name);
+      return { tag: snap.tag, color: org ? orgGlow(org) : undefined, five: snap.players.map((p) => ({ id: p.id, handle: p.handle, role: p.role })) };
     } catch { return undefined; }
   }, [world, career]);
 

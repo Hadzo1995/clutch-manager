@@ -6,6 +6,8 @@ export interface AvatarOptions {
   kind?: AvatarKind;
   /** Team colour hex, used on jersey trim, rim light and background glow. */
   accent?: string;
+  /** Fixed jersey colour (a real org's kit); the face and every other trait stay the same. */
+  jersey?: string;
 }
 export interface AvatarTraits {
   skin: string;
@@ -196,7 +198,7 @@ function build(seed: string, opts: AvatarOptions | undefined): Built {
   const coach = kind === 'coach';
   // Identity depends only on seed+kind (same face regardless of team colours); ids include accent too.
   const r = mulberry32(cyrb53(`${kind}:${seed}`));
-  const id = 'a' + (cyrb53(`${seed}|${kind}|${accent}`, 7) % 2176782336).toString(36);
+  const id = 'a' + (cyrb53(`${seed}|${kind}|${accent}|${opts?.jersey ?? ''}`, 7) % 2176782336).toString(36);
   const ref = (k: string) => `url(#${id}${k})`;
 
   // ---- geometry
@@ -255,9 +257,10 @@ function build(seed: string, opts: AvatarOptions | undefined): Built {
     ? weighted(r, [['polo', 40], ['jacket', 35], ['blazer', 25]] as const)
     : pick(r, ['classic', 'raglan', 'sash', 'split', 'chevron'] as const);
   const collar: 'crew' | 'v' | 'zip' = coach ? 'crew' : pick(r, ['crew', 'v', 'zip'] as const);
-  const jerseyBase = coach
+  const rolledJersey = coach
     ? weighted(r, [['#1a2233', 30], ['#202227', 30], ['#e9e9ec', 15], [mix(accent, '#14161b', 0.72), 25]] as const)
     : weighted(r, [['#16191f', 35], ['#1e232c', 25], ['#e6e7ea', 12], [mix(accent, '#101216', 0.74), 28]] as const);
+  const jerseyBase = opts?.jersey ? normHex(opts.jersey) : rolledJersey;
   const lanyard = coach && jerseyStyle !== 'blazer' && r() < 0.5;
 
   const irisCol = darkSkin ? pick(r, IRIS.slice(0, 3)) : pick(r, IRIS);
@@ -771,7 +774,7 @@ const CACHE_MAX = 600;
 const cache = new Map<string, string>();
 
 export function avatarDataUrl(seed: string, opts?: AvatarOptions): string {
-  const key = `${opts?.kind ?? 'player'}|${opts?.accent ?? ''}|${seed}`;
+  const key = `${opts?.kind ?? 'player'}|${opts?.accent ?? ''}|${opts?.jersey ?? ''}|${seed}`;
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
   const url = 'data:image/svg+xml;utf8,' + encodeURIComponent(build(seed, opts).svg);

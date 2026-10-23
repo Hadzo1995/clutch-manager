@@ -750,3 +750,5 @@ select.inline { width: auto; min-height: 34px; padding: 4px 8px; font-size: 0.85
 .ptag-btn { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; text-align: left; }
 .ptag-btn:hover span:not(.mx-mvp-badge), .ptag-btn:focus-visible span:not(.mx-mvp-badge) { text-decoration: underline; text-underline-offset: 3px; }
 .cc-tag { display: inline-block; font: 600 0.62rem/1 var(--font-data); letter-spacing: 0.05em; padding: 2px 4px 1px; border: 1px solid var(--line-strong, var(--line)); border-radius: 3px; color: var(--ink-3); vertical-align: 1px; }
+.org-tag { display: inline-flex; align-items: center; gap: 4px; font: 600 0.62rem/1 var(--font-data); letter-spacing: 0.04em; padding: 1px 5px 1px 1px; border-radius: 4px; color: var(--ink-2); background: color-mix(in srgb, var(--org) 22%, transparent); border: 1px solid color-mix(in srgb, var(--org-accent) 35%, transparent); vertical-align: middle; white-space: nowrap; }
+.org-tag .crest { flex: none; filter: none; }

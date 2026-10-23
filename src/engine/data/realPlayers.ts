@@ -19,11 +19,27 @@ export function realDataset(): Dataset | null {
   if (cached) return cached;
   const r = importCsv(REAL_PLAYERS_CSV, { sourceName: 'real-pros', snapshotDate: REAL_SNAPSHOT_DATE, now: REAL_SNAPSHOT_DATE });
   if (!r.ok || !r.dataset) return null;
+  const teamOf = teamsByHandle(REAL_PLAYERS_CSV);
   cached = {
     ...r.dataset,
     id: REAL_DATASET_ID,
     label: `Real pros (Valve standings ${REAL_SNAPSHOT_DATE})`,
-    players: r.dataset.players.map((p) => ({ ...p, id: `pro-${p.handle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, provenance: { ...p.provenance, source: REAL_SOURCE, kind: 'public' } })),
+    players: r.dataset.players.map((p) => ({ ...p, team: teamOf.get(p.handle), id: `pro-${p.handle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, provenance: { ...p.provenance, source: REAL_SOURCE, kind: 'public' } })),
   };
   return cached;
+}
+
+/** handle -> team from the embedded CSV (the importer keeps only the columns the engine rates). */
+function teamsByHandle(csv: string): Map<string, string> {
+  const lines = csv.trim().split('\n');
+  const header = lines[0]!.split(',');
+  const h = header.indexOf('handle');
+  const t = header.indexOf('team');
+  const out = new Map<string, string>();
+  if (h < 0 || t < 0) return out;
+  for (const line of lines.slice(1)) {
+    const cells = line.split(',');
+    if (cells[h] && cells[t]) out.set(cells[h]!, cells[t]!);
+  }
+  return out;
 }

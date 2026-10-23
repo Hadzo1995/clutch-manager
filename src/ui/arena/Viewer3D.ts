@@ -18,6 +18,7 @@ import { activeSmokes, visionFan } from './vision';
 import { floorStyle, releaseSurfaces, surfaces, worldMaterial } from './materials';
 import type { SurfaceSet } from './materials';
 import { buildProps } from './props';
+import { PostFX, wantsPostFx } from './postfx';
 import type { PropAnim } from './props';
 import { CARRY, buildSoldier, gunClassOf, poseSoldier, setDead, setGun, soldierKit } from './models';
 import type { Gait } from './models';
@@ -140,9 +141,16 @@ function puffTexture(): THREE.CanvasTexture {
   });
 }
 
+/** Hemisphere fill strength when the sky environment map provides the ambient light. */
+const ENV_HEMI = 0.45;
+/** Sun direction tweak: horizontal spread and vertical lift relative to the map style. */
+const SUN_SPREAD = 1.35, SUN_LIFT = 0.8;
+
 export class Viewer3D {
   readonly canvas: HTMLCanvasElement;
   private renderer: THREE.WebGLRenderer;
+  /** Ambient occlusion, bloom and grade on capable desktops; null means plain rendering. */
+  private fx: PostFX | null = null;
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera(38, 1, 0.5, 3000);
   private style!: MapStyle;
@@ -304,6 +312,9 @@ export class Viewer3D {
     canvas.addEventListener('contextmenu', this.onCtx);
     if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) (window as unknown as { __viewer: Viewer3D }).__viewer = this;
     if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) (window as unknown as { __vinfo: () => unknown }).__vinfo = () => ({ ...this.renderer.info.render, ...this.renderer.info.memory, objects: this.scene.children.length, pixelRatio: this.renderer.getPixelRatio(), shadow: this.sun?.shadow.mapSize.x });
+    if (wantsPostFx()) {
+      try { this.fx = new PostFX(this.renderer, this.scene, this.camera, Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight)); } catch { this.fx = null; }
+    }
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(canvas);
     this.resize();
@@ -372,12 +383,16 @@ export class Viewer3D {
 
   private buildLights() {
     const st = this.style;
-    this.scene.add(new THREE.HemisphereLight(st.hemi.sky, st.hemi.ground, st.hemi.intensity));
+    const env = this.buildEnvironmentMap();
+    // With image-based light the hemisphere fill only tops up the shadows.
+    this.scene.add(new THREE.HemisphereLight(st.hemi.sky, st.hemi.ground, st.hemi.intensity * (env ? ENV_HEMI : 1)));
     const sun = new THREE.DirectionalLight(st.sun.color, st.sun.intensity);
     const W = this.geo.w * CELL, H = this.geo.h * CELL;
     const [dx, dy, dz] = st.sun.dir;
-    const k = 110 / Math.hypot(dx, dy, dz);
-    sun.position.set(dx * k, dy * k, dz * k);
+    // A slightly lower sun than each style's nominal one: longer shadows give walls and boxes depth.
+    const k = 110 / Math.hypot(dx * SUN_SPREAD, dy * SUN_LIFT, dz * SUN_SPREAD);
+    sun.position.set(dx * SUN_SPREAD * k, dy * SUN_LIFT * k, dz * SUN_SPREAD * k);
+    sun.intensity *= 1.12;
     sun.target.position.set(0, 0, 0);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -387,6 +402,40 @@ export class Viewer3D {
     sun.shadow.normalBias = 0.04;
     this.scene.add(sun, sun.target, this.flashLight);
     this.sun = sun;
+  }
+
+  /**
+   * Image-based light from this map's own sky, warm ground bounce and sun: every surface picks up
+   * soft sky light from above and coloured bounce from below, and metal and glass get believable
+   * reflections. Built once per viewer from a tiny scene, so it costs nothing per frame.
+   */
+  private buildEnvironmentMap(): boolean {
+    try {
+      const st = this.style;
+      const tmp: { dispose(): void }[] = [];
+      const envScene = new THREE.Scene();
+      envScene.add(skyDome(st, tmp));
+      const groundGeo = new THREE.CircleGeometry(1300, 32);
+      const groundMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(st.hemi.ground).lerp(new THREE.Color(st.sky[1]), 0.35), side: THREE.DoubleSide });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2; ground.position.y = -40;
+      const sunGeo = new THREE.SphereGeometry(70, 16, 8);
+      const sunMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(st.sun.color).multiplyScalar(6) });
+      const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+      const [dx, dy, dz] = st.sun.dir;
+      sunMesh.position.set(dx, dy, dz).normalize().multiplyScalar(1100);
+      envScene.add(ground, sunMesh);
+      tmp.push(groundGeo, groundMat, sunGeo, sunMat);
+      const pm = new THREE.PMREMGenerator(this.renderer);
+      const rt = pm.fromScene(envScene, 0.04);
+      pm.dispose();
+      for (const d of tmp) d.dispose();
+      this.scene.environment = rt.texture;
+      this.disposables.push(rt);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Cell (x, y) to world position (centre of the cell at floor height). */
@@ -882,7 +931,11 @@ export class Viewer3D {
     if (P.n < 90 && (P.sum < 3000 || P.n < 5)) return;
     const avg = P.sum / P.n;
     P.n = 0; P.sum = 0;
-    if (avg > 34 && P.ratio > 1) {
+    if (avg > 34 && this.fx) {
+      // First step: drop the post-processing chain.
+      this.fx.dispose();
+      this.fx = null;
+    } else if (avg > 34 && P.ratio > 1) {
       P.ratio = P.ratio > 1.5 ? 1.5 : 1;
       this.renderer.setPixelRatio(P.ratio);
       this.resize();
@@ -920,7 +973,7 @@ export class Viewer3D {
     }
     this.updateCamera(dt);
     this.scaleSprites();
-    this.renderer.render(this.scene, this.camera);
+    if (this.fx) this.fx.render(); else this.renderer.render(this.scene, this.camera);
   }
 
   private updatePlayers(tl: RoundTimeline, t: number) {
@@ -1416,6 +1469,7 @@ export class Viewer3D {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
     if (!w || !h) return;
     this.renderer.setSize(w, h, false);
+    this.fx?.setSize(w, h);
     this.camera.aspect = w / h;
     // Nudge the picture down a little: the score bug covers the top of the stage.
     this.camera.setViewOffset(w, h, 0, -h * 0.035, w, h);
@@ -1526,6 +1580,8 @@ export class Viewer3D {
 
   dispose() {
     this.ro.disconnect();
+    this.fx?.dispose();
+    this.fx = null;
     const c = this.canvas;
     c.removeEventListener('pointerdown', this.onDown);
     c.removeEventListener('pointermove', this.onMove);

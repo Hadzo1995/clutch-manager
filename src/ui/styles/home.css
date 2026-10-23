@@ -513,3 +513,12 @@ button.lg-team:hover .lg-name, button.lg-team:focus-visible .lg-name { text-deco
 .lg-roster-p .faint { grid-column: 2; }
 .lg-roster-ovr { grid-column: 3; grid-row: 1 / 3; font-family: var(--font-display); font-size: 1.1rem; }
 .lg-leaders td, .lg-leaders th { font-variant-numeric: tabular-nums; }
+
+/* World ranking: the real orgs of the standings snapshot. */
+.lg-world-list { list-style: none; margin: 4px 0 10px; padding: 0; display: grid; gap: 2px; }
+.lg-world-list li { display: grid; grid-template-columns: 22px 22px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; background: linear-gradient(90deg, color-mix(in srgb, var(--org) 16%, transparent), transparent 55%); }
+.lg-world-list li.here { box-shadow: inset 2px 0 0 var(--ct); }
+.lg-world-n { color: var(--ink-3); font-size: 0.8rem; text-align: right; }
+.lg-world-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-world-star { background: none; border: 0; padding: 0; color: var(--ink-3); font: 600 0.75rem/1 var(--font-data); cursor: pointer; }
+.lg-world-star:hover { color: var(--ink-1, #fff); text-decoration: underline; }

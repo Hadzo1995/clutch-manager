@@ -7,6 +7,8 @@ import { profileOf } from '../engine/career';
 import { cardOvr, effectiveOvr } from '../engine/ratings';
 import type { OwnedCard, PlayerProfile, Rarity, Role } from '../engine/types';
 import { ROLE_LABEL } from '../engine/types';
+import { realTeamMeta } from '../engine/data/realTeams';
+import { Crest } from './crest';
 
 // ---------- Game context ----------
 
@@ -32,6 +34,18 @@ export function useGame(): Game {
 export function CountryTag({ cc }: { cc: string }) {
   const code = /^[A-Z]{2}$/.test(cc) && cc !== 'UN' ? cc : '—';
   return <span className="cc-tag" title={`Country: ${code}`}>{code}</span>;
+}
+
+/** A real player's organisation in the snapshot: its badge and tag (nothing for fictional players). */
+export function OrgTag({ team, full = false }: { team?: string; full?: boolean }) {
+  if (!team) return null;
+  const m = realTeamMeta(team);
+  return (
+    <span className="org-tag" title={`Real-world team: ${m.name} (standings snapshot)`} style={{ ['--org' as string]: m.primary, ['--org-accent' as string]: m.accent }}>
+      <Crest name={m.name} tag={m.tag} size={16} />
+      <span>{full ? m.name : m.tag}</span>
+    </span>
+  );
 }
 
 export function fmt(n: number): string {
@@ -125,6 +139,7 @@ export function PlayerCard({ world, card, profile, compact = false, selected = f
         <div className="handle">{p.record.handle}</div>
         <div className="meta">
           <CountryTag cc={p.record.country} />
+          <OrgTag team={p.record.team} />
           <span>{ROLE_LABEL[role]}</span>
           {card && <Stars n={card.stars} />}
         </div>

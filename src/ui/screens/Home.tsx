@@ -10,7 +10,7 @@ import { ACTIVITIES } from '../../engine/training';
 import { today, useGame } from '../common';
 import { FormPills, money, signed } from './leagueUtil';
 import type { Result } from './leagueUtil';
-import { Crest } from '../crest';
+import { Crest, orgTextStyle } from '../crest';
 import '../styles/home.css';
 import { canClaimDaily, weeklyWages } from '../../engine/career';
 import { MAX_SQUAD, NO_FACILITIES, facilityUpkeep } from '../../engine/economy';
@@ -77,7 +77,7 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
               </div>
               <div className="hm-mid" aria-hidden="true"><span>VS</span></div>
               <div className="hm-side opp">
-                <span className="hm-crest-row"><Crest name={opp.name} tag={opp.tag} size={52} /><span className="hm-tag">{opp.tag}</span></span>
+                <span className="hm-crest-row"><Crest name={opp.name} tag={opp.tag} size={52} /><span className="hm-tag" style={orgTextStyle(opp.name)}>{opp.tag}</span></span>
                 <span className="hm-tname">{opp.name}</span>
                 <span className="hm-meta">{oppPos > 0 && oppRow ? <><span className="num">{ordinal(oppPos)}</span> · <span className="num">{oppRow.wins}-{oppRow.losses}</span></> : 'Cup guest'}</span>
               </div>

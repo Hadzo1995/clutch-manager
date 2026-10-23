@@ -103,7 +103,7 @@ export function buildArena(scene: THREE.Scene, teamName: string, teamTag: string
 
   // The LED wall: your club in big type, redrawn with a moving scan line.
   const wall = screenTexture(() => {}, 1024, 400);
-  let vsTag = '', lastT = 0;
+  let vsTag = '', vsColor = '#5aa9e6', lastT = 0;
   const drawWall = (t: number) => {
     lastT = t;
     const { g, c } = wall;
@@ -120,7 +120,7 @@ export function buildArena(scene: THREE.Scene, teamName: string, teamTag: string
       g.font = "700 130px 'Chakra Petch', 'Segoe UI', sans-serif";
       g.fillStyle = '#ffcf80'; g.shadowColor = '#f0a33a'; g.shadowBlur = 30;
       g.fillText(teamTag.toUpperCase(), W * 0.27, H * 0.42);
-      g.fillStyle = '#bfe2ff'; g.shadowColor = '#5aa9e6';
+      g.fillStyle = vsColor === '#5aa9e6' ? '#bfe2ff' : '#ffffff'; g.shadowColor = vsColor;
       g.fillText(vsTag.toUpperCase(), W * 0.73, H * 0.42);
       g.shadowBlur = 0;
       g.font = "600 56px 'Chakra Petch', 'Segoe UI', sans-serif"; g.fillStyle = 'rgba(232,237,243,0.7)';
@@ -237,7 +237,7 @@ export function buildArena(scene: THREE.Scene, teamName: string, teamTag: string
     lineup.add(pool);
     const plate = screenTexture((g, w, h) => {
       g.fillStyle = 'rgba(8,11,15,0.82)'; g.fillRect(0, 8, w, h - 16);
-      g.fillStyle = side === 'T' ? '#f0a33a' : '#5aa9e6'; g.fillRect(0, 8, 8, h - 16);
+      g.fillStyle = side === 'T' ? '#f0a33a' : vsColor; g.fillRect(0, 8, 8, h - 16);
       g.textAlign = 'center'; g.textBaseline = 'middle';
       g.font = "700 40px 'Chakra Petch', 'Segoe UI', sans-serif"; g.fillStyle = '#ffffff';
       g.fillText(p.handle.toUpperCase(), w / 2 + 4, h * 0.4, w - 30);
@@ -254,8 +254,9 @@ export function buildArena(scene: THREE.Scene, teamName: string, teamTag: string
     five.push({ soldier, plate: sprite, tex: plate.tex, mats: [poolMat, plateMat], seed: i + (side === 'CT' ? 5 : 0), plateY: y });
   };
   /** Your five (amber); with an opponent, both teams stand in front of their booths and the wall shows the matchup. */
-  const setFive = (players: StagePlayer[], opponent?: { tag: string; five: StagePlayer[] }) => {
+  const setFive = (players: StagePlayer[], opponent?: { tag: string; color?: string; five: StagePlayer[] }) => {
     clearFive();
+    vsColor = opponent?.color ?? '#5aa9e6';
     const vs = !!opponent && opponent.five.length > 0;
     players.slice(0, 5).forEach((p, i) => addPlayer(p, i, 'T', vs ? -8.4 : 0, vs ? 0.22 : 0));
     if (vs) opponent.five.slice(0, 5).forEach((p, i) => addPlayer(p, i, 'CT', 8.4, -0.22));
@@ -287,14 +288,14 @@ export function buildArena(scene: THREE.Scene, teamName: string, teamTag: string
   };
 }
 
-export function StadiumScene({ teamName, teamTag, active, five = [], opponent }: { teamName: string; teamTag: string; active: boolean; five?: StagePlayer[]; opponent?: { tag: string; five: StagePlayer[] } }) {
+export function StadiumScene({ teamName, teamTag, active, five = [], opponent }: { teamName: string; teamTag: string; active: boolean; five?: StagePlayer[]; opponent?: { tag: string; color?: string; five: StagePlayer[] } }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const arenaRef = useRef<ReturnType<typeof buildArena> | null>(null);
   const fiveRef = useRef(five);
   fiveRef.current = five;
   const oppRef = useRef(opponent);
   oppRef.current = opponent;
-  const fiveKey = [...five, ...(opponent?.five ?? [])].map((p) => `${p.id}:${p.handle}:${p.role}`).join('|') + (opponent?.tag ?? '');
+  const fiveKey = [...five, ...(opponent?.five ?? [])].map((p) => `${p.id}:${p.handle}:${p.role}`).join('|') + (opponent?.tag ?? '') + (opponent?.color ?? '');
   const [shown, setShown] = useState(false);
   const live = useRef(active);
   live.current = active;

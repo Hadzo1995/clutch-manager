@@ -10,6 +10,7 @@ import type { SeriesFormat, SeriesResult } from './match';
 import type { TeamTendencies } from './team';
 import type { Coach, MapName, PlayerProfile, Role } from './types';
 import { MAPS, ROLES } from './types';
+import { realTeamMeta } from './data/realTeams';
 
 export interface Division {
   id: number;
@@ -108,7 +109,85 @@ function randomTendencies(rng: Rng): TeamTendencies {
   return { t, ct, aSiteBias: Number(rng.range(0.3, 0.75).toFixed(2)) };
 }
 
+/** Real organisations with a full roster in the pool, strongest first (by mean player rank). */
+function realOrgs(profiles: PlayerProfile[]): { key: string; meanRank: number; players: PlayerProfile[] }[] {
+  const byTeam = new Map<string, PlayerProfile[]>();
+  for (const p of profiles) {
+    const t = p.record.team;
+    if (!t) continue;
+    const list = byTeam.get(t) ?? [];
+    list.push(p);
+    byTeam.set(t, list);
+  }
+  return [...byTeam.entries()]
+    .map(([key, players]) => ({ key, players, meanRank: players.reduce((s, p) => s + p.record.rank, 0) / players.length }))
+    .sort((a, b) => a.meanRank - b.meanRank);
+}
+
+/** Give each of a real roster's players a distinct role: primary roles first, then secondary, then whatever is left. */
+function assignRoles(players: PlayerProfile[]): { ids: string[]; roles: Role[] } {
+  const free = new Set<Role>(ROLES);
+  const out = new Map<string, Role>();
+  for (const pass of ['primaryRole', 'secondaryRole'] as const) {
+    for (const p of players) {
+      const r = p.record[pass];
+      if (!out.has(p.record.id) && free.has(r)) { out.set(p.record.id, r); free.delete(r); }
+    }
+  }
+  for (const p of players) if (!out.has(p.record.id)) { const r = [...free][0]!; out.set(p.record.id, r); free.delete(r); }
+  const sorted = [...players].sort((a, b) => ROLES.indexOf(out.get(a.record.id)!) - ROLES.indexOf(out.get(b.record.id)!));
+  return { ids: sorted.map((p) => p.record.id), roles: sorted.map((p) => out.get(p.record.id)!) };
+}
+
+/**
+ * Real-pro dataset: the division is made of real organisations whose rosters sit in its rank
+ * range, playing with their actual five. A player you own is replaced by the closest-ranked
+ * free player of the same role, so nobody appears on two teams.
+ */
+function realAiTeams(rng: Rng, division: Division, profiles: PlayerProfile[], coaches: Coach[], count: number, excludeTags: string[]): AiTeam[] | null {
+  const [lo, hi] = division.rankRange;
+  const orgs = realOrgs(profiles).filter((o) => o.players.length >= 3);
+  if (orgs.length < 24) return null; // not the real dataset (or a heavily trimmed pool)
+  const eligible = orgs.filter((o) => o.meanRank >= lo - 10 && o.meanRank <= hi + 10 && !excludeTags.includes(realTeamMeta(o.key).tag));
+  if (eligible.length < count) return null;
+  const picked = rng.shuffle(eligible).slice(0, count).sort((a, b) => a.meanRank - b.meanRank);
+  const used = new Set<string>(picked.flatMap((o) => o.players.slice(0, 5).map((p) => p.record.id)));
+  const onARealTeam = new Set(orgs.flatMap((o) => o.players.map((p) => p.record.id)));
+  const freeAgents = profiles.filter((p) => !onARealTeam.has(p.record.id) || !picked.some((o) => o.key === p.record.team));
+  const coachPool = coaches.filter((c) => (division.id >= 2 ? true : c.hireCost < 1500));
+  return picked.map((o) => {
+    const roster = o.players.slice(0, 5);
+    // Fill short rosters (players you signed are not in the pool) with the nearest-ranked free player.
+    while (roster.length < 5) {
+      const target = o.meanRank;
+      const options = freeAgents.filter((p) => !used.has(p.record.id)).sort((a, b) => Math.abs(a.record.rank - target) - Math.abs(b.record.rank - target));
+      const pick = options[0];
+      if (!pick) break;
+      used.add(pick.record.id);
+      roster.push(pick);
+    }
+    const { ids, roles } = assignRoles(roster);
+    const meta = realTeamMeta(o.key);
+    const mapPractice = {} as Record<MapName, number>;
+    const favourites = rng.shuffle(MAPS).slice(0, 3);
+    for (const m of MAPS) mapPractice[m] = favourites.includes(m) ? rng.int(60, 85) : rng.int(25, 55);
+    return {
+      id: `ai-${meta.tag.toLowerCase()}`,
+      name: meta.name,
+      tag: meta.tag,
+      playerIds: ids,
+      roles,
+      coachId: rng.pick(coachPool.length ? coachPool : coaches).id,
+      chemistry: rng.int(55, 85), // real rosters have played together
+      mapPractice,
+      tendencies: randomTendencies(rng),
+    };
+  });
+}
+
 export function generateAiTeams(rng: Rng, division: Division, profiles: PlayerProfile[], coaches: Coach[], count = 7, excludeTags: string[] = []): AiTeam[] {
+  const real = realAiTeams(rng, division, profiles, coaches, count, excludeTags);
+  if (real && real.every((t) => t.playerIds.length === 5)) return real;
   const [lo, hi] = division.rankRange;
   const pool = profiles.filter((p) => p.record.rank >= lo && p.record.rank <= hi);
   const used = new Set<string>();

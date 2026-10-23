@@ -192,6 +192,11 @@ export function compactLedger(ledger: LedgerEntry[], currentSeason: number): Led
   return [...keep, ...[...totals.values()].filter((t) => t.amount !== 0).sort((a, b) => b.season - a.season)];
 }
 
+/** Who you face this season, strongest roster first. */
+function fieldNews(season: Career['season']): string {
+  return `Season ${season.number} field in the ${DIVISIONS[season.division]!.name}: ${season.aiTeams.map((t) => t.name).join(', ')}.`;
+}
+
 export function addNews(c: Career, line: string): void {
   c.news = [line, ...c.news].slice(0, 40);
 }
@@ -300,6 +305,7 @@ export function createCareer(world: World, opts: NewCareerOptions): Career {
   career.lastLineup = career.lineup.map((s) => s.cardId);
   career.plan = defaultPlan(MAPS[0]);
   addNews(career, `${career.teamName} enter the ${DIVISIONS[0]!.name}. Season 1 starts now.`);
+  addNews(career, fieldNews(career.season));
   return career;
 }
 
@@ -773,6 +779,7 @@ function finishSeason(world: World, n: Career): void {
   const owned = new Set(n.cards.map((x) => x.playerId));
   n.season = newSeason(rng, season.number + 1, nextDiv, world.profileList.filter((p) => !owned.has(p.record.id)), world.coaches);
   n.season.sponsorRep = n.reputation;
+  addNews(n, fieldNews(n.season));
   n.sponsor = null;
   n.negotiations = {};
   saveRng(n, rng);

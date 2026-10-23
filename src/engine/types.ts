@@ -115,6 +115,8 @@ export interface PlayerRecord {
   age: number;
   primaryRole: Role;
   secondaryRole: Role;
+  /** Real organisation from the standings snapshot (real-pro dataset only). */
+  team?: string;
   stats: ObservedStats;
   provenance: Provenance;
 }

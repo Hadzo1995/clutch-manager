@@ -7,6 +7,7 @@
  * so what the panels say always matches what the map shows.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { orgJersey } from '../../engine/data/realTeams';
 import type { RoundResult, TeamIdx } from '../../engine/match';
 import type { TeamSnapshot } from '../../engine/team';
 import type { MapName } from '../../engine/types';
@@ -504,7 +505,7 @@ function PlayerRow({ p, t, tl, teams, kd, followed, mvp, onClick }: { p: PlayerT
   return (
     <button className={`tv-row ${dead ? 'dead' : ''} ${followed ? 'followed' : ''} ${mvp ? 'mvp' : ''} ${spotted ? 'spotted' : ''}`} onClick={onClick} aria-pressed={followed} aria-label={`${p.handle}, ${ROLE_LABEL[p.role]}, ${dead ? 'dead' : `${hp} HP`}, ${weapon}. Follow on the map.`}>
       <span className="tv-ava-wrap">
-        <Avatar seed={mp?.playerId ?? p.id} size={36} accent={color} className="tv-ava" />
+        <Avatar seed={mp?.playerId ?? p.id} size={36} accent={color} jersey={orgJersey(teams[p.team].name)} className="tv-ava" />
         <span className="tv-role" title={ROLE_LABEL[p.role]}><RoleIcon role={p.role} /></span>
       </span>
       <span className="tv-main">
@@ -543,7 +544,7 @@ function FollowCard({ p, t, tl, teams, onClose, onProfile }: { p: PlayerTrack; t
   const nades = dead ? [] : utilLeft(tl, p.id, t);
   return (
     <div className={`tv-follow ${p.side === 'T' ? 't' : 'ct'} ${dead ? 'dead' : ''}`} role="status" aria-label={`Following ${p.handle}`}>
-      <Avatar seed={mp?.playerId ?? p.id} size={44} accent={color} className="tv-follow-ava" />
+      <Avatar seed={mp?.playerId ?? p.id} size={44} accent={color} jersey={orgJersey(teams[p.team].name)} className="tv-follow-ava" />
       <div className="tv-follow-body">
         <div className="tv-follow-top">
           <span className="tv-follow-name">{p.handle}</span>

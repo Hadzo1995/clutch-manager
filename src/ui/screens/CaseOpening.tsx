@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { playerJersey } from '../../engine/data/realTeams';
 import type { CSSProperties, ReactNode } from 'react';
 import { CASES, rollPlayer } from '../../engine/cases';
 import type { CaseId, CaseOutcome } from '../../engine/cases';
@@ -6,7 +7,7 @@ import { Rng } from '../../engine/rng';
 import { RARITIES, ROLE_LABEL } from '../../engine/types';
 import type { PlayerProfile, Rarity } from '../../engine/types';
 import { Avatar } from '../avatar/Avatar';
-import { Coin, PlayerCard, RARITY_LABEL } from '../common';
+import { Coin, OrgTag, PlayerCard, RARITY_LABEL } from '../common';
 import { TIER, caseAudio, prefersReducedMotion } from './caseFx';
 import type { CaseAudio } from './caseFx';
 import '../styles/caseOpen.css';
@@ -34,7 +35,7 @@ type Stage = 'inspect' | 'spin' | 'reveal';
 const ReelItem = memo(function ReelItem({ profile }: { profile: PlayerProfile }) {
   return (
     <div className={`co-item r-${profile.rarity}`}>
-      <div className="co-item-face"><Avatar seed={profile.record.id} size={64} accent="#f0a33a" /></div>
+      <div className="co-item-face"><Avatar seed={profile.record.id} size={64} accent="#f0a33a" jersey={playerJersey(profile.record.team)} /></div>
       <b className="co-item-name">{profile.record.handle}</b>
       <i className="co-item-bar" aria-hidden="true" />
     </div>
@@ -162,7 +163,7 @@ export function CaseOpening({ caseId, pool, crate, caseColor, onUnlock, onClose,
               <div className="co-grid">
                 {contents.map((c) => (
                   <div key={c.record.id} className={`co-mini r-${c.rarity}`}>
-                    <Avatar seed={c.record.id} size={40} accent="#f0a33a" />
+                    <Avatar seed={c.record.id} size={40} accent="#f0a33a" jersey={playerJersey(c.record.team)} />
                     <b>{c.record.handle}</b>
                     <span>{RARITY_LABEL[c.rarity]}</span>
                     <i className="co-item-bar" aria-hidden="true" />
@@ -203,7 +204,7 @@ export function CaseOpening({ caseId, pool, crate, caseColor, onUnlock, onClose,
             <div className="co-name">
               <span className="co-rarity">{RARITY_LABEL[p.rarity]}</span>
               <h1>{p.record.handle} <span className="num">{p.ovr}</span></h1>
-              <span className="co-sub">{ROLE_LABEL[p.record.primaryRole]}</span>
+              <span className="co-sub">{ROLE_LABEL[p.record.primaryRole]} <OrgTag team={p.record.team} full /></span>
             </div>
             <p className="muted small">
               {outcome.pendingFull
