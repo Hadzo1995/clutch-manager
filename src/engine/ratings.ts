@@ -216,15 +216,23 @@ export function buildOvrCalibration(rows: { attrs: Attributes; role: Role }[]): 
 // ---------- Tiers and caps ----------
 
 /** Tiers, best first, with the share of the player pool in each (cumulative) and the hard OVR cap. */
-export const TIERS: { tier: Tier; upTo: number; cap: number }[] = [
-  { tier: 'S+++', upTo: 0.01, cap: 100 },
-  { tier: 'S++', upTo: 0.03, cap: 97 },
-  { tier: 'S+', upTo: 0.08, cap: 94 },
-  { tier: 'S', upTo: 0.16, cap: 91 },
-  { tier: 'A', upTo: 0.38, cap: 87 },
-  { tier: 'B', upTo: 0.7, cap: 83 },
-  { tier: 'C', upTo: 1, cap: 79 },
+export const TIERS: { tier: Tier; upTo: number; cap: number; start: number }[] = [
+  { tier: 'S+++', upTo: 0.01, cap: 100, start: 86 },
+  { tier: 'S++', upTo: 0.03, cap: 97, start: 84 },
+  { tier: 'S+', upTo: 0.08, cap: 94, start: 82 },
+  { tier: 'S', upTo: 0.16, cap: 91, start: 80 },
+  { tier: 'A', upTo: 0.38, cap: 87, start: 78 },
+  { tier: 'B', upTo: 0.7, cap: 83, start: 75 },
+  { tier: 'C', upTo: 1, cap: 79, start: 72 },
 ];
+/**
+ * Starting OVR comes from the tier (plus a little of the player's current level within it), so
+ * a card's tier and its numbers agree. The starts average out near the old pool average, so
+ * attribute levels in the match engine stay where they were; only who is good moves.
+ */
+const TIER_START = Object.fromEntries(TIERS.map((t) => [t.tier, t.start])) as Record<Tier, number>;
+const START_SPREAD = 0.35;
+
 export const TIER_CAP = Object.fromEntries(TIERS.map((t) => [t.tier, t.cap])) as Record<Tier, number>;
 
 /**
@@ -241,37 +249,49 @@ function tierScore(p: PlayerRecord): number {
   return 1 + (p.stats.rating - 1) * 0.8;
 }
 
+/** How many players of each role go in the top tiers; the rest of each role is split by share. */
+export const TOP_PER_ROLE: Partial<Record<Tier, number>> = { 'S+++': 1, 'S++': 2 };
+
 /**
- * Tier per player id. Ratings are compared within each primary role first (an IGL's or support's
- * rating runs lower than an AWPer's for the same impact), then everyone is ranked together.
+ * Tier per player id, decided per role: within each role players are ranked by HLTV (the
+ * reference), the best one goes to S+++, the next two to S++, and the rest of that role is
+ * split into the lower tiers by share. Every role ends up with the same tier spread.
  */
 function assignTiers(records: PlayerRecord[]): Map<string, Tier> {
-  const byRole = new Map<string, number[]>();
-  for (const r of records) { const l = byRole.get(r.primaryRole) ?? []; l.push(tierScore(r)); byRole.set(r.primaryRole, l); }
-  const stat = new Map([...byRole].map(([role, v]) => {
-    const mean = v.reduce((x, y) => x + y, 0) / v.length;
-    const sd = Math.sqrt(v.reduce((x, y) => x + (y - mean) ** 2, 0) / v.length) || 0.05;
-    return [role, { mean, sd }] as const;
-  }));
-  // Current level (the dataset's rating, from this season's standings) keeps the tiers honest
-  // about who is good now: HLTV career counts for two thirds, today's level for one third.
-  const cur = records.map((r) => r.stats.rating);
-  const cMean = cur.reduce((x, y) => x + y, 0) / cur.length;
-  const cSd = Math.sqrt(cur.reduce((x, y) => x + (y - cMean) ** 2, 0) / cur.length) || 0.05;
-  const z = (r: PlayerRecord) => { const st = stat.get(r.primaryRole)!; return (2 / 3) * ((tierScore(r) - st.mean) / st.sd) + (1 / 3) * ((r.stats.rating - cMean) / cSd); };
-  const ranked = [...records].sort((a, b) => z(b) - z(a) || a.rank - b.rank);
-  const n = ranked.length;
   const out = new Map<string, Tier>();
-  ranked.forEach((r, i) => {
-    const f = (i + 1) / n;
-    // At least the very best player is S+++, however small the pool.
-    out.set(r.id, TIER_OVERRIDES[r.handle] ?? (i === 0 ? 'S+++' : TIERS.find((t) => f <= t.upTo)!.tier));
-  });
+  const roles = [...new Set(records.map((r) => r.primaryRole))];
+  for (const role of roles) {
+    const ranked = records.filter((r) => r.primaryRole === role).sort((a, b) => tierScore(b) - tierScore(a) || a.rank - b.rank);
+    let i = 0;
+    for (const t of TIERS) {
+      const k = TOP_PER_ROLE[t.tier];
+      if (k === undefined) continue;
+      for (const r of ranked.slice(i, i + k)) out.set(r.id, t.tier);
+      i += k;
+    }
+    const rest = ranked.slice(i);
+    const lower = TIERS.filter((t) => TOP_PER_ROLE[t.tier] === undefined);
+    const from = TIERS.find((t) => TOP_PER_ROLE[t.tier] === undefined)!;
+    const prevShare = TIERS[TIERS.indexOf(from) - 1]?.upTo ?? 0;
+    rest.forEach((r, j) => {
+      // Shares of the lower tiers, rescaled to what is left of the role.
+      const f = prevShare + ((j + 1) / rest.length) * (1 - prevShare);
+      out.set(r.id, lower.find((t) => f <= t.upTo)!.tier);
+    });
+  }
+  for (const r of records) if (TIER_OVERRIDES[r.handle]) out.set(r.id, TIER_OVERRIDES[r.handle]!);
   return out;
 }
 
 /** Hand-set tiers by handle, applied after the ranking (for the cases the numbers get wrong). */
 export const TIER_OVERRIDES: Record<string, Tier> = {};
+
+/** Every attribute moved by the same amount, kept inside the engine's 35..99 range. */
+function shiftAttributes(a: Attributes, down: number): Attributes {
+  const out = {} as Attributes;
+  for (const k of ATTRIBUTES) out[k] = clamp(Math.round(a[k] - down), 35, 99);
+  return out;
+}
 
 /** Hard ceiling: the tier's cap, and never below today's OVR. */
 function potentialFor(tier: Tier, ovr: number): number {
@@ -294,11 +314,19 @@ export function buildProfiles(dataset: Dataset): Map<string, PlayerProfile> {
   const cut = RATING_CONFIG.rarityCutoffs;
   const n = sorted.length;
   const out = new Map<string, PlayerProfile>();
+  const tierMean = new Map<Tier, number>();
+  for (const t of TIERS) {
+    const v = prelim.filter((x) => tiers.get(x.record.id) === t.tier).map((x) => x.ovr);
+    tierMean.set(t.tier, v.length ? v.reduce((x, y) => x + y, 0) / v.length : 76);
+  }
   sorted.forEach((pr, i) => {
     const f = (i + 1) / n;
     const rarity: Rarity = f <= cut.legend ? 'legend' : f <= cut.elite ? 'elite' : f <= cut.gold ? 'gold' : f <= cut.silver ? 'silver' : 'bronze';
     const tier = tiers.get(pr.record.id) ?? 'C';
-    out.set(pr.record.id, { ...pr, rarity, tier, potential: potentialFor(tier, pr.ovr) });
+    const target = Math.round(clamp(TIER_START[tier] + (pr.ovr - tierMean.get(tier)!) * START_SPREAD, 55, TIER_CAP[tier] - 5));
+    const base = shiftAttributes(pr.base, ((pr.ovr - target) * calib[pr.record.primaryRole].sd) / 6);
+    const ovr = ovrFor(base, pr.record.primaryRole, calib);
+    out.set(pr.record.id, { ...pr, base, ovr, rarity, tier, potential: potentialFor(tier, ovr) });
   });
   return out;
 }

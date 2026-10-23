@@ -50,7 +50,7 @@ describe('training plans', () => {
     const attrs = cardAttributes(p, card);
     for (const a of ATTRIBUTES) expect(attrs[a]).toBeLessThanOrEqual(attributeCap(p, card, a));
   });
-  it('a handful of sessions gives modest, not huge, gains', () => {
+  it('three weeks of aim work give a clear but bounded gain (training is the main lever, 2026-10-23)', () => {
     const w = world();
     let c = newCareer();
     const before = c.cards.map((card) => cardAttributes(profileOf(w, card), card).aim);
@@ -60,7 +60,7 @@ describe('training plans', () => {
       c = { ...c, phase: 'training' };
     }
     const after = c.cards.map((card) => cardAttributes(profileOf(w, card), card).aim);
-    for (let i = 0; i < before.length; i++) expect(after[i]! - before[i]!).toBeLessThanOrEqual(4.5);
+    for (let i = 0; i < before.length; i++) expect(after[i]! - before[i]!).toBeLessThanOrEqual(3 * 2.5);
   });
   it('an active, trained gold card can outplay an idle legend (C22)', () => {
     const list = world().profileList;

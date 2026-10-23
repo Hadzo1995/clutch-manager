@@ -55,8 +55,8 @@ export const ACTIVITIES: Record<ActivityId, Activity> = {
   },
 };
 
-export const SESSION_BASE_GAIN = 0.45;
-export const WEEKLY_ATTR_CAP = 1.5;
+export const SESSION_BASE_GAIN = 0.9;
+export const WEEKLY_ATTR_CAP = 2.5;
 export const REPEAT_FACTORS = [1, 0.5, 0.25];
 
 export interface TrainingPlan {
@@ -151,7 +151,7 @@ export function runTraining(plan: TrainingPlan, members: TrainingMember[], coach
         const cur = current[attr] + (g[attr] ?? 0);
         const room = Math.max(0, cap - m.profile.base[attr]);
         const headroom = room <= 0 ? 0 : Math.pow(clamp((cap - cur) / room, 0, 1), 1.3);
-        const focusMult = act.focusOnly ? 1 : focus === attr ? 1.6 : focus ? 0.85 : 1;
+        const focusMult = act.focusOnly ? 1 : focus === attr ? 2 : focus ? 0.9 : 1;
         const noise = rng ? rng.range(0.6, 1.4) : 1;
         const delta = SESSION_BASE_GAIN * trainingMultiplier(personalityOf(m.profile.record.id)) * w * roleMult * cf * ageFactor(m.profile.record.age) * headroom * fatiguePenalty(fatigueNow) * repeat * focusMult * noise;
         g[attr] = (g[attr] ?? 0) + delta;
@@ -192,5 +192,5 @@ export function totalExpectedGain(outcome: TrainingOutcome): number {
 }
 
 export function defaultPlan(focusMap: MapName = 'Mirage'): TrainingPlan {
-  return { sessions: ['aim', 'scrims', 'review'], focusMap, individualFocus: {} };
+  return { sessions: ['scrims', 'review', 'rest'], focusMap, individualFocus: {} };
 }

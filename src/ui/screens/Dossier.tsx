@@ -49,7 +49,7 @@ export function DossierTab({ playerId, card, attrs }: { playerId: string; card?:
   return (
     <>
       <div className="panel inset">
-        <div className="panel-head"><h3>Ability, form and potential</h3></div>
+        <div className="panel-head"><h3>Ability, form and max cap</h3></div>
         <div className="dos-afp">
           <div>
             <span className="label">Ability</span>
@@ -62,7 +62,7 @@ export function DossierTab({ playerId, card, attrs }: { playerId: string; card?:
             <p className="small faint">{card ? <>Recent matches, −10 to +10. Plays at <b className="num">{today}</b> today after form, sharpness and fatigue.</> : 'Tracked once the player is in your squad.'}</p>
           </div>
           <div>
-            <span className="label">Potential</span>
+            <span className="label">Max cap</span>
             <b className="num">{p.potential}</b>
             <p className="small faint">{room > 0 ? `Room for about ${room} more with training.` : 'At or near the ceiling.'} A game estimate, not a real-world prediction.</p>
           </div>

@@ -59,7 +59,7 @@ export function RatingBar({ ovr, potential, today }: { ovr: number; potential: n
   const lo = 40, hi = 100;
   const pos = (v: number) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
   return (
-    <div className="rbar" role="img" aria-label={`Overall ${ovr}, potential ${potential}${today !== undefined ? `, plays at ${today} today` : ''}`}>
+    <div className="rbar" role="img" aria-label={`Overall ${ovr}, max cap ${potential}${today !== undefined ? `, plays at ${today} today` : ''}`}>
       <div className="rbar-track">
         <i className="rbar-pot" style={{ left: `${pos(ovr)}%`, width: `${Math.max(0, pos(potential) - pos(ovr))}%` }} />
         <i className="rbar-now" style={{ width: `${pos(ovr)}%` }} />
