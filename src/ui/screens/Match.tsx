@@ -14,9 +14,9 @@ import { mapFamiliarity, teamStrength } from '../../engine/team';
 import type { TeamSnapshot } from '../../engine/team';
 import { aiVetoChoice, applyVeto, currentStep, newVeto, vetoMaps } from '../../engine/veto';
 import type { VetoState } from '../../engine/veto';
-import { MAPS, ECONOMY_LABEL, ECONOMY_TIPS, CT_SETUP_LABEL, FOOTSTEPS_LABEL, FOOTSTEPS_TIPS, PLAYSTYLE_LABEL, T_APPROACH_LABEL } from '../../engine/types';
+import { MAPS, ROLE_LABEL, ECONOMY_LABEL, ECONOMY_TIPS, CT_SETUP_LABEL, FOOTSTEPS_LABEL, FOOTSTEPS_TIPS, PLAYSTYLE_LABEL, T_APPROACH_LABEL } from '../../engine/types';
 import type { CTSetup, EconomyPolicy, Footsteps, MapName, Playstyle, Tactics, TApproach } from '../../engine/types';
-import { Bar, useGame } from '../common';
+import { Bar, RoleIcon, useGame } from '../common';
 import { RoundViewer } from '../arena/RoundViewer';
 import { Avatar } from '../avatar/Avatar';
 import { webglAvailable } from '../arena/Viewer3D';
@@ -107,6 +107,32 @@ export function MatchFlow({ onClose }: { onClose: () => void }) {
 
 // ---------------- Prep: scouting, veto, tactics ----------------
 
+/** Broadcast-style starting lineups: both fives face to face, opponents in their org's kit. */
+function Lineups({ me, opp }: { me: TeamSnapshot; opp: TeamSnapshot }) {
+  const kit = orgJersey(opp.name);
+  const oppStyle = orgTextStyle(opp.name);
+  const side = (t: TeamSnapshot, mine: boolean) => (
+    <div className={`mx-lineup ${mine ? 'me' : 'them'}`}>
+      <span className="label mx-lineup-head" style={mine ? undefined : oppStyle}>{t.tag} · starting five</span>
+      <ol>
+        {t.players.slice(0, 5).map((p) => (
+          <li key={p.id}>
+            <Avatar seed={p.playerId} size={52} accent={mine ? '#f0a33a' : '#5aa9e6'} jersey={mine ? undefined : kit} className="mx-lineup-ava" />
+            <b>{p.handle}</b>
+            <span className="mx-lineup-role"><RoleIcon role={p.role} /> {ROLE_LABEL[p.role]}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+  return (
+    <section className="panel mx-lineups" aria-label="Starting lineups">
+      {side(me, true)}
+      {side(opp, false)}
+    </section>
+  );
+}
+
 function noisy(value: number, key: string, exact: boolean): number {
   if (exact) return value;
   const n = (new Rng(hashString(key)).next() - 0.5) * 0.24;
@@ -156,6 +182,8 @@ function Prep({ teams, humanIdx, opp, veto, setVeto, tactics, setTactics, seedKe
           <span className="label mx-card-strength-label">Team strength</span>
         </div>
       </section>
+
+      <Lineups me={me} opp={opp} />
 
       <section className="panel mx-veto" aria-label="Map veto">
         <div className="panel-head">

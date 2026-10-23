@@ -416,3 +416,19 @@
 .mx-tips { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .mx-tips li { display: grid; gap: 2px; padding: 9px 12px; border-radius: var(--r-sm); background: var(--panel-2); box-shadow: inset 3px 0 0 var(--t); }
 .mx-tip-act { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sm); color: var(--t); }
+
+/* Starting lineups: both fives face to face, broadcast style. */
+.mx-lineups { display: grid; grid-template-columns: 1fr; gap: var(--s3); }
+.mx-lineup ol { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.mx-lineup li { display: grid; justify-items: center; gap: 4px; padding: 10px 4px 8px; border-radius: 10px; text-align: center; min-width: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--t) 14%, transparent), transparent 70%); border: 1px solid color-mix(in srgb, var(--t) 22%, var(--line)); }
+.mx-lineup.them li { background: linear-gradient(180deg, color-mix(in srgb, var(--ct) 14%, transparent), transparent 70%); border-color: color-mix(in srgb, var(--ct) 22%, var(--line)); }
+.mx-lineup.them .mx-lineup-head { text-align: right; display: block; }
+.mx-lineup b { font-size: 0.85rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mx-lineup-role { font-size: 0.68rem; color: var(--ink-3); display: inline-flex; gap: 3px; align-items: center; white-space: nowrap; }
+.mx-lineup-ava { border-radius: 50%; }
+@media (max-width: 760px) {
+  .mx-lineup ol { gap: 4px; }
+  .mx-lineup-role { display: none; }
+  .mx-lineup b { font-size: 0.72rem; }
+}
