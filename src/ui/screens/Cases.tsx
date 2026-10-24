@@ -12,7 +12,7 @@ import '../styles/cases.css';
 const CASE_COLOR: Record<CaseId, string> = { daily: 'var(--good)', standard: 'var(--ct)', role: 'var(--t)', premium: 'var(--legend)' };
 const caseStyle = (id: CaseId) => ({ ['--cc' as string]: CASE_COLOR[id] } as CSSProperties);
 
-export function Cases() {
+export function Cases({ goSquad }: { goSquad: () => void }) {
   const { world, career: c, update, toast, openPlayer } = useGame();
   const [role, setRole] = useState<Role>('awp');
   const [opening, setOpening] = useState<CaseId | null>(null);
@@ -89,7 +89,7 @@ export function Cases() {
         );
       })}
       {c.pendingPull && !opening && <PullChoice />}
-      {opening && <CaseOpening caseId={opening} caseColor={CASE_COLOR[opening]} pool={world.profileList} role={CASES[opening].needsRole ? role : undefined} crate={<Crate variant={opening} role={CASES[opening].needsRole ? role : undefined} />} onUnlock={() => unlock(opening)} onClose={() => setOpening(null)} onView={view} />}
+      {opening && <CaseOpening caseId={opening} caseColor={CASE_COLOR[opening]} pool={world.profileList} role={CASES[opening].needsRole ? role : undefined} crate={<Crate variant={opening} role={CASES[opening].needsRole ? role : undefined} />} onUnlock={() => unlock(opening)} onClose={() => setOpening(null)} onView={view} balance={c.coins} onCollection={() => { setOpening(null); goSquad(); }} />}
     </>
   );
 }

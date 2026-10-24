@@ -273,7 +273,7 @@ export function TournamentView({ id, me, onLeave }: { id: string; me: Me; onLeav
       {tab === 'maps' && <MapPrefs club={club!} onChange={(prefs) => updateClub({ ...club!, tournament: { ...club!.tournament!, mapPrefs: prefs } })} entryNote={entryLine(t, nextSlot, desired !== null, upToDate, sending, sendErr)} goSquad={() => setTab('squad')} />}
       {tab === 'squad' && <Squad />}
       {tab === 'train' && (lockNote ? <Locked title="Training" note={lockNote} /> : <Train goHome={() => setTab('overview')} daily={daily} />)}
-      {tab === 'cases' && (lockNote ? <Locked title="Cases" note={lockNote} /> : <Cases />)}
+      {tab === 'cases' && (lockNote ? <Locked title="Cases" note={lockNote} /> : <Cases goSquad={() => setTab('squad')} />)}
       {player && <PlayerSheet cardId={player.cardId} playerId={player.playerId} onClose={() => setPlayer(null)} />}
       {watching && <Watch t={t} m={watching} entries={entries} seat={seat} result={results[watching.id] ?? null} onClose={() => setWatching(null)} />}
     </GameCtx.Provider>

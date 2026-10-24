@@ -13,6 +13,7 @@ import { Crest } from '../crest';
 import { CrestEditor } from '../CrestEditor';
 import { music } from '../music';
 import { setStadiumOn, stadiumOn } from '../StadiumScene';
+import { MOTION_LABEL, motionPref, setMotionPref, systemReducesMotion } from '../motion';
 import '../styles/home.css';
 import { storeDataset } from '../persist';
 import { providerStatuses } from '../../engine/data/providers';
@@ -25,6 +26,7 @@ export function Settings({ onClose, replaceWorld, onReset }: { onClose: () => vo
   const [crestOpen, setCrestOpen] = useState(false);
   const [musicEnabled, setMusicEnabled] = useState(music.on);
   const [stadium, setStadium] = useState(stadiumOn);
+  const [motion, setMotion] = useState(motionPref);
   const [csv, setCsv] = useState<{ name: string; text: string } | null>(null);
   const [snapshot, setSnapshot] = useState(new Date().toISOString().slice(0, 10));
   const [report, setReport] = useState<ImportReport | null>(null);
@@ -113,6 +115,14 @@ export function Settings({ onClose, replaceWorld, onReset }: { onClose: () => vo
             <div className="st-row">
               <div className="st-row-t"><strong>Menu music</strong><span className="small faint">A quiet loop on the menus. It stops during matches.</span></div>
               <button className="btn small" aria-pressed={musicEnabled} onClick={() => { const v = !musicEnabled; setMusicEnabled(v); music.setEnabled(v); music.unlock(); }}>{musicEnabled ? 'On' : 'Off'}</button>
+            </div>
+          </div>
+          <div className="st-card">
+            <div className="st-row st-row-col">
+              <div className="st-row-t"><strong>Animations</strong><span className="small faint">{motion === 'system' ? `Follows your system, which currently asks for ${systemReducesMotion() ? 'reduced motion, so animations are off' : 'full motion'}.` : motion === 'reduced' ? 'Screens switch instantly and the case strip is skipped.' : 'Screen transitions, card effects and the full case-opening strip.'}</span></div>
+              <div className="seg compact st-seg" role="group" aria-label="Animations">
+                {(['full', 'reduced', 'system'] as const).map((m) => <button key={m} aria-pressed={motion === m} onClick={() => { setMotion(m); setMotionPref(m); }}>{MOTION_LABEL[m]}</button>)}
+              </div>
             </div>
           </div>
           <div className="st-card">

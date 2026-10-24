@@ -4,11 +4,12 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { Rarity } from '../../engine/types';
+import { reducedMotion } from '../motion';
 
 export const TIER: Record<Rarity, number> = { bronze: 0, silver: 1, gold: 2, elite: 3, legend: 4 };
 export const RARITY_HEX: Record<Rarity, string> = { bronze: '#c08552', silver: '#a9b6c4', gold: '#e3b23c', elite: '#49b6ff', legend: '#d46cff' };
 
-export const prefersReducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+export const prefersReducedMotion = reducedMotion;
 
 export type CaseAudio = ReturnType<typeof caseAudio>;
 

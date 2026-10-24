@@ -405,9 +405,7 @@ table.tbl tbody tr:hover td { background: rgba(255, 255, 255, 0.025); }
 .mx-controls { background: linear-gradient(180deg, #151d27, #0e141b); border-color: rgba(160, 190, 220, 0.1); }
 
 /* ---------- Reduced motion ---------- */
-@media (prefers-reduced-motion: reduce) {
-  .ob-backdrop i, .pcard.pc::before, .mx-steps li.now { animation: none !important; }
-}
+:root[data-motion="reduced"] .ob-backdrop i, :root[data-motion="reduced"] .pcard.pc::before, :root[data-motion="reduced"] .mx-steps li.now { animation: none !important; }
 
 /* ---------- Cases: the case tiles (the look from outside) ---------- */
 @property --cs-ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
@@ -608,10 +606,8 @@ table.tbl tbody tr:hover td { background: rgba(255, 255, 255, 0.025); }
 
 @media (max-width: 420px) { .cs-top { grid-template-columns: 96px minmax(0, 1fr); } .cs-art3d { width: 96px; height: 80px; } .cs-art3d .crate { width: 96px; } }
 @media (max-width: 560px) { .cs-unlock { height: 240px; } .cs-crate3d, .cs-crate3d .crate { width: 190px; } .cs-reel2 { height: 214px; } .cs-strip { top: 18px; } .cs-flip-in { width: 160px; } }
-@media (prefers-reduced-motion: reduce) {
-  .cs-art3d .crate, .cs-case.premium, .crate .cr-gem, .crate .cr-seam, .crate .cr-sheen, .cs-crate3d, .cs-beam, .cs-flip, .cs-back, .fx-shake, .cs-rarity, .cs-overlay::after, .cs-burst i, .cs-reveal::before { animation: none !important; }
-  .cs-flip-in { transition: none; }
-}
+:root[data-motion="reduced"] .cs-art3d .crate, :root[data-motion="reduced"] .cs-case.premium, :root[data-motion="reduced"] .crate .cr-gem, :root[data-motion="reduced"] .crate .cr-seam, :root[data-motion="reduced"] .crate .cr-sheen, :root[data-motion="reduced"] .cs-crate3d, :root[data-motion="reduced"] .cs-beam, :root[data-motion="reduced"] .cs-flip, :root[data-motion="reduced"] .cs-back, :root[data-motion="reduced"] .fx-shake, :root[data-motion="reduced"] .cs-rarity, :root[data-motion="reduced"] .cs-overlay::after, :root[data-motion="reduced"] .cs-burst i, :root[data-motion="reduced"] .cs-reveal::before { animation: none !important; }
+  :root[data-motion="reduced"] .cs-flip-in { transition: none; }
 
 /* ---------- Live match HUD ---------- */
 .tv { --hud: rgba(7, 10, 14, 0.86); --hud-line: rgba(180, 205, 230, 0.12); }
@@ -717,7 +713,7 @@ table.tbl tbody tr:hover td { background: rgba(255, 255, 255, 0.025); }
 /* Transport */
 .tv-play { background: radial-gradient(circle at 50% 35%, #26313e, #0d1218); border-color: rgba(160, 190, 220, 0.18); box-shadow: 0 6px 16px -8px #000; }
 .tv-play:hover { border-color: var(--t); box-shadow: 0 0 16px -4px rgba(240, 163, 58, 0.7); }
-@media (prefers-reduced-motion: reduce) { .tv-intro, .tv-banner, .tv-banner::after { animation: none; } }
+:root[data-motion="reduced"] .tv-intro, :root[data-motion="reduced"] .tv-banner, :root[data-motion="reduced"] .tv-banner::after { animation: none; }
 .tv-row.mvp { opacity: 1; filter: none; }
 
 /* ---------- League crests ---------- */
@@ -860,12 +856,12 @@ table.tbl tbody tr:hover td { background: rgba(255, 255, 255, 0.025); }
 }
 .panel:hover { border-color: rgba(160, 190, 220, 0.14); }
 /* Ambient light that drifts slowly behind every screen (transform only, one layer). */
-@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
-  .app::before {
+@media (min-width: 1024px) {
+  :root[data-motion="full"] .app::before {
     content: ''; position: fixed; z-index: -1; left: -20vw; top: -30vh; width: 70vw; height: 70vh; pointer-events: none; border-radius: 50%;
     background: radial-gradient(closest-side, rgba(240, 163, 58, 0.07), transparent); animation: pm-amb 26s ease-in-out infinite alternate;
   }
-  .app::after {
+  :root[data-motion="full"] .app::after {
     content: ''; position: fixed; z-index: -1; right: -20vw; bottom: -30vh; width: 70vw; height: 70vh; pointer-events: none; border-radius: 50%;
     background: radial-gradient(closest-side, rgba(90, 169, 230, 0.07), transparent); animation: pm-amb 32s ease-in-out infinite alternate-reverse;
   }
@@ -876,16 +872,16 @@ table.tbl tbody tr:hover td { background: rgba(255, 255, 255, 0.025); }
 .side-nav button:hover svg, .tabbar button:hover svg { transform: translateX(1px) rotate(-6deg); }
 .side-nav button svg, .tabbar button svg { transition: transform 240ms var(--spring), filter 200ms; }
 /* Player cards tilt toward the pointer with a moving glare (pointer position set in App). */
-@media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  button.pcard.pc:hover { transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-4px) scale(1.02); }
-  button.pcard.pc:hover::after { left: 0; top: 0; bottom: 0; width: 100%; transform: none; transition: none;
+@media (hover: hover) {
+  :root[data-motion="full"] button.pcard.pc:hover { transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-4px) scale(1.02); }
+  :root[data-motion="full"] button.pcard.pc:hover::after { left: 0; top: 0; bottom: 0; width: 100%; transform: none; transition: none;
     background: radial-gradient(circle at var(--mx, 50%) var(--my, 30%), rgba(255, 255, 255, 0.2), transparent 50%); }
 }
 /* Screen entrance: a touch more travel (transform and opacity only, cheap on every GPU). */
 main > * { animation: pm-rise2 520ms var(--ease-out) both; }
 @keyframes pm-rise2 { from { opacity: 0; transform: translateY(16px) scale(0.99); } }
 main > .overlay { animation: fade-in var(--med) var(--ease); }
-@media (prefers-reduced-motion: reduce) { .page-head::after, main > * { animation: none; } }
+:root[data-motion="reduced"] .page-head::after, :root[data-motion="reduced"] main > * { animation: none; }
 
 /* Title screen: a live 3D flight over the maps behind the brand column (desktop). */
 .ob-scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 900ms var(--ease); }

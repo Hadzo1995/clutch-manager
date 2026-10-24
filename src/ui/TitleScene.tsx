@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { MapName } from '../engine/types';
 import { geometryFor } from '../maps';
 import { Viewer3D, webglAvailable } from './arena/Viewer3D';
+import { reducedMotion } from './motion';
 
 const TOUR: MapName[] = ['Mirage', 'Inferno', 'Dust2'];
 const LEG_MS = 16000;
@@ -19,7 +20,7 @@ export function TitleScene({ onFail }: { onFail: () => void }) {
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas || !webglAvailable()) { onFail(); return; }
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const reduced = reducedMotion();
     const map = TOUR[leg % TOUR.length]!;
     let v: Viewer3D;
     try {

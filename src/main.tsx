@@ -4,6 +4,9 @@ import { App } from './ui/App';
 import { TournamentApp } from './ui/tournament/TournamentApp';
 import './ui/styles.css';
 import './ui/styles/premium.css';
+import { applyMotion } from './ui/motion';
+
+applyMotion();
 
 /** The career game, or the beta tournament when the address ends in #tournament. */
 function Root() {

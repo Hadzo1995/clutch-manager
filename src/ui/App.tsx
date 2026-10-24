@@ -31,6 +31,7 @@ import { MatchFlow } from './screens/Match';
 import { PlayerSheet } from './screens/PlayerSheet';
 import { Settings } from './screens/Settings';
 import { onlineAvailable } from '../online/supa';
+import { reducedMotion } from './motion';
 
 const openTournament = () => { location.hash = '#tournament'; };
 
@@ -105,7 +106,7 @@ export function App() {
 
   // Player cards tilt toward the pointer (CSS reads --rx/--ry/--mx/--my; see premium.css).
   useEffect(() => {
-    if (!window.matchMedia?.('(hover: hover)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!window.matchMedia?.('(hover: hover)').matches || reducedMotion()) return;
     let last: HTMLElement | null = null;
     const move = (e: PointerEvent) => {
       const el = (e.target as Element | null)?.closest?.('button.pcard.pc') as HTMLElement | null;
@@ -213,7 +214,7 @@ export function App() {
           {tab === 'squad' && <Squad />}
           {tab === 'train' && <Train goHome={() => setTab('home')} />}
           {tab === 'scout' && <Scout />}
-          {tab === 'cases' && <Cases />}
+          {tab === 'cases' && <Cases goSquad={() => setTab('squad')} />}
           {tab === 'league' && <League />}
           {tab === 'pvp' && <Pvp />}
         </main>

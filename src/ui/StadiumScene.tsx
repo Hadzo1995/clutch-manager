@@ -12,6 +12,7 @@ import { buildSoldier, soldierKit } from './arena/models';
 import type { Soldier } from './arena/models';
 import { ROLE_LABEL } from '../engine/types';
 import type { Role } from '../engine/types';
+import { reducedMotion } from './motion';
 
 /** One of your starting five, as shown on stage. */
 export interface StagePlayer { id: string; handle: string; role: Role }
@@ -323,7 +324,7 @@ export function StadiumScene({ teamName, teamTag, active, five = [], opponent }:
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const reduced = reducedMotion();
     const start = performance.now();
     let raf = 0, last = 0, first = true;
     const frame = (now: number) => {

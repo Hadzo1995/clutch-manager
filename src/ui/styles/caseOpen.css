@@ -1,93 +1,56 @@
-/* Case opening in the style of CS2 (CaseOpening.tsx). Prefixed co-. --rc is the drop's rarity colour. */
-.overlay.co-overlay { align-items: center; justify-content: center; padding: 16px; background: radial-gradient(80% 70% at 50% 45%, rgba(20, 26, 34, 0.92), rgba(3, 5, 8, 0.97)); }
-.overlay.co-overlay.at-reveal { background: radial-gradient(70% 60% at 50% 42%, color-mix(in srgb, var(--rc) 20%, rgba(10, 14, 19, 0.94)), rgba(3, 5, 8, 0.98)); transition: background 500ms ease-out; }
-.co-box { width: 100%; max-width: 820px; max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 18px; border-radius: 6px;
-  background: linear-gradient(180deg, #161b22, #0e1217); border: 1px solid #2a323c; box-shadow: 0 30px 80px -30px #000; }
-.co-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.co-title { display: grid; gap: 2px; min-width: 0; }
-.co-kicker { font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: #8b97a3; }
-.co-title h2 { font-size: var(--fs-xl); color: #eef2f6; }
-.co-tools { display: flex; gap: 6px; flex: none; }
+/*
+ * Case opening (CaseOpening.tsx), a full-screen sequence in the manner of CS2. Prefixed co-.
+ * --cc is the case's colour (stage lighting), --rc the drop's rarity colour (strip tiles, reveal).
+ * Motion uses transform and opacity only, so it stays smooth on integrated GPUs.
+ */
+.overlay.co-overlay { align-items: stretch; justify-content: stretch; padding: 0; z-index: 80; backdrop-filter: none;
+  background: radial-gradient(70% 55% at 50% 0%, color-mix(in srgb, var(--cc) 16%, transparent), transparent 70%), radial-gradient(120% 90% at 50% 40%, #0d1218, #040609 80%); }
+.overlay.co-overlay.at-reveal { background: radial-gradient(60% 55% at 32% 42%, color-mix(in srgb, var(--rc) 24%, transparent), transparent 70%), radial-gradient(120% 90% at 50% 40%, #0d1218, #040609 80%); }
+.co-stage { position: relative; width: 100%; height: 100%; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; padding: 18px clamp(14px, 3vw, 40px) 28px; }
+.co-stage > * { width: 100%; max-width: 1240px; margin-left: auto; margin-right: auto; }
+/* A soft top light that follows the case colour, and the rarity once revealed. */
+.co-light { position: absolute; inset: 0 0 auto 0; height: 70%; max-width: none !important; pointer-events: none; opacity: 0.6;
+  background: conic-gradient(from 180deg at 50% -10%, transparent 160deg, color-mix(in srgb, var(--cc) 22%, transparent) 180deg, transparent 200deg); filter: blur(30px); }
+.at-reveal .co-light { background: conic-gradient(from 180deg at 32% -10%, transparent 155deg, color-mix(in srgb, var(--rc) 30%, transparent) 180deg, transparent 205deg); }
 
-/* 1. Inspect */
-.co-inspect { display: grid; gap: 14px; }
-.co-case { display: grid; place-items: center; height: 150px; }
-.co-case .crate { width: 210px; height: auto; filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.6)); }
-.co-contents { display: grid; gap: 10px; }
-.co-label { font-size: var(--fs-sm); color: #b8c2cc; }
-.co-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
-.co-mini { position: relative; display: grid; justify-items: center; gap: 3px; padding: 8px 6px 10px; border-radius: 3px; overflow: hidden; min-width: 0;
-  background: linear-gradient(180deg, #2a3038, #1b1f25); }
-.co-mini::after { content: ''; position: absolute; inset: auto 0 0 0; height: 50%; pointer-events: none; background: linear-gradient(0deg, color-mix(in srgb, var(--rc) 22%, transparent), transparent); }
-.co-mini b { font-size: 0.78rem; color: #e6ebf0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.co-mini span { font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--rc); }
-.co-mini img { border-radius: 50%; }
-.co-any { --rc: #e4ae39; align-content: center; text-align: center; }
-.co-any b { white-space: normal; color: #e4ae39; }
-.co-star { font-size: 1.6rem; color: #e4ae39 !important; line-height: 1; }
-.co-odds { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-xs); color: #9aa6b2; }
-.co-odds span { display: inline-flex; align-items: center; gap: 5px; }
-.co-odds i { width: 8px; height: 8px; border-radius: 2px; background: var(--rc); }
-.co-odds b { color: #e6ebf0; font-weight: 500; }
-.co-unlock-row { display: flex; justify-content: flex-end; padding-top: 12px; border-top: 1px solid #262d36; }
-.co-unlock { min-width: 220px; }
-.co-unlock .coins { color: inherit; }
+.co-head { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(160, 190, 220, 0.08); }
+.co-title { display: grid; gap: 2px; min-width: 0; }
+.co-kicker { font-size: 0.68rem; letter-spacing: 0.22em; text-transform: uppercase; color: #8b97a3; }
+.co-title h2 { font-size: var(--fs-2xl); color: #f1f4f7; letter-spacing: 0.02em; }
+.co-role { color: var(--ink-2); font-weight: 500; }
+.co-tools { display: flex; align-items: center; gap: 8px; flex: none; }
+.co-tools .btn { display: inline-flex; align-items: center; gap: 6px; }
+.co-bal { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; }
+.co-x { min-width: 36px; justify-content: center; }
 
 /* Rarity colour on every tile */
 .r-bronze { --rc: var(--bronze); } .r-silver { --rc: var(--silver); } .r-gold { --rc: var(--gold); } .r-elite { --rc: var(--elite); } .r-legend { --rc: var(--legend); }
 
-/* 2. Roll: grey tiles with a rarity bar, under a fixed gold line */
-.co-reel { position: relative; overflow: hidden; height: 196px; border-radius: 3px; background: #0b0e12; border-top: 1px solid #262d36; border-bottom: 1px solid #262d36; }
-.co-reel::before, .co-reel::after { content: ''; position: absolute; top: 0; bottom: 0; width: 14%; z-index: 2; pointer-events: none; }
-.co-reel::before { left: 0; background: linear-gradient(90deg, #0b0e12, transparent); }
-.co-reel::after { right: 0; background: linear-gradient(270deg, #0b0e12, transparent); }
-.co-strip { position: absolute; top: 16px; left: 0; display: flex; gap: 6px; will-change: transform; }
-.co-item { position: relative; flex: none; width: 122px; height: 164px; border-radius: 2px; overflow: hidden;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 8px 6px 14px;
-  background: linear-gradient(180deg, #30363f, #1c2026 70%); }
-.co-item::after { content: ''; position: absolute; inset: auto 0 0 0; height: 55%; pointer-events: none; background: linear-gradient(0deg, color-mix(in srgb, var(--rc) 28%, transparent), transparent); }
-.co-item-face img { display: block; border-radius: 50%; box-shadow: 0 6px 14px -6px #000; }
-.co-item-name { position: relative; z-index: 1; font-family: var(--font-display); font-size: 0.86rem; color: #eef2f6; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.co-item-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--rc); z-index: 1; }
-.co-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; z-index: 3; background: #f2c14e; box-shadow: 0 0 6px rgba(242, 193, 78, 0.8); }
-.co-line::before, .co-line::after { content: ''; position: absolute; left: -5px; border: 6px solid transparent; }
-.co-line::before { top: 0; border-top-color: #f2c14e; }
-.co-line::after { bottom: 0; border-bottom-color: #f2c14e; }
+/* ---------- 1. Inspect ---------- */
+.co-inspect { position: relative; z-index: 1; margin-block: auto; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px 28px; align-items: start; animation: co-fade 360ms var(--ease) both; }
+.co-showcase { display: grid; gap: 14px; position: sticky; top: 0; }
+.co-pedestal { position: relative; height: 300px; display: grid; place-items: center; }
+.co-cone { position: absolute; left: 50%; top: -30px; width: 380px; height: 330px; margin-left: -190px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), color-mix(in srgb, var(--cc) 10%, transparent) 70%, transparent);
+  clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%); filter: blur(8px); }
+.co-disc { position: absolute; left: 50%; bottom: 18px; width: 300px; height: 46px; margin-left: -150px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--cc) 45%, transparent), transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--cc) 25%, transparent) inset; }
+.co-float { position: relative; z-index: 1; animation: co-float 4.5s ease-in-out infinite alternate; }
+.co-float .crate { width: 290px; height: auto; filter: drop-shadow(0 26px 30px rgba(0, 0, 0, 0.7)); }
+.co-pitch { display: grid; gap: 8px; text-align: center; justify-items: center; }
+.co-odds-bar { display: flex; width: 100%; max-width: 360px; height: 5px; border-radius: 3px; overflow: hidden; gap: 2px; }
+.co-odds-bar i { min-width: 3px; }
+.co-contents { display: grid; gap: 10px; }
+.co-label { font-size: var(--fs-sm); color: #b8c2cc; letter-spacing: 0.02em; }
+.co-unlock-row { grid-column: 1 / -1; position: sticky; bottom: -28px; display: flex; align-items: center; justify-content: flex-end; gap: 16px; padding: 14px 0 6px; border-top: 1px solid rgba(160, 190, 220, 0.1);
+  background: linear-gradient(0deg, #05080b 60%, transparent); }
+.co-unlock { min-width: 260px; min-height: 48px; font-size: var(--fs-md); letter-spacing: 0.04em; }
+.co-unlock .coins { color: inherit; }
 
-/* 3. Reveal */
-.co-result { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 6px 0 4px; animation: co-in 420ms ease-out both; }
-.co-glow { position: absolute; left: 50%; top: 10px; width: 420px; height: 300px; margin-left: -210px; pointer-events: none; border-radius: 50%;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--rc) 45%, transparent), transparent); filter: blur(10px); }
-.co-won { position: relative; width: 190px; animation: co-won 520ms cubic-bezier(0.2, 1.2, 0.4, 1) both; }
-.co-won .pcard { width: 100%; box-shadow: 0 0 0 2px var(--rc), 0 20px 50px -16px var(--rc); }
-.co-name { position: relative; display: grid; gap: 2px; justify-items: center; }
-.co-rarity { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--rc); }
-.co-name h1 { font-size: var(--fs-2xl); color: #f2f5f8; border-bottom: 3px solid var(--rc); padding-bottom: 4px; }
-.co-name h1 .num { color: var(--rc); }
-.co-sub { font-size: var(--fs-sm); color: #9aa6b2; }
-.co-result p { position: relative; max-width: 52ch; }
-.co-btns { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; max-width: 360px; margin-top: 4px; }
-@keyframes co-in { from { opacity: 0; } }
-@keyframes co-won { from { opacity: 0; transform: scale(0.82); } }
-
-@media (max-width: 560px) {
-  .overlay.co-overlay { padding: 8px; }
-  .co-box { padding: 14px; gap: 12px; }
-  .co-case { height: 116px; }
-  .co-case .crate { width: 160px; }
-  .co-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .co-unlock-row { justify-content: stretch; }
-  .co-unlock { width: 100%; min-width: 0; }
-  .co-reel { height: 176px; }
-  .co-strip { top: 12px; }
-  .co-glow { width: 300px; margin-left: -150px; }
-}
-@media (prefers-reduced-motion: reduce) { .co-result, .co-won { animation: none; } }
-
-/* Exact contents table (CaseOpening Contents): one row per rarity, best first. */
+/* Exact contents table: one row per rarity, best first. */
 .co-table { display: grid; gap: 6px; }
-.co-row { display: grid; grid-template-columns: minmax(170px, 230px) 1fr; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 4px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 14%, #1b2027), #161a20 70%); border-left: 3px solid var(--rc); }
+.co-row { display: grid; grid-template-columns: minmax(170px, 230px) 1fr; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 4px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 14%, #1b2027), #141920 70%); border-left: 3px solid var(--rc); }
 .co-row-head { display: grid; grid-template-columns: 1fr auto; gap: 1px 8px; align-items: baseline; }
 .co-row-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--rc); letter-spacing: 0.04em; }
 .co-row-name i { width: 8px; height: 8px; border-radius: 2px; background: var(--rc); box-shadow: 0 0 8px var(--rc); }
@@ -100,39 +63,139 @@
 .co-face small { font-size: 0.6rem; color: #b8c2cc; max-width: 54px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .co-more { padding-left: 4px; }
 .co-all { justify-self: start; }
-.co-chance { position: relative; }
-.co-rarity .tier-chip { margin-left: 6px; vertical-align: 1px; }
 
-/* Rare drops: slow light rays behind the card (Elite and Legend only). */
-.co-result.rare::before { content: ''; position: absolute; left: 50%; top: 120px; width: 620px; height: 620px; margin: -310px 0 0 -310px; pointer-events: none; opacity: 0.55;
-  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rc) 40%, transparent) 0deg 6deg, transparent 6deg 22deg);
-  -webkit-mask: radial-gradient(closest-side, #000 20%, transparent 72%); mask: radial-gradient(closest-side, #000 20%, transparent 72%);
-  animation: co-rays 18s linear infinite; }
-@keyframes co-rays { to { transform: rotate(360deg); } }
-
-@media (max-width: 560px) {
-  .co-row { grid-template-columns: 1fr; gap: 6px; }
-  .co-result.rare::before { width: 420px; height: 420px; margin: -210px 0 0 -210px; }
-}
-@media (prefers-reduced-motion: reduce) { .co-result.rare::before { animation: none; } }
-
-/* Unlock beat: latches pop, the lid lifts, light spills out; then the strip rolls. */
-.co-unlocking { position: relative; height: 196px; display: grid; place-items: center; overflow: hidden; border-radius: 3px;
-  background: radial-gradient(60% 90% at 50% 100%, color-mix(in srgb, var(--cc) 18%, transparent), transparent 70%), #0b0e12; }
-.co-unlocking .crate { width: 200px; height: auto; position: relative; z-index: 1; animation: co-shake 360ms 80ms linear both; }
+/* ---------- 2. Unlock beat: latches pop, the lid lifts, light spills out ---------- */
+.co-unlocking { position: relative; z-index: 1; flex: 1; min-height: 360px; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(40% 60% at 50% 70%, color-mix(in srgb, var(--cc) 22%, transparent), transparent 70%); }
+.co-unlock-crate { position: relative; z-index: 1; }
+.co-unlocking .crate { width: min(360px, 70vw); height: auto; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.7)); animation: co-shake 380ms 80ms linear both; }
 .co-unlocking .crate .cr-latch { animation: co-latch 140ms 260ms ease-out both; }
-.co-unlocking .crate .cr-lid { animation: co-lid 520ms 380ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.co-unlocking .crate .cr-lid { animation: co-lid 560ms 380ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
 .co-unlocking .crate .cr-leak { opacity: 1; animation: co-leak 600ms 300ms ease-in both; }
-.co-unlock-beam { position: absolute; left: 50%; bottom: 40%; width: 140px; height: 260px; margin-left: -70px; pointer-events: none; opacity: 0;
+.co-unlock-beam { position: absolute; left: 50%; bottom: 46%; width: 220px; height: 70vh; margin-left: -110px; pointer-events: none; opacity: 0;
   background: linear-gradient(0deg, color-mix(in srgb, var(--cc) 70%, #fff), color-mix(in srgb, var(--cc) 25%, transparent) 60%, transparent);
-  clip-path: polygon(25% 100%, 75% 100%, 100% 0, 0 0); filter: blur(5px); transform-origin: 50% 100%; animation: co-beam 600ms 420ms ease-out both; }
+  clip-path: polygon(30% 100%, 70% 100%, 100% 0, 0 0); filter: blur(6px); transform-origin: 50% 100%; animation: co-beam 620ms 420ms ease-out both; }
+
+/* ---------- 3. Roll ---------- */
+.co-spin { position: relative; z-index: 1; flex: 1; display: grid; align-content: center; gap: 14px; max-width: none !important; animation: co-fade 260ms var(--ease) both; }
+.co-reel { --speed: 0; position: relative; overflow: hidden; height: 258px; width: 100%;
+  background: linear-gradient(180deg, #0c1015, #07090c); border-top: 1px solid rgba(160, 190, 220, 0.12); border-bottom: 1px solid rgba(160, 190, 220, 0.12);
+  box-shadow: inset 0 20px 40px -24px #000, inset 0 -20px 40px -24px #000, 0 0 80px -30px color-mix(in srgb, var(--cc) 50%, transparent); }
+.co-reel::before, .co-reel::after { content: ''; position: absolute; top: 0; bottom: 0; width: 20%; z-index: 2; pointer-events: none; }
+.co-reel::before { left: 0; background: linear-gradient(90deg, #06080b 10%, transparent); }
+.co-reel::after { right: 0; background: linear-gradient(270deg, #06080b 10%, transparent); }
+.co-strip { position: absolute; top: 24px; left: 50%; display: flex; will-change: transform; }
+.co-streak { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: calc(var(--speed) * 0.85);
+  background: repeating-linear-gradient(90deg, transparent 0 86px, rgba(255, 255, 255, 0.05) 86px 88px, transparent 88px 174px); }
+.co-spin-note { text-align: center; }
+
+.co-item { position: relative; flex: none; height: 208px; border-radius: 3px; overflow: hidden; isolation: isolate;
+  display: grid; grid-template-rows: 1fr auto; justify-items: center; align-items: center; padding: 14px 8px 16px;
+  background: radial-gradient(110% 80% at 50% 28%, color-mix(in srgb, var(--rc) 20%, #2b323b), #161a20 78%);
+  border: 1px solid rgba(255, 255, 255, 0.06); }
+.co-item::after { content: ''; position: absolute; inset: auto 0 0 0; height: 50%; z-index: -1; pointer-events: none; background: linear-gradient(0deg, color-mix(in srgb, var(--rc) 26%, transparent), transparent); }
+.co-item-wpn { position: absolute; z-index: -1; left: -22%; top: 26%; width: 144%; height: auto; transform: rotate(-14deg); opacity: 0.2; fill: var(--rc); }
+.wpn .wpn-hi { fill: none; stroke: rgba(255, 255, 255, 0.5); stroke-width: 0.6; }
+.co-item-face img { display: block; border-radius: 10px; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--rc) 60%, transparent), 0 10px 18px -8px #000; }
+.co-item-txt { display: grid; justify-items: center; gap: 1px; max-width: 100%; }
+.co-item-name { font-family: var(--font-display); font-size: 0.98rem; color: #f1f4f7; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.co-item-sub { font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--rc) 70%, #cfd6dd); }
+.co-item-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: var(--rc); box-shadow: 0 0 12px var(--rc); }
+.co-item.won { z-index: 1; box-shadow: inset 0 0 0 2px var(--rc), 0 0 34px -4px var(--rc); animation: co-won-tile 800ms ease-out both; }
+
+/* The marker: a thin gold line with arrowheads, which flares when the strip lands. */
+.co-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; margin-left: -1.5px; z-index: 3; background: #f5c451; box-shadow: 0 0 10px rgba(245, 196, 81, 0.9), 0 0 30px rgba(245, 196, 81, 0.35); }
+.co-line::before, .co-line::after { content: ''; position: absolute; left: -7px; border: 8px solid transparent; }
+.co-line::before { top: 0; border-top-color: #f5c451; }
+.co-line::after { bottom: 0; border-bottom-color: #f5c451; }
+.co-reel.landed .co-line { animation: co-flare 700ms ease-out both; }
+
+/* ---------- 4. Reveal ---------- */
+.co-result { position: relative; z-index: 1; flex: 1; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: center; gap: 24px 48px; max-width: 1100px !important; padding: 10px 0 20px; }
+.co-sparks { position: fixed; inset: 0; z-index: 0; }
+.co-drop { position: relative; display: grid; place-items: center; min-height: 460px; }
+.co-rays { position: absolute; left: 50%; top: 50%; width: 760px; height: 760px; margin: -380px 0 0 -380px; pointer-events: none; opacity: 0.25;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rc) 45%, transparent) 0deg 5deg, transparent 5deg 20deg);
+  -webkit-mask: radial-gradient(closest-side, #000 18%, transparent 70%); mask: radial-gradient(closest-side, #000 18%, transparent 70%);
+  animation: co-rays 24s linear infinite; }
+.co-result.t2 .co-rays { opacity: 0.4; }
+.co-result.t3 .co-rays, .co-result.t4 .co-rays { opacity: 0.65; animation-duration: 14s; }
+.co-card { position: relative; width: 300px; padding: 18px 18px 22px; border-radius: 8px; overflow: hidden; isolation: isolate; display: grid; justify-items: center; gap: 10px;
+  background: radial-gradient(110% 80% at 50% 30%, color-mix(in srgb, var(--rc) 30%, #262d36), #12161b 80%);
+  border: 1px solid color-mix(in srgb, var(--rc) 60%, transparent);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 30px 80px -24px color-mix(in srgb, var(--rc) 70%, #000), 0 0 120px -40px var(--rc);
+  animation: co-card-in 760ms cubic-bezier(0.2, 1.25, 0.35, 1) both; }
+.co-card::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.22) 48%, transparent 60%); transform: translateX(-120%); animation: co-sheen 1.4s 700ms ease-out both; }
+.co-card-wpn { position: absolute; z-index: -1; left: -18%; top: 36%; width: 136%; height: auto; transform: rotate(-14deg); opacity: 0.22; fill: var(--rc); }
+.co-card-top { display: flex; align-items: center; gap: 8px; width: 100%; }
+.co-card-ovr { display: inline-flex; align-items: baseline; gap: 4px; font-size: 2.6rem; font-weight: 700; line-height: 1; color: var(--rc); text-shadow: 0 0 24px color-mix(in srgb, var(--rc) 60%, transparent); }
+.co-card-ovr small { font-family: var(--font-display); font-size: 0.7rem; letter-spacing: 0.14em; color: var(--ink-2); }
+.co-card-role { margin-left: auto; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--rc); }
+.co-card-role svg { width: 17px; height: 17px; }
+.co-card-face img { display: block; border-radius: 12px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--rc) 70%, transparent), 0 20px 30px -12px #000; }
+.co-card-name { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; color: #f6f8fa; letter-spacing: 0.02em; }
+.co-card-meta { display: flex; align-items: center; gap: 6px; }
+.co-card-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: var(--rc); box-shadow: 0 0 18px var(--rc); }
+
+.co-info { position: relative; display: grid; gap: 12px; align-content: center; }
+.co-info > * { animation: co-rise 520ms var(--ease) both; }
+.co-info > :nth-child(2) { animation-delay: 80ms; } .co-info > :nth-child(3) { animation-delay: 140ms; } .co-info > :nth-child(4) { animation-delay: 200ms; }
+.co-info > :nth-child(5) { animation-delay: 260ms; } .co-info > :nth-child(6) { animation-delay: 320ms; } .co-info > :nth-child(7) { animation-delay: 380ms; }
+.co-rarity { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: var(--rc); }
+.co-name { font-size: clamp(2.2rem, 5vw, 3.6rem); line-height: 1; color: #f6f8fa; letter-spacing: 0.01em; }
+.co-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--fs-sm); color: #a9b5c1; }
+.co-sub .role-ico { width: 16px; height: 16px; color: var(--rc); }
+.co-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: 0; border-radius: 6px; overflow: hidden; background: rgba(160, 190, 220, 0.1); border: 1px solid rgba(160, 190, 220, 0.1); }
+.co-stats div { display: grid; gap: 3px; padding: 10px 12px; background: #0e1319; }
+.co-stats dt { font-size: 0.64rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.co-stats dd { margin: 0; font-size: 1.2rem; color: var(--ink); }
+.co-stats dd .coins { font-size: 1.05rem; }
+.co-status { display: grid; gap: 4px; padding: 10px 12px; border-radius: 6px; border-left: 3px solid var(--rc); background: color-mix(in srgb, var(--rc) 8%, #0e1319); }
+.co-status.warn { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 8%, #0e1319); }
+.co-status strong { font-family: var(--font-display); letter-spacing: 0.04em; }
+.co-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.co-btns .btn { min-height: 44px; }
+.co-btns .btn.primary { min-width: 160px; }
+
+@keyframes co-fade { from { opacity: 0; } }
+@keyframes co-float { from { transform: translateY(4px); } to { transform: translateY(-10px); } }
 @keyframes co-shake { 0%, 100% { rotate: 0deg; } 25% { rotate: -1.6deg; } 50% { rotate: 1.6deg; } 75% { rotate: -1deg; } }
 @keyframes co-latch { to { transform: rotateX(70deg) translateY(3px); opacity: 0.5; } }
 @keyframes co-lid { to { transform: translate(-8px, -34px) rotate(-16deg); } }
 @keyframes co-leak { from { opacity: 0; } to { opacity: 1; } }
 @keyframes co-beam { from { opacity: 0; transform: scaleY(0.15); } to { opacity: 0.85; transform: none; } }
+@keyframes co-won-tile { 0% { filter: brightness(1); transform: none; } 30% { filter: brightness(1.7); transform: scale(1.05); } 100% { filter: brightness(1.15); transform: scale(1.03); } }
+@keyframes co-flare { 0% { box-shadow: 0 0 10px rgba(245, 196, 81, 0.9); } 30% { box-shadow: 0 0 26px #fff, 0 0 60px rgba(245, 196, 81, 0.9); } 100% { box-shadow: 0 0 10px rgba(245, 196, 81, 0.9), 0 0 30px rgba(245, 196, 81, 0.35); } }
+@keyframes co-rays { to { transform: rotate(360deg); } }
+@keyframes co-card-in { from { opacity: 0; transform: perspective(900px) rotateY(-28deg) scale(0.7); } }
+@keyframes co-sheen { to { transform: translateX(120%); } }
+@keyframes co-rise { from { opacity: 0; transform: translateY(10px); } }
 
-/* The winning tile on the strip glows in its rarity colour as the strip stops. */
-.co-item.won { box-shadow: inset 0 0 0 2px var(--rc), 0 0 22px -2px var(--rc); animation: co-won-tile 700ms ease-out both; }
-@keyframes co-won-tile { 0% { filter: brightness(1); } 30% { filter: brightness(1.6); } 100% { filter: brightness(1.15); } }
-@media (prefers-reduced-motion: reduce) { .co-unlocking .crate, .co-unlocking .crate *, .co-unlock-beam, .co-item.won { animation: none !important; } }
+@media (max-width: 860px) {
+  .co-inspect { grid-template-columns: 1fr; }
+  .co-showcase { position: static; }
+  .co-pedestal { height: 220px; }
+  .co-float .crate { width: 220px; }
+  .co-cone { width: 280px; margin-left: -140px; height: 250px; }
+  .co-disc { width: 220px; margin-left: -110px; }
+  .co-result { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .co-drop { min-height: 400px; }
+  .co-info { justify-items: center; }
+  .co-sub, .co-btns { justify-content: center; }
+  .co-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .co-rays { width: 520px; height: 520px; margin: -260px 0 0 -260px; }
+}
+@media (max-width: 560px) {
+  .co-stage { gap: 12px; padding-top: 12px; }
+  .co-title h2 { font-size: var(--fs-xl); }
+  .co-bal { display: none; }
+  .co-row { grid-template-columns: 1fr; gap: 6px; }
+  .co-unlock-row { flex-direction: column; align-items: stretch; gap: 8px; text-align: center; }
+  .co-unlock { width: 100%; min-width: 0; }
+  .co-reel { height: 240px; }
+  .co-strip { top: 16px; }
+  .co-card { width: 260px; }
+  .co-btns .btn { flex: 1 1 140px; }
+}
+:root[data-motion="reduced"] .co-float, :root[data-motion="reduced"] .co-rays, :root[data-motion="reduced"] .co-card::after { animation: none !important; }
