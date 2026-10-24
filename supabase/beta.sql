@@ -8,7 +8,7 @@
 --   * The game asks beta_status() on start. While a beta_settings row exists, the game is gated:
 --     only signed-in accounts that redeemed an invite code, inside the beta window, get in.
 --     Delete the row (or set gate = false) and the game is open to everyone again.
---   * Each invite code works once. The beta stops taking players at max_players (50), even if
+--   * Each invite code works once. The beta stops taking players at max_players (51: 50 testers and you), even if
 --     more codes exist.
 --   * Creating tournaments, taking seats, sending lineups and creating or joining PvP rooms need a
 --     beta place, checked by the database, not by the game.
@@ -393,6 +393,7 @@ end $$;
 
 -- The beta window. Edit the two dates before running if they've changed; running again keeps
 -- any dates you already set (change them with the update in the admin notes above).
+-- 51 places: 50 testers plus the organiser's own account.
 insert into public.beta_settings (starts_at, ends_at, max_players)
-  values ('2026-11-02 00:00 Europe/Sarajevo', '2026-12-03 00:00 Europe/Sarajevo', 50)
+  values ('2026-11-02 00:00 Europe/Sarajevo', '2026-12-03 00:00 Europe/Sarajevo', 51)
   on conflict (id) do nothing;

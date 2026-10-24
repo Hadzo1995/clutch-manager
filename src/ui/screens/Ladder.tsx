@@ -107,7 +107,7 @@ function Ladder({ onRooms }: { onRooms: () => void }) {
           <h1>Beta ladder</h1>
           <p className="sub">Challenge any team on the ladder: a Bo1 between your career team and theirs. Win to climb. Up to 10 challenges a day, and each team at most twice. Results never change your career.</p>
         </div>
-        {mine && <div className="ladder-me"><span className="label">You</span><b className="num">#{rank}</b><span className="num">{mine.rating}</span><span className="faint small num">{mine.wins}–{mine.losses}</span></div>}
+        {mine && <div className="ladder-me"><span className="label">You <span className="beta-badge">Beta tester</span></span><b className="num">#{rank}</b><span className="num">{mine.rating}</span><span className="faint small num">{mine.wins}–{mine.losses}</span></div>}
       </header>
       {me === null && <section className="panel"><p className="muted">Sign in to play the ladder.</p><button className="btn small" onClick={onRooms}>Sign in from 1-on-1 rooms</button></section>}
       {!check.ok && <p className="small bad">{check.errors[0]} Fix your lineup to join the ladder.</p>}

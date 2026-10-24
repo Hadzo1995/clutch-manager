@@ -154,7 +154,7 @@ function Ended({ s }: { s: BetaStatus }) {
   return (
     <>
       <h1>The closed beta has ended</h1>
-      <p>Thank you for playing. Your career is saved on this device and will be there when the game opens again.</p>
+      <p>Thank you for playing. Your career is saved online and on this device, and your account keeps its <span className="beta-badge">Beta tester</span> badge for the launch.</p>
       {survey && <Survey id={survey} onClose={() => setSurvey(null)} />}
       <SignOutLink />
     </>
