@@ -170,7 +170,16 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, balance, onU
       if (stripRef.current) stripRef.current.style.transform = `translate3d(${-px}px,0,0)`;
       if (reelEl) reelEl.style.setProperty('--speed', speed.toFixed(3));
       const idx = tileAt(px);
-      if (idx !== lastIdx) { lastIdx = idx; play((a) => a.tick(speed)); }
+      if (idx !== lastIdx) {
+        lastIdx = idx;
+        play((a) => a.tick(speed));
+        // The marker and the floor light take the colour of the tile passing under them,
+        // so every rare tile that goes by flashes its colour (the tiles are real draws).
+        const r = reel[idx]?.rarity;
+        if (reelEl && r) { reelEl.style.setProperty('--mc', `var(--${r})`); reelEl.dataset.under = r; }
+        // Suspense: in the last stretch every tile crossing gives the marker a little kick.
+        if (reelEl && speed < 0.25) { reelEl.classList.remove('kick'); void reelEl.offsetWidth; reelEl.classList.add('kick'); }
+      }
     };
     const finish = (instant: boolean) => {
       if (finished) return;
@@ -181,7 +190,10 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, balance, onU
       // The winning tile lights up in its rarity colour, then the reveal takes over.
       stripRef.current?.children[WIN_INDEX]?.classList.add('won');
       reelEl?.classList.add('landed');
-      window.setTimeout(() => { busy.current = false; setStage('reveal'); }, instant ? 250 : LAND_HOLD_MS);
+      // Rare drops hold a beat longer on the strip, glowing, before the reveal.
+      const rare = outcome?.profile.rarity === 'legend' || outcome?.profile.rarity === 'elite';
+      if (rare) reelEl?.classList.add('rare');
+      window.setTimeout(() => { busy.current = false; setStage('reveal'); }, instant ? 250 : LAND_HOLD_MS + (rare ? 700 : 0));
     };
     place(from, 0);
     const frame = (now: number) => {
@@ -278,7 +290,7 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, balance, onU
                 {reel.map((x, i) => <ReelItem key={`${opened}-${i}`} profile={x} />)}
               </div>
               <i className="co-streak" aria-hidden="true" />
-              <div className="co-line" aria-hidden="true" />
+              <i className="co-glowfloor" aria-hidden="true" /><i className="co-stopflash" aria-hidden="true" /><div className="co-line" aria-hidden="true" />
             </div>
             <p className="co-spin-note small faint">The drop was decided when you unlocked the case. The strip only shows it.</p>
           </div>

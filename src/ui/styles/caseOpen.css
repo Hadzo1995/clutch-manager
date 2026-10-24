@@ -199,3 +199,27 @@
   .co-btns .btn { flex: 1 1 140px; }
 }
 :root[data-motion="reduced"] .co-float, :root[data-motion="reduced"] .co-rays, :root[data-motion="reduced"] .co-card::after { animation: none !important; }
+
+/* ---------- Excitement layer (honest: every effect follows a real tile or the real drop) ---------- */
+/* The marker and a floor glow take the colour of the tile under them while the strip runs. */
+.co-reel { --mc: #f5c451; }
+.co-reel .co-line { background: color-mix(in srgb, var(--mc) 70%, #fff); box-shadow: 0 0 12px var(--mc), 0 0 40px color-mix(in srgb, var(--mc) 45%, transparent); transition: background 120ms, box-shadow 120ms; }
+.co-reel .co-line::before { border-top-color: color-mix(in srgb, var(--mc) 70%, #fff); }
+.co-reel .co-line::after { border-bottom-color: color-mix(in srgb, var(--mc) 70%, #fff); }
+.co-glowfloor { position: absolute; left: 50%; bottom: 0; width: 360px; height: 120px; margin-left: -180px; pointer-events: none; z-index: 0;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--mc) 40%, transparent), transparent); opacity: calc(0.35 + var(--speed) * 0.4); transition: background 140ms; }
+/* Final stretch: each tile that crosses makes the marker jolt. */
+.co-reel.kick .co-line { animation: co-kick 160ms ease-out; }
+@keyframes co-kick { 0% { transform: scaleY(1.08); filter: brightness(1.8); } 100% { transform: none; filter: none; } }
+/* The stop: a short shake of the whole strip and a flash in the drop's colour. */
+.co-reel.landed { animation: co-impact 320ms ease-out; }
+@keyframes co-impact { 0% { transform: translateY(0); } 25% { transform: translateY(3px); } 50% { transform: translateY(-2px); } 75% { transform: translateY(1px); } 100% { transform: none; } }
+.co-stopflash { position: absolute; inset: 0; z-index: 4; opacity: 0; pointer-events: none;
+  background: radial-gradient(40% 90% at 50% 50%, color-mix(in srgb, var(--rc) 55%, #fff), transparent 70%); }
+.co-reel.landed .co-stopflash { animation: co-stopflash 700ms ease-out both; }
+@keyframes co-stopflash { 0% { opacity: 0; } 15% { opacity: 0.75; } 100% { opacity: 0; } }
+/* Elite and Legend: the winning tile pulses and light pours out of it before the reveal. */
+.co-reel.rare .co-item.won { animation: co-rare-pulse 520ms ease-in-out infinite alternate; }
+@keyframes co-rare-pulse { from { box-shadow: inset 0 0 0 2px var(--rc), 0 0 30px -4px var(--rc); filter: brightness(1.1); } to { box-shadow: inset 0 0 0 3px #fff, 0 0 70px 6px var(--rc); filter: brightness(1.5); } }
+.co-reel.rare .co-glowfloor { width: 720px; margin-left: -360px; height: 100%; opacity: 0.9; background: radial-gradient(closest-side, color-mix(in srgb, var(--rc) 55%, transparent), transparent); }
+html[data-motion="reduced"] .co-reel, html[data-motion="reduced"] .co-reel * , html[data-motion="reduced"] .co-stopflash { animation: none !important; }
