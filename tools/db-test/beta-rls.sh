@@ -1,0 +1,58 @@
+#!/bin/bash
+# Checks the closed beta rules in supabase/beta.sql (same setup as rls.sh; see README.md).
+# Load schema.sql, pvp.sql and beta.sql first. It resets the beta tables and settings each run.
+P="psql -h /tmp -p 5433 -U postgres -d sb -qtA -v ON_ERROR_STOP=1"
+as() { local who=$1; shift; local role=authenticated sub="00000000-0000-0000-0000-00000000000$who"; [ "$who" = anon ] && { role=anon; sub=; }
+  $P -c "set role $role; set request.jwt.claim.sub = '$sub'; $*" 2>&1 | sed 's/^psql:.*ERROR: */ERR /' | tr '\n' ' '; echo; }
+expect() { local want=$1 label=$2; shift 2; local out; out=$(as "$@"); if [[ "$out" == *"$want"* ]]; then echo "PASS $label"; else echo "FAIL $label -> $out"; fi; }
+admin() { $P -c "set client_min_messages=warning; $*" >/dev/null; }
+admin "truncate public.beta_invites, public.beta_failed_codes, public.beta_days, public.beta_surveys, public.pvp_rooms, public.tournaments cascade; delete from public.beta_settings;
+  insert into public.beta_settings (starts_at, ends_at, max_players) values (now() - interval '1 day', now() + interval '29 days', 2);
+  insert into public.beta_invites (code) values ('CM-AAAA-AAAA'), ('CM-BBBB-BBBB'), ('CM-CCCC-CCCC');"
+
+[ "$($P -c "select count(*) from public.beta_make_invites(4)")" = 4 ] && echo "PASS admin makes 4 codes" || echo "FAIL admin makes 4 codes"
+[ "$($P -c "select count(*) from public.beta_invites where code ~ '^CM-[A-HJ-KM-NP-Z2-9]{4}-[A-HJ-KM-NP-Z2-9]{4}$'")" = 7 ] && echo "PASS codes use the readable alphabet" || echo "FAIL codes use the readable alphabet"
+admin "delete from public.beta_invites where code not in ('CM-AAAA-AAAA', 'CM-BBBB-BBBB', 'CM-CCCC-CCCC')"
+expect "ERR" "game cannot make codes" 1 "select public.beta_make_invites(1)"
+expect "ERR" "game cannot read invites" 1 "select 1/(select count(*) from public.beta_invites)"
+expect "ERR" "game cannot read the roster" 1 "select * from public.beta_roster"
+expect "ERR" "anon cannot read the roster" anon "select * from public.beta_roster"
+expect "\"gate\": true" "anon sees the gate" anon "select public.beta_status()"
+expect "\"invited\": false" "u1 not invited yet" 1 "select public.beta_status()"
+expect "ERR" "anon cannot redeem" anon "select public.beta_redeem('CM-AAAA-AAAA')"
+expect "ERR" "u1 cannot create a tournament before redeeming" 1 "insert into public.tournaments(id, owner_id, first_kickoff, data) values ('TABCDE', auth.uid(), now() + interval '1 day', '{}')"
+expect "ERR" "u1 cannot create a PvP room before redeeming" 1 "insert into public.pvp_rooms(code, host_id, data) values ('ABC234', auth.uid(), '{}')"
+expect "doesn’t exist" "wrong code refused" 1 "select public.beta_redeem('CM-ZZZZ-ZZZZ')"
+expect "ok" "u1 redeems (lower case, no dashes)" 1 "select public.beta_redeem('cmaaaaaaaa')"
+expect "ok" "u1 redeeming again is fine" 1 "select public.beta_redeem('CM-BBBB-BBBB')"
+expect "\"invited\": true" "u1 is invited" 1 "select public.beta_status()"
+expect "\"players\": 1" "player count is 1" anon "select public.beta_status()"
+expect "already used" "u2 cannot reuse u1's code" 2 "select public.beta_redeem('CM-AAAA-AAAA')"
+expect "ok" "u2 redeems another code" 2 "select public.beta_redeem('CM-BBBB-BBBB')"
+expect "full" "u3 refused: beta is full at 2" 3 "select public.beta_redeem('CM-CCCC-CCCC')"
+expect "done" "u1 creates a tournament" 1 "insert into public.tournaments(id, owner_id, first_kickoff, data) values ('TABCDE', auth.uid(), now() + interval '1 day', '{}'); select 'done'"
+expect "done" "u2 takes a seat" 2 "insert into public.tournament_seats values ('TABCDE', 1, auth.uid(), '{}'); select 'done'"
+expect "ERR" "u3 (not in the beta) cannot take a seat" 3 "insert into public.tournament_seats values ('TABCDE', 2, auth.uid(), '{}')"
+expect "done" "u1 creates a PvP room" 1 "insert into public.pvp_rooms(code, host_id, data) values ('ABC234', auth.uid(), '{}'); select 'done'"
+expect "PvP is for closed beta players" "u3 cannot claim the guest seat" 3 "select public.pvp_claim_guest('ABC234')"
+expect "t" "u2 claims the guest seat" 2 "select public.pvp_claim_guest('ABC234')"
+expect "ERR" "game cannot call the unguarded claim" 3 "select public.pvp_claim_guest_open('ABC234')"
+expect "done" "u1 pings twice" 1 "select public.beta_ping(); select public.beta_ping(); select 'done'"
+[ "$($P -c "select sessions from public.beta_days")" = 2 ] && echo "PASS ping counts sessions per day" || echo "FAIL ping counts sessions per day"
+expect "ERR" "game cannot read play days" 1 "select 1/(select count(*) from public.beta_days)"
+expect "done" "u1 sends the week-2 survey" 1 "insert into public.beta_surveys (user_id, survey, answers) values (auth.uid(), 'week2', '{\"score\":8}'); select 'done'"
+expect "ERR" "u1 cannot send it twice" 1 "insert into public.beta_surveys (user_id, survey, answers) values (auth.uid(), 'week2', '{}')"
+expect "ERR" "u1 cannot answer for u2" 1 "insert into public.beta_surveys (user_id, survey, answers) values ('00000000-0000-0000-0000-000000000002', 'week2', '{}')"
+expect "ERR" "u3 cannot send a survey" 3 "insert into public.beta_surveys (user_id, survey, answers) values (auth.uid(), 'week2', '{}')"
+expect "0" "u2 cannot read u1's survey" 2 "select count(*) from public.beta_surveys"
+admin "update public.beta_settings set max_players = 50, starts_at = now() + interval '1 day', ends_at = now() + interval '30 days'"
+expect "ERR" "before the start, members cannot create rooms" 1 "insert into public.pvp_rooms(code, host_id, data) values ('DEF234', auth.uid(), '{}')"
+expect "ok" "codes can be redeemed before the start" 3 "select public.beta_redeem('CM-CCCC-CCCC')"
+admin "update public.beta_settings set starts_at = now() - interval '31 days', ends_at = now() - interval '1 day'"
+expect "ended" "after the end, codes are refused" 4 "select public.beta_redeem('CM-DDDD-DDDD')"
+expect "ERR" "after the end, members cannot create rooms" 1 "insert into public.pvp_rooms(code, host_id, data) values ('DEF234', auth.uid(), '{}')"
+admin "update public.beta_settings set gate = false"
+expect "\"gate\": false" "gate off shows open" anon "select public.beta_status()"
+expect "done" "gate off: anyone signed in can create rooms" 5 "insert into public.pvp_rooms(code, host_id, data) values ('GHJ234', auth.uid(), '{}'); select 'done'"
+admin "delete from public.beta_settings"
+expect "\"gate\": false" "no settings row: open" anon "select public.beta_status()"
