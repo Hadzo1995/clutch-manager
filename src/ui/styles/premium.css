@@ -908,3 +908,29 @@ main > .overlay { animation: fade-in var(--med) var(--ease); }
     var(--glass), color-mix(in srgb, var(--panel) 80%, transparent);
 }
 .app.has-stadium .sidebar { background: linear-gradient(180deg, rgba(18, 25, 34, 0.88), rgba(8, 11, 16, 0.92)); }
+
+/* ---------- Player profile: portrait in the hero, wider two-column sheet on desktop ---------- */
+.ps-portrait { display: none; }
+@media (min-width: 720px) {
+  .ps-hero { grid-template-columns: 150px minmax(0, 1fr); grid-template-areas: 'portrait main' 'portrait kpis'; column-gap: 18px; }
+  .ps-hero > .ps-hero-main { grid-area: main; }
+  .ps-hero > .ps-kpis { grid-area: kpis; }
+  .ps-portrait { grid-area: portrait; position: relative; display: grid; place-items: end center; align-self: stretch; min-height: 170px; isolation: isolate; }
+  .ps-portrait img { position: relative; border-radius: 14px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--rc) 65%, transparent), 0 22px 30px -14px #000; }
+  .ps-portrait::after { content: ''; position: absolute; left: 10%; right: 10%; bottom: -10px; height: 18px; z-index: -1; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--rc) 55%, transparent), transparent); }
+  .ps-wpn { position: absolute; z-index: -1; left: -30%; top: 20%; width: 160%; height: auto; transform: rotate(-14deg); opacity: 0.18; fill: var(--rc); }
+  .ps-head .sheet-ava { display: none; }
+}
+@media (min-width: 1024px) {
+  .sheet.ps { max-width: 860px; }
+  .ps-body.t-overview { display: block; columns: 2 330px; column-gap: 12px; }
+  .ps-body.t-overview > * { break-inside: avoid; margin-bottom: 12px; }
+  .ps-name { font-size: 2.1rem; }
+}
+
+/* ---------- Club & finances: a wider two-column board on desktop ---------- */
+@media (min-width: 1180px) {
+  .sheet.cl-sheet { max-width: 980px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-content: start; column-gap: 14px; grid-auto-flow: row dense; grid-auto-rows: max-content; }
+  .sheet.cl-sheet > .sheet-head, .sheet.cl-sheet > .cl-kpis, .sheet.cl-sheet > [aria-label='Sponsor'], .sheet.cl-sheet > [aria-label='Reputation and career'] { grid-column: 1 / -1; }
+  .sheet.cl-sheet > .panel { align-self: start; }
+}

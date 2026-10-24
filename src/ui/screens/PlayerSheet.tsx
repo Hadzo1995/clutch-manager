@@ -14,6 +14,7 @@ import { ContractPanel, TransferPanel } from './Transfer';
 import { playerStatus } from '../../engine/career';
 import { marketValue } from '../../engine/economy';
 import { DossierTab, MapResults } from './Dossier';
+import { WeaponArt, weaponFor } from './caseArt';
 
 const ORIGIN_LABEL = { observed: 'From stats', inferred: 'Estimated', fictional: 'Game value' } as const;
 type Tab = 'overview' | 'dossier' | 'attributes' | 'career' | 'data';
@@ -77,6 +78,7 @@ export function PlayerSheet({ cardId, playerId, onClose }: { cardId: string | nu
         </div>
 
         <section className={`ps-hero ${p.rarity}`} aria-label="Ratings summary">
+          <div className="ps-portrait" aria-hidden="true"><WeaponArt kind={weaponFor(p.record.primaryRole)} className="ps-wpn" /><Avatar seed={p.record.id} size={136} accent="#f0a33a" /></div>
           <div className="ps-hero-main">
             <OvrBadge value={ovr} rarity={p.rarity} size="lg" />
             <div className="ps-hero-txt">
@@ -111,7 +113,7 @@ export function PlayerSheet({ cardId, playerId, onClose }: { cardId: string | nu
           ))}
         </div>
 
-        <div className="ps-body" role="tabpanel" key={tab}>
+        <div className={`ps-body t-${tab}`} role="tabpanel" key={tab}>
           {tab === 'overview' && (
             <>
               {card && <ConditionPanel card={card} />}

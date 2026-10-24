@@ -1,0 +1,53 @@
+/* Desktop command bar (CommandBar.tsx): the HUD strip at the top of every manager screen. Prefixed cmd-. */
+.cmd { display: none; }
+@media (min-width: 1024px) {
+  .cmd { position: sticky; top: 10px; z-index: 30; display: grid; grid-template-columns: minmax(220px, 1.1fr) minmax(0, 1fr) auto; align-items: center; gap: 18px;
+    margin: -12px 0 4px; padding: 9px 10px 9px 16px; border-radius: 10px;
+    background: linear-gradient(180deg, rgba(22, 30, 40, 0.86), rgba(12, 17, 23, 0.9)); border: 1px solid rgba(160, 190, 220, 0.1);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 18px 40px -24px #000; backdrop-filter: blur(12px) saturate(1.2); }
+  .cmd::before { content: ''; position: absolute; left: 16px; right: 16px; top: -1px; height: 1px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(240, 163, 58, 0.55), transparent); }
+  .cmd-season { display: grid; gap: 6px; min-width: 0; }
+  .cmd-row { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+  .cmd-row b { font-family: var(--font-display); font-size: var(--fs-md); letter-spacing: 0.02em; }
+  .cmd-track { display: flex; gap: 3px; margin: 0; padding: 0; list-style: none; }
+  .cmd-track li { flex: 1; height: 4px; border-radius: 2px; background: rgba(160, 190, 220, 0.12); }
+  .cmd-track li.playoff { background: rgba(240, 163, 58, 0.16); }
+  .cmd-track li.cup { background: rgba(90, 169, 230, 0.16); }
+  .cmd-track li:nth-child(8), .cmd-track li:nth-child(10) { margin-left: 5px; }
+  .cmd-track li.done { background: var(--ink-3); }
+  .cmd-track li.done.playoff { background: var(--t-dim); } .cmd-track li.done.cup { background: var(--ct-dim); }
+  .cmd-track li.now { background: var(--t); box-shadow: 0 0 10px rgba(240, 163, 58, 0.8); }
+  .cmd-track li.now.cup { background: var(--ct); box-shadow: 0 0 10px rgba(90, 169, 230, 0.8); }
+
+  .cmd-next { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px 12px; border-radius: 8px; border: 1px solid transparent; background: none; color: inherit; text-align: left;
+    transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease); }
+  .cmd-next:hover { background: var(--hover); border-color: var(--line-soft); }
+  .cmd-opp { display: grid; min-width: 0; line-height: 1.15; }
+  .cmd-opp b { font-family: var(--font-display); letter-spacing: 0.04em; }
+  .cmd-opp span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .cmd-right { display: flex; align-items: center; gap: 8px; }
+  .cmd-phase { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; white-space: nowrap; }
+  .cmd-phase.train { color: var(--warn); background: var(--warn-soft); }
+  .cmd-phase.match { color: var(--good); background: var(--good-soft); }
+  .cmd-alerts { position: relative; }
+  .cmd-bell { position: relative; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--line-soft); background: rgba(255, 255, 255, 0.03); color: var(--ink-2);
+    transition: color var(--fast), border-color var(--fast), background var(--fast); }
+  .cmd-bell:hover, .cmd-bell[aria-expanded='true'] { color: var(--ink); border-color: var(--line-strong); background: rgba(255, 255, 255, 0.06); }
+  .cmd-bell b { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; display: grid; place-items: center; font-size: 0.66rem; background: var(--panel-3); color: var(--ink); border: 1px solid var(--line-strong); }
+  .cmd-bell.urgent b { background: var(--bad); border-color: transparent; color: #1a0705; box-shadow: 0 0 10px rgba(240, 106, 95, 0.6); }
+  .cmd-pop { position: absolute; right: 0; top: calc(100% + 8px); width: 380px; max-height: 60vh; overflow-y: auto; display: grid; gap: 4px; padding: 8px; border-radius: 10px;
+    background: #111821; border: 1px solid rgba(160, 190, 220, 0.14); box-shadow: 0 30px 60px -20px #000; animation: cmd-pop 160ms var(--ease) both; transform-origin: top right; }
+  .cmd-pop-h { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 6px 6px; border-bottom: 1px solid var(--line-soft); margin-bottom: 2px; }
+  .cmd-item { display: grid; grid-template-columns: 3px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 8px; border-radius: 6px; border: 0; background: none; color: var(--ink); text-align: left; font-size: var(--fs-sm); }
+  .cmd-item:hover, .cmd-item:focus-visible { background: var(--hover); }
+  .cmd-item i { align-self: stretch; border-radius: 2px; background: var(--ink-3); }
+  .cmd-item.urgent i { background: var(--bad); } .cmd-item.good i { background: var(--good); } .cmd-item.info i { background: var(--ct); }
+  .cmd-item em { font-style: normal; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--t); white-space: nowrap; }
+  .cmd-clear { padding: 8px 6px; }
+  .cmd-coins { display: inline-flex; align-items: center; height: 38px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-soft); background: rgba(255, 255, 255, 0.03); color: var(--ink); }
+  .cmd-coins:hover { border-color: var(--line-strong); }
+  .cmd-go { min-height: 38px; white-space: nowrap; }
+  @keyframes cmd-pop { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+}

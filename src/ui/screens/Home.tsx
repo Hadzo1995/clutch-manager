@@ -12,7 +12,8 @@ import { FormPills, money, signed } from './leagueUtil';
 import type { Result } from './leagueUtil';
 import { Crest, orgTextStyle } from '../crest';
 import '../styles/home.css';
-import { canClaimDaily, weeklyWages } from '../../engine/career';
+import { buildAlerts } from '../alerts';
+import { weeklyWages } from '../../engine/career';
 import { MAX_SQUAD, NO_FACILITIES, facilityUpkeep } from '../../engine/economy';
 
 export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' | 'cases' | 'league') => void; onPlay: () => void }) {
@@ -258,28 +259,10 @@ function Tutorial({ goTo, openClub }: { goTo: Goto; openClub: () => void }) {
 /** The manager's to-do list, built from real career state. */
 function NextActions({ goTo, openClub, openPlayer }: { goTo: Goto; openClub: () => void; openPlayer: (cardId: string | null, playerId?: string) => void }) {
   const { world, career: c } = useGame();
-  const items: { key: string; tone: 'urgent' | 'info' | 'good' | ''; text: string; cta: string; go: () => void }[] = [];
-  const valid = lineupValidation(c);
-  if (!valid.ok) items.push({ key: 'lineup', tone: 'urgent', text: valid.errors[0]!, cta: 'Squad', go: () => goTo('squad') });
-  if (c.coins < 0) items.push({ key: 'debt', tone: 'urgent', text: `In debt by ${-c.coins}. Spending is blocked.`, cta: 'Finances', go: openClub });
-  const ww = weeklyWages(world, c);
-  const burn = ww.players + ww.coach + facilityUpkeep(c.facilities ?? NO_FACILITIES) - (c.sponsor?.weekly ?? 0);
-  if (c.coins >= 0 && burn > 0 && c.coins < burn * 4) items.push({ key: 'runway', tone: 'urgent', text: `Wages and upkeep outrun the sponsor by ${burn} a week. Without match income the money lasts about ${Math.max(0, Math.floor(c.coins / burn))} weeks.`, cta: 'Finances', go: openClub });
-  if (!c.sponsor) items.push({ key: 'sponsor', tone: 'urgent', text: 'No sponsor this season. Three offers are waiting.', cta: 'Choose', go: openClub });
-  for (const b of c.bids ?? []) {
-    const p = world.profiles.get(b.playerId);
-    items.push({ key: `bid-${b.id}`, tone: 'info', text: `${teamName(c, b.teamId)} bid ${b.fee} for ${p?.record.handle ?? 'a player'}. The offer ends with this week.`, cta: 'Review', go: () => openPlayer(b.cardId) });
-  }
-  for (const card of c.cards) {
-    if (card.contract && card.contract.weeksLeft <= 3) {
-      const p = world.profiles.get(card.playerId);
-      items.push({ key: `ct-${card.cardId}`, tone: 'urgent', text: `${p?.record.handle ?? 'A player'}'s contract ends in ${card.contract.weeksLeft} week${card.contract.weeksLeft === 1 ? '' : 's'}.`, cta: 'Renew', go: () => openPlayer(card.cardId) });
-    }
-  }
-  const tired = c.lineup.map((s) => c.cards.find((x) => x.cardId === s.cardId)).filter((x) => x && x.fatigue >= 60);
-  if (tired.length && c.phase === 'training') items.push({ key: 'tired', tone: 'info', text: `${tired.length} starter${tired.length === 1 ? ' is' : 's are'} tired (60+ fatigue). Add a rest day.`, cta: 'Train', go: () => goTo('train') });
-  if (canClaimDaily(c, today())) items.push({ key: 'daily', tone: 'good', text: 'Your free daily case is ready.', cta: 'Open', go: () => goTo('cases') });
-  if (c.lineup.length === 5 && c.cards.length < 7) items.push({ key: 'depth', tone: 'info', text: `Only ${c.cards.length} players. A bench player covers tired starters and expiring contracts.`, cta: 'Scout', go: () => goTo('scout') });
+  const items = buildAlerts(world, c, today()).map((a) => ({
+    ...a,
+    go: () => (typeof a.target === 'object' ? openPlayer(a.target.cardId) : a.target === 'club' ? openClub() : goTo(a.target)),
+  }));
   return (
     <section className="panel hm-todo span-4" aria-label="To do">
       <div className="panel-head"><h2>To do</h2>{items.length > 0 && <span className="chip">{items.length}</span>}</div>

@@ -32,6 +32,7 @@ import { PlayerSheet } from './screens/PlayerSheet';
 import { Settings } from './screens/Settings';
 import { onlineAvailable } from '../online/supa';
 import { reducedMotion } from './motion';
+import { CommandBar } from './CommandBar';
 
 const openTournament = () => { location.hash = '#tournament'; };
 
@@ -209,6 +210,7 @@ export function App() {
           </button>
         </header>
         <main>
+          <CommandBar weekText={weekLabel(career.season.week)} goTo={setTab} onPlay={() => setMatchOpen(true)} />
           {saveFailed && <div className="demo-banner">This browser is blocking storage, so progress will be lost when you close the page. Use Settings → Export save to keep it.</div>}
           {tab === 'home' && <Home goTo={setTab} onPlay={() => setMatchOpen(true)} />}
           {tab === 'squad' && <Squad />}
