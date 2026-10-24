@@ -2,11 +2,12 @@
 # Checks the closed beta rules in supabase/beta.sql (same setup as rls.sh; see README.md).
 # Load schema.sql, pvp.sql and beta.sql first. It resets the beta tables and settings each run.
 P="psql -h /tmp -p 5433 -U postgres -d sb -qtA -v ON_ERROR_STOP=1"
+U1=00000000-0000-0000-0000-000000000001; U2=00000000-0000-0000-0000-000000000002
 as() { local who=$1; shift; local role=authenticated sub="00000000-0000-0000-0000-00000000000$who"; [ "$who" = anon ] && { role=anon; sub=; }
   $P -c "set role $role; set request.jwt.claim.sub = '$sub'; $*" 2>&1 | sed 's/^psql:.*ERROR: */ERR /' | tr '\n' ' '; echo; }
 expect() { local want=$1 label=$2; shift 2; local out; out=$(as "$@"); if [[ "$out" == *"$want"* ]]; then echo "PASS $label"; else echo "FAIL $label -> $out"; fi; }
 admin() { $P -c "set client_min_messages=warning; $*" >/dev/null; }
-admin "truncate public.beta_invites, public.beta_failed_codes, public.beta_days, public.beta_surveys, public.pvp_rooms, public.tournaments cascade; delete from public.beta_settings;
+admin "truncate public.ladder_matches, public.ladder_players, public.beta_saves, public.beta_invites, public.beta_failed_codes, public.beta_days, public.beta_surveys, public.pvp_rooms, public.tournaments cascade; delete from public.beta_settings;
   insert into public.beta_settings (starts_at, ends_at, max_players) values (now() - interval '1 day', now() + interval '29 days', 2);
   insert into public.beta_invites (code) values ('CM-AAAA-AAAA'), ('CM-BBBB-BBBB'), ('CM-CCCC-CCCC');"
 
@@ -45,6 +46,39 @@ expect "ERR" "u1 cannot send it twice" 1 "insert into public.beta_surveys (user_
 expect "ERR" "u1 cannot answer for u2" 1 "insert into public.beta_surveys (user_id, survey, answers) values ('00000000-0000-0000-0000-000000000002', 'week2', '{}')"
 expect "ERR" "u3 cannot send a survey" 3 "insert into public.beta_surveys (user_id, survey, answers) values (auth.uid(), 'week2', '{}')"
 expect "0" "u2 cannot read u1's survey" 2 "select count(*) from public.beta_surveys"
+# cloud saves
+expect "done" "u1 saves its career" 1 "insert into public.beta_saves (user_id, data, saved_at) values (auth.uid(), 'x', now()); select 'done'"
+expect "done" "u1 updates its save" 1 "update public.beta_saves set data = 'y', saved_at = now() where user_id = auth.uid(); select 'done'"
+expect "0" "u2 cannot read u1's save" 2 "select count(*) from public.beta_saves"
+expect "ERR" "u3 (not in the beta) cannot save" 3 "insert into public.beta_saves (user_id, data, saved_at) values (auth.uid(), 'x', now())"
+expect "ERR" "u2 cannot write u1's save" 2 "insert into public.beta_saves (user_id, data, saved_at) values ('$U1', 'x', now())"
+# ladder
+expect "ERR" "u3 cannot join the ladder" 3 "select public.ladder_join('C', 'Gamma', 'GAM', '{\"players\":[1,2,3,4,5]}')"
+expect "ERR" "a team needs five players" 1 "select public.ladder_join('A', 'Alpha', 'ALP', '{\"players\":[1,2]}')"
+expect "u-" "u1 joins the ladder" 1 "select public.ladder_join('A', 'Alpha', 'alp', '{\"players\":[1,2,3,4,5]}')"
+expect "u-" "u2 joins the ladder" 2 "select public.ladder_join('B', 'Beta', 'BET', '{\"players\":[1,2,3,4,5]}')"
+expect "ALP" "tag is upper-cased" 1 "select tag from public.ladder_players where user_id = auth.uid()"
+expect "ERR" "game cannot add bots" 1 "select public.ladder_add_bots(1)"
+[ "$($P -c "select count(*) from public.ladder_add_bots(3)")" = 3 ] && echo "PASS admin adds 3 bots" || echo "FAIL admin adds 3 bots"
+expect "0" "u1 cannot edit ratings directly (0 rows)" 1 "with x as (update public.ladder_players set rating = 5000 returning 1) select count(*) from x"
+expect "ERR" "u1 cannot write matches directly" 1 "insert into public.ladder_matches (challenger, defender, seed, challenger_team, expected, delta) values ('u-$U1', 'bot-0', 1, '{}', 0.5, 50)"
+expect "ERR" "u1 cannot challenge itself" 1 "select public.ladder_challenge('u-$U1')"
+expect "\"seed\"" "u1 challenges u2" 1 "select public.ladder_challenge('u-$U2')"
+expect "984|1016" "the challenge counts as a loss at once (1000 vs 1000: -16)" 1 "select string_agg(rating::text, '|' order by id) from public.ladder_players where user_id is not null"
+expect "ERR" "u2 cannot report u1's challenge" 2 "select public.ladder_report((select max(id) from public.ladder_matches), true, '{}', 'h')"
+expect "16" "u1 reports a win" 1 "select public.ladder_report((select max(id) from public.ladder_matches), true, '{}', 'h')"
+expect "1016|1|0|984|0|1" "a reported win swaps the points and the record" 1 "select string_agg(rating || '|' || wins || '|' || losses, '|' order by id) from public.ladder_players where user_id is not null"
+expect "16" "reporting twice changes nothing" 1 "select public.ladder_report((select max(id) from public.ladder_matches), false, '{}', 'h')"
+expect "\"bot_slot\": 0" "u1 challenges a bot" 1 "select public.ladder_challenge('bot-0')"
+expect "-" "u1 reports a loss to the bot" 1 "select public.ladder_report((select max(id) from public.ladder_matches), false, '{}', 'h', '{\"players\":[1,2,3,4,5]}')"
+expect "t" "the bot's team is stored with the report" 1 "select defender_team is not null from public.ladder_matches where defender = 'bot-0'"
+expect "seed" "u1 challenges the bot again" 1 "select public.ladder_challenge('bot-0')"
+expect "twice" "a third challenge of the same team in a day is refused" 1 "select public.ladder_challenge('bot-0')"
+admin "update public.ladder_matches set created_at = now() - interval '20 minutes' where defender = 'bot-0' and status = 'pending'"
+expect "lost" "a late report counts as a loss" 1 "select public.ladder_report((select max(id) from public.ladder_matches where defender = 'bot-0'), true, '{}', 'h'); select status from public.ladder_matches where defender = 'bot-0' order by id desc limit 1"
+expect "0" "u3 cannot read the ladder" 3 "select count(*) from public.ladder_players"
+admin "select public.beta_reset_ladder()"
+[ "$($P -c "select count(*) || ':' || sum(rating) from public.ladder_players")" = "2:2000" ] && echo "PASS reset removes bots and resets ratings" || echo "FAIL reset removes bots and resets ratings"
 admin "update public.beta_settings set max_players = 50, starts_at = now() + interval '1 day', ends_at = now() + interval '30 days'"
 expect "ERR" "before the start, members cannot create rooms" 1 "insert into public.pvp_rooms(code, host_id, data) values ('DEF234', auth.uid(), '{}')"
 expect "ok" "codes can be redeemed before the start" 3 "select public.beta_redeem('CM-CCCC-CCCC')"

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { currentUser, onAuth, signIn, signOut, signUp } from '../../online/supa';
 import { betaAccess, betaDay, betaDays, betaPing, dueSurvey, markSurvey, redeemInvite, rememberInvite, sendSurvey } from '../../online/beta';
 import type { BetaAccess, BetaStatus, SurveyId } from '../../online/beta';
+import { pullCloudSave, startCloudSave } from '../../online/cloudSave';
 import { ContactForm } from '../ContactForm';
 import '../styles/beta.css';
 
@@ -29,9 +30,19 @@ export function BetaGate({ children }: { children: ReactNode }) {
     if (access?.kind === 'in' && !pinged.current) { pinged.current = true; void betaPing(); }
   }, [access]);
 
+  // Beta players' careers live online too: take the newer copy before the game reads it, then keep the cloud copy current.
+  const [synced, setSynced] = useState(false);
+  const isIn = access?.kind === 'in';
+  useEffect(() => {
+    if (!isIn) return;
+    let stop: (() => void) | undefined, live = true;
+    void pullCloudSave().then(() => { if (!live) return; setSynced(true); stop = startCloudSave(); });
+    return () => { live = false; stop?.(); };
+  }, [isIn]);
+
   if (!access) return <Door><p className="muted">Checking your beta place…</p></Door>;
   if (access.kind === 'open') return <>{children}</>;
-  if (access.kind === 'in') return <><BetaBar s={access.s} />{children}</>;
+  if (access.kind === 'in') return synced ? <><BetaBar s={access.s} />{children}</> : <Door><p className="muted">Loading your career…</p></Door>;
   if (access.kind === 'offline') {
     return <Door><h1>Can’t reach the game server</h1><p className="muted">The closed beta checks your invite online. Check your connection and try again.</p>
       <button className="btn primary" onClick={() => { setAccess(null); void check(); }}>Try again</button></Door>;

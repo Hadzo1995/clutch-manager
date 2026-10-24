@@ -1,0 +1,11 @@
+/* Beta ladder (inside the PvP tab). Uses the game's tokens and the shared .tbl table. */
+.ladder-switch { max-width: 360px; margin-bottom: 12px; }
+.ladder-me { display: grid; grid-template-columns: auto auto; gap: 0 10px; align-items: baseline; padding: 8px 12px; border-radius: var(--r); border: 1px solid color-mix(in srgb, var(--t) 40%, transparent); background: var(--t-soft); }
+.ladder-me .label { grid-column: 1 / -1; }
+.ladder-me b { font-size: 1.4rem; color: var(--t); }
+.ladder-tbl td.name, .ladder-tbl th:nth-child(2) { text-align: left; max-width: 14rem; }
+.ladder-tbl td.name .chip { margin-left: 6px; }
+.ladder-tbl td:last-child { width: 1%; }
+.ladder-empty { padding: 12px 16px; margin: 0; }
+.ladder-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ladder-log li { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; font-size: 0.86rem; }
