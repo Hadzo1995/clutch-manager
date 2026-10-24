@@ -14,3 +14,10 @@ The PvP rooms have their own file and check:
 
     psql -d sb -f ../../supabase/pvp.sql
     ./pvp-rls.sh
+
+The closed beta has its own check too (load it after the two files above):
+
+    psql -d sb -f ../../supabase/beta.sql
+    ./beta-rls.sh
+
+It leaves the beta switched off when it finishes, so `rls.sh` and `pvp-rls.sh` still pass afterwards.

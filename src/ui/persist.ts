@@ -15,14 +15,34 @@ export function loadCareer(): Career | null {
   }
 }
 
+type SaveListener = (raw: string | null) => void;
+const listeners = new Set<SaveListener>();
+
+/** Called with each saved career (null when it was deleted); the beta's cloud save listens. */
+export function onCareerStored(fn: SaveListener): () => void {
+  listeners.add(fn);
+  return () => { listeners.delete(fn); };
+}
+
 export function storeCareer(c: Career | null): boolean {
+  const raw = c ? serializeCareer(c) : null;
+  for (const fn of listeners) fn(raw);
   try {
-    if (c) localStorage.setItem(SAVE_KEY, serializeCareer(c));
+    if (raw) localStorage.setItem(SAVE_KEY, raw);
     else localStorage.removeItem(SAVE_KEY);
     return true;
   } catch {
     return false;
   }
+}
+
+/** The saved career as stored, for the cloud copy. */
+export function rawSave(): string | null {
+  try { return localStorage.getItem(SAVE_KEY); } catch { return null; }
+}
+
+export function storeRawSave(raw: string): boolean {
+  try { localStorage.setItem(SAVE_KEY, raw); return true; } catch { return false; }
 }
 
 export function loadDataset(): Dataset | null {

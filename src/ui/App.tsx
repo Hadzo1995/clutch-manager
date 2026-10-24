@@ -25,7 +25,7 @@ import { Train } from './screens/Train';
 import { Scout } from './screens/Scout';
 import { ClubSheet } from './screens/Club';
 import { Cases } from './screens/Cases';
-import { Pvp } from './screens/Pvp';
+import { PvpHub } from './screens/Ladder';
 import { League } from './screens/League';
 import { MatchFlow } from './screens/Match';
 import { PlayerSheet } from './screens/PlayerSheet';
@@ -218,7 +218,7 @@ export function App() {
           {tab === 'scout' && <Scout />}
           {tab === 'cases' && <Cases goSquad={() => setTab('squad')} />}
           {tab === 'league' && <League />}
-          {tab === 'pvp' && <Pvp />}
+          {tab === 'pvp' && <PvpHub />}
         </main>
         <div className="tabbar">
           <nav aria-label="Main">
