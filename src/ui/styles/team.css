@@ -627,3 +627,6 @@ button.pcard.pc:focus-visible { outline: 2px solid var(--t); outline-offset: 2px
 
 /* Compare: game-value marker on group headings */
 .cmp-gv { margin-left: 8px; padding: 1px 6px; border-radius: 4px; border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); color: var(--warn); font-size: 0.58rem; letter-spacing: 0.1em; vertical-align: 1px; }
+
+/* Default game plan on the squad screen: full width, after the collection. */
+main > .sq-plan { grid-column: 1 / -1; order: 10; }

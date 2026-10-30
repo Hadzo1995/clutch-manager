@@ -12,6 +12,7 @@ import { FormPills, money, signed } from './leagueUtil';
 import type { Result } from './leagueUtil';
 import { Crest, orgTextStyle } from '../crest';
 import '../styles/home.css';
+import { formatDate, matchDate } from '../../engine/calendar';
 import { buildAlerts } from '../alerts';
 import { weeklyWages } from '../../engine/career';
 import { MAX_SQUAD, NO_FACILITIES, facilityUpkeep } from '../../engine/economy';
@@ -23,6 +24,9 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
   const table = standings(c.season);
   const pos = table.findIndex((r) => r.teamId === HUMAN_ID) + 1;
   const me = table.find((r) => r.teamId === HUMAN_ID)!;
+  // Before the first league round everyone is level, so a place would only reflect the tie-break.
+  const started = table.some((r) => r.played > 0);
+  const place = (n: number) => (started ? ordinal(n) : '–');
   const strength = valid.ok ? teamStrength(humanSnapshot(world, c)) : null;
   const opponentId = fixture ? (fixture.home === HUMAN_ID ? fixture.away : fixture.home) : null;
   const opp = opponentId ? aiTeamById(c, opponentId) : undefined;
@@ -67,6 +71,7 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
           <>
             <div className="hm-hero-top">
               <span className="label">{stageLabel}</span>
+              <span className="small faint num hm-date">{formatDate(matchDate(c.season.number, fixture.week))}</span>
               <span className="chip">{fixture.format.toUpperCase()}</span>
               <span className={`chip ${c.phase === 'training' ? 'warn' : 'good'}`}>{c.phase === 'training' ? 'Training day' : 'Matchday'}</span>
             </div>
@@ -74,13 +79,13 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
               <div className="hm-side me">
                 <span className="hm-crest-row"><Crest name={c.teamName} tag={c.teamTag} mine size={52} /><span className="hm-tag">{c.teamTag}</span></span>
                 <span className="hm-tname">{c.teamName}</span>
-                <span className="hm-meta"><span className="num">{ordinal(pos)}</span> · <span className="num">{me.wins}-{me.losses}</span></span>
+                <span className="hm-meta"><span className="num">{place(pos)}</span> · <span className="num">{me.wins}-{me.losses}</span></span>
               </div>
               <div className="hm-mid" aria-hidden="true"><span>VS</span></div>
               <div className="hm-side opp">
                 <span className="hm-crest-row"><Crest name={opp.name} tag={opp.tag} size={52} /><span className="hm-tag" style={orgTextStyle(opp.name)}>{opp.tag}</span></span>
                 <span className="hm-tname">{opp.name}</span>
-                <span className="hm-meta">{oppPos > 0 && oppRow ? <><span className="num">{ordinal(oppPos)}</span> · <span className="num">{oppRow.wins}-{oppRow.losses}</span></> : 'Cup guest'}</span>
+                <span className="hm-meta">{oppPos > 0 && oppRow ? <><span className="num">{place(oppPos)}</span> · <span className="num">{oppRow.wins}-{oppRow.losses}</span></> : 'Cup guest'}</span>
               </div>
             </div>
             <div className="hm-str" aria-label={`Team strength: you ${strength ?? 'unknown'}, ${opp.tag} ${oppStrength}`}>
@@ -129,7 +134,7 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
 
       <button className="panel hm-tile span-4" onClick={() => goTo('league')} aria-label={`League: ${ordinal(pos)} in the ${div.name}. Open the league`}>
         <div className="hm-tile-head"><span className="label">{div.name}</span><span className="hm-go" aria-hidden="true">League ›</span></div>
-        <div className="hm-kpi"><span className="hm-big">{ordinal(pos)}</span><span className="faint small">of {table.length}</span><span className="hm-kpi-r num">{me.points} <span className="faint">pts</span></span></div>
+        <div className="hm-kpi"><span className="hm-big">{place(pos)}</span><span className="faint small">of {table.length}</span><span className="hm-kpi-r num">{me.points} <span className="faint">pts</span></span></div>
         <div className="hm-mini" role="presentation">
           {mini.map((r) => {
             const i = table.indexOf(r);
@@ -187,7 +192,7 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
       )}
 
       <section className={`panel ${tr ? 'span-6' : ''}`} aria-label="News">
-        <div className="panel-head"><h2>Newsroom</h2><span className="label">Season {c.season.number} · Week {Math.min(c.season.week, 12)}</span></div>
+        <div className="panel-head"><h2>Newsroom</h2><span className="label">Season {c.season.number} · {formatDate(matchDate(c.season.number, c.season.week), { year: false })}</span></div>
         <ul className="hm-news">{c.news.slice(0, 8).map((n, i) => <li key={i}>{n}</li>)}</ul>
       </section>
     </>

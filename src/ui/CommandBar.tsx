@@ -5,6 +5,7 @@ import { buildAlerts } from './alerts';
 import type { AlertTarget } from './alerts';
 import { Coin, today, useGame } from './common';
 import { Crest } from './crest';
+import { formatDate, matchDate } from '../engine/calendar';
 import './styles/hud.css';
 
 type Go = (t: 'squad' | 'train' | 'scout' | 'cases' | 'league') => void;
@@ -44,9 +45,9 @@ export function CommandBar({ weekText, goTo, onPlay }: { weekText: string; goTo:
   return (
     <div className="cmd" role="region" aria-label="Season status">
       <div className="cmd-season">
-        <div className="cmd-row"><span className="label">Season {c.season.number}</span><b>{weekText}</b></div>
+        <div className="cmd-row"><span className="label">Season {c.season.number}</span><b>{weekText}</b><span className="small faint num cmd-date">{formatDate(matchDate(c.season.number, week))}</span></div>
         <ol className="cmd-track" aria-label={`Week ${week} of ${SEASON.length}`}>
-          {SEASON.map((s) => <li key={s.w} className={`${s.kind}${s.w < week ? ' done' : s.w === week ? ' now' : ''}`} title={s.label} />)}
+          {SEASON.map((s) => <li key={s.w} className={`${s.kind}${s.w < week ? ' done' : s.w === week ? ' now' : ''}`} title={`${s.label} · ${formatDate(matchDate(c.season.number, s.w))}`} />)}
         </ol>
       </div>
       <button type="button" className="cmd-next" onClick={() => goTo('league')} aria-label={opp ? `Next match against ${opp.name}. Open the league` : 'Open the league'}>

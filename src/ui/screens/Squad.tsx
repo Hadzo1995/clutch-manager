@@ -1,7 +1,8 @@
 import { Avatar } from '../avatar/Avatar';
 import { MAX_SQUAD, coachWage } from '../../engine/economy';
 import { useState } from 'react';
-import { autoLineup, hireCoach, humanSnapshot, lineupValidation, profileOf, setLineup } from '../../engine/career';
+import { autoLineup, hireCoach, humanSnapshot, lineupValidation, profileOf, setLineup, setTactics } from '../../engine/career';
+import { TacticsEditor } from './Match';
 import { coachOverall } from '../../engine/data/coaches';
 import { cardOvr, effectiveOvr } from '../../engine/ratings';
 import { coordination, roleFit, teamStrength } from '../../engine/team';
@@ -96,6 +97,11 @@ export function Squad() {
             <button className="btn small primary" onClick={() => setMarket(true)}>Find a coach</button>
           </div>
         )}
+      </section>
+
+      <section className="panel sq-plan" aria-labelledby="plan-h">
+        <div className="panel-head"><h2 id="plan-h">Game plan</h2><span className="small faint">Saved as your default · fine-tune it in match prep, at halftime and in timeouts</span></div>
+        <TacticsEditor tactics={c.tactics} onChange={(t) => update(setTactics(c, t))} />
       </section>
 
       <section className="panel sq-coll" aria-labelledby="coll-h">

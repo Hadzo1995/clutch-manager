@@ -137,3 +137,29 @@
 .cs-odds-note { margin: 4px 0 0; line-height: 1.4; }
 .cs-odds-note .cs-tiers { opacity: 0.8; }
 .cs-foot .btn { white-space: nowrap; }
+
+/* Inventory: owned cards and the drop history */
+.cs-inv { grid-column: 1 / -1; display: grid; gap: 12px; }
+.cs-inv-rar { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--fs-sm); color: var(--ink-2); }
+.cs-inv-rar span { display: inline-flex; align-items: center; gap: 6px; }
+.cs-inv-rar span.zero { opacity: 0.45; }
+.cs-inv-rar i { width: 9px; height: 9px; border-radius: 2px; }
+.cs-inv-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.cs-inv-card { all: unset; box-sizing: border-box; cursor: pointer; display: grid; gap: 2px; padding: 9px 10px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line-soft); border-top: 2px solid var(--rc, var(--line)); transition: transform var(--fast) var(--ease), border-color var(--fast); }
+.cs-inv-card:hover, .cs-inv-card:focus-visible { transform: translateY(-1px); border-color: var(--rc, var(--line-strong)); }
+.cs-inv-card.bronze { --rc: var(--bronze); } .cs-inv-card.silver { --rc: var(--silver); } .cs-inv-card.gold { --rc: var(--gold); } .cs-inv-card.elite { --rc: var(--elite); } .cs-inv-card.legend { --rc: var(--legend); }
+.cs-inv-card.more { place-items: center; border-style: dashed; color: var(--ink-2); }
+.cs-inv-ovr { font-family: var(--font-display); font-size: var(--fs-xl); color: var(--rc); line-height: 1; }
+.cs-inv-h { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-inv-m { display: flex; align-items: center; gap: 6px; color: var(--ink-2); min-height: 16px; }
+.cs-inv-sub { margin: 4px 0 0; font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); }
+.cs-drops { list-style: none; margin: 0; padding: 0; display: grid; }
+.cs-drops li { display: grid; grid-template-columns: 4px 1fr auto; grid-template-areas: 'bar p w' 'bar r r'; gap: 2px 10px; padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
+.cs-drops li:last-child { border-bottom: 0; }
+.cs-drops li > i { grid-area: bar; border-radius: 2px; background: var(--rc, var(--line)); }
+.cs-drops li.bronze { --rc: var(--bronze); } .cs-drops li.silver { --rc: var(--silver); } .cs-drops li.gold { --rc: var(--gold); } .cs-drops li.elite { --rc: var(--elite); } .cs-drops li.legend { --rc: var(--legend); }
+.cs-drop-p { grid-area: p; display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 600; }
+.cs-drop-r { grid-area: r; }
+.cs-drop-w { grid-area: w; text-align: right; white-space: nowrap; }
+.cs-drops .linkish { all: unset; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+.cs-drops .linkish:hover { text-decoration-color: var(--t); }

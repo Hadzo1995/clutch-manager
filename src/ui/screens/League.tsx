@@ -10,6 +10,7 @@ import { RoleIcon, useGame } from '../common';
 import { FormPills, signed, teamForm } from './leagueUtil';
 import { Crest } from '../crest';
 import '../styles/home.css';
+import { LEAGUE_KICKOFF, formatDate, matchDate, seasonSpan, seasonStart } from '../../engine/calendar';
 
 function weekName(w: number): string {
   if (w <= 7) return `Week ${w}`;
@@ -57,6 +58,7 @@ export function League() {
       <header className="page-head lg-head">
         <div className="stack" style={{ gap: 4 }}>
           <span className="label">Season {c.season.number} · {c.season.week > 12 ? 'Finished' : weekTitle(c.season.week, c.season.division)}</span>
+          <span className="small faint num">{seasonSpan(c.season.number)}</span>
           <h1>{div.name}</h1>
         </div>
         <ol className="lg-ladder" aria-label="Divisions, lowest to highest">
@@ -105,10 +107,10 @@ export function League() {
       </section>
 
       <section className="panel lg-o3" aria-label="Fixtures">
-        <div className="panel-head"><h2>Fixtures</h2><span className="small muted">{weekTitle(shownWeek, c.season.division)}</span></div>
+        <div className="panel-head"><h2>Fixtures</h2><span className="small muted">{weekTitle(shownWeek, c.season.division)} · {formatDate(matchDate(c.season.number, shownWeek))}</span></div>
         <div className="lg-weeks" role="group" aria-label="Choose a week">
           {weeks.map((w) => (
-            <button key={w} aria-pressed={w === shownWeek} className={`${w === c.season.week ? 'now' : ''} ${w < c.season.week ? 'done' : ''}`} onClick={() => setWeek(w)}>
+            <button key={w} aria-pressed={w === shownWeek} title={formatDate(matchDate(c.season.number, w))} className={`${w === c.season.week ? 'now' : ''} ${w < c.season.week ? 'done' : ''}`} onClick={() => setWeek(w)}>
               {weekName(w)}
             </button>
           ))}
@@ -137,12 +139,12 @@ export function League() {
         <section className="panel lg-you lg-o2" aria-label="Your season">
           <div className="panel-head"><span className="label">Your season</span><span className="lg-tag t">{c.teamTag}</span></div>
           <div className="lg-you-kpis">
-            <div className="stat"><span className="label">Place</span><span className="v">{ordinal(pos)}</span></div>
+            <div className="stat"><span className="label">Place</span><span className="v">{table.some((r) => r.played > 0) ? ordinal(pos) : '–'}</span></div>
             <div className="stat"><span className="label">Points</span><span className="v num">{me.points}</span></div>
             <div className="stat"><span className="label">RD</span><span className={`v num ${me.roundDiff > 0 ? 'good' : me.roundDiff < 0 ? 'bad' : ''}`}>{signed(me.roundDiff)}</span></div>
           </div>
           {next && nextOpp && (
-            <div className="lg-next"><span className="label">Next</span><span className="small">{weekName(next.week)} vs <strong>{nameOf(nextOpp)}</strong></span><span className="chip">{next.format.toUpperCase()}</span></div>
+            <div className="lg-next"><span className="label">Next</span><span className="small">{weekName(next.week)} · {formatDate(matchDate(c.season.number, next.week), { year: false })} vs <strong>{nameOf(nextOpp)}</strong></span><span className="chip">{next.format.toUpperCase()}</span></div>
           )}
           <dl className="lg-rules">
             <div><dt>1st place</dt><dd className="num">{div.prizes[0]!.toLocaleString('en-US')}</dd></div>
@@ -151,6 +153,8 @@ export function League() {
           </dl>
           <p className="small faint">Top 4 reach the Bo3 playoffs. Weeks {CUP_START}-{CUP_START + 2} are the {cupName(c.season.division)}: the top teams and you against 4 guests from {canUp ? `the ${DIVISIONS[c.season.division + 1]!.name}` : 'the ESL Pro League'}.{canUp ? ' Top 2 are promoted.' : ''}{canDown ? ' Bottom 2 are relegated.' : ''}</p>
         </section>
+
+        <SeasonCalendar />
 
         <section className="panel lg-o4" aria-label="Map record">
           <div className="panel-head"><h2>Map record</h2><span className="small muted">all seasons</span></div>
@@ -301,6 +305,32 @@ function Leaders() {
           </tbody>
         </table>
       )}
+    </section>
+  );
+}
+
+/** The season's shape on the calendar: league weeks, playoffs, cup and the off-season, with dates. */
+function SeasonCalendar() {
+  const { career: c } = useGame();
+  const n = c.season.number;
+  const week = c.season.week;
+  const phases: { label: string; from: number; to: number }[] = [
+    { label: 'League · 7 rounds, Bo1', from: 1, to: 7 },
+    { label: 'Playoffs · Bo3', from: 8, to: 9 },
+    { label: `${cupName(c.season.division)} · Bo3`, from: CUP_START, to: CUP_START + 2 },
+  ];
+  const span = (a: number, b: number) => a === b ? formatDate(matchDate(n, a), { year: false }) : `${formatDate(matchDate(n, a), { year: false, weekday: false })} – ${formatDate(matchDate(n, b), { year: false, weekday: false })}`;
+  return (
+    <section className="panel lg-cal" aria-label="Season calendar">
+      <div className="panel-head"><h2>Calendar</h2><span className="small muted">Season {n}</span></div>
+      <ol className="lg-cal-list">
+        {phases.map((p) => {
+          const state = week > p.to ? 'done' : week >= p.from ? 'now' : '';
+          return <li key={p.label} className={state}><i aria-hidden="true" /><span>{p.label}</span><span className="num small muted">{span(p.from, p.to)}</span></li>;
+        })}
+        <li className={week > CUP_START + 2 ? 'now' : ''}><i aria-hidden="true" /><span>Off-season · season {n + 1} starts</span><span className="num small muted">{formatDate(seasonStart(n + 1), { weekday: false })}</span></li>
+      </ol>
+      <p className="small faint">Season 1 opened on {formatDate(LEAGUE_KICKOFF)}. Matchdays are weekly, every {formatDate(LEAGUE_KICKOFF).split(' ')[0]}. Dates are in-game and move on when you play the week.</p>
     </section>
   );
 }
