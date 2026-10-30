@@ -249,9 +249,10 @@ export function roundRobin(teamIds: string[]): [string, string][][] {
   return weeks;
 }
 
-export function newSeason(rng: Rng, number: number, divisionId: number, profiles: PlayerProfile[], coaches: Coach[]): SeasonState {
+/** `excludeTags`: tags no AI team may use (your own club's tag, so two teams never share one). */
+export function newSeason(rng: Rng, number: number, divisionId: number, profiles: PlayerProfile[], coaches: Coach[], excludeTags: string[] = []): SeasonState {
   const division = DIVISIONS[divisionId]!;
-  const aiTeams = generateAiTeams(rng, division, profiles, coaches);
+  const aiTeams = generateAiTeams(rng, division, profiles, coaches, 7, excludeTags);
   const ids = [HUMAN_ID, ...aiTeams.map((t) => t.id)];
   const fixtures: Fixture[] = [];
   roundRobin(rng.shuffle(ids)).forEach((pairs, wi) => {

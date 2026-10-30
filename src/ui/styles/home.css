@@ -521,4 +521,15 @@ button.lg-team:hover .lg-name, button.lg-team:focus-visible .lg-name { text-deco
 .lg-world-n { color: var(--ink-3); font-size: 0.8rem; text-align: right; }
 .lg-world-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lg-world-star { background: none; border: 0; padding: 0; color: var(--ink-3); font: 600 0.75rem/1 var(--font-data); cursor: pointer; }
-.lg-world-star:hover { color: var(--ink-1, #fff); text-decoration: underline; }
+.lg-world-star:hover { color: var(--ink); text-decoration: underline; }
+
+/* Season calendar (League) */
+.lg-cal-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.lg-cal-list li { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line-soft); font-size: var(--fs-sm); }
+.lg-cal-list li:last-child { border-bottom: 0; }
+.lg-cal-list li i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ink-3); }
+.lg-cal-list li.done i { background: var(--ink-3); }
+.lg-cal-list li.done span:nth-child(2) { color: var(--ink-3); }
+.lg-cal-list li.now i { background: var(--t); border-color: var(--t); box-shadow: 0 0 0 3px color-mix(in srgb, var(--t) 25%, transparent); }
+.lg-cal-list li.now span:nth-child(2) { color: var(--ink); font-weight: 600; }
+.lg-cal .small.faint { margin-top: 10px; }
