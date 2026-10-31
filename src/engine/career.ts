@@ -3,7 +3,7 @@
  * career, works on a deep copy, and returns the new career, so the UI can keep
  * state immutable and saves are plain JSON.
  */
-import { Rng, clamp } from './rng';
+import { Rng, clamp, hashString } from './rng';
 import { addToCollection, CASES, rollPlayer } from './cases';
 import type { CaseId, CaseOutcome } from './cases';
 import { generateCoaches } from './data/coaches';
@@ -129,7 +129,7 @@ export interface Career {
   sponsor: Sponsor | null;
   ledger: LedgerEntry[];
   /** Offers made this week, by player id, to limit retries. */
-  negotiations: Record<string, { season: number; week: number; tries: number }>;
+  negotiations: Record<string, { season: number; week: number; tries: number; counter?: OfferTerms }>;
   shortlist: string[];
   /** Offers from AI clubs for your players. */
   bids: Bid[];
@@ -145,7 +145,11 @@ export interface Career {
   tournament?: { id: string; seat: number; applied: string[]; lastTrainDate?: string; restedDay?: number; mapPrefs?: MapName[] };
 }
 
-export interface Bid { id: string; cardId: string; playerId: string; teamId: string; fee: number; season: number; expiresWeek: number }
+export interface Bid {
+  id: string; cardId: string; playerId: string; teamId: string; fee: number; season: number; expiresWeek: number;
+  /** You asked for more once; the fee is now their final offer. */
+  countered?: boolean;
+}
 
 export const ACHIEVEMENTS: Record<string, { name: string; description: string }> = {
   'first-win': { name: 'First blood', description: 'Win your first match.' },
@@ -914,6 +918,46 @@ export function acceptBid(world: World, c: Career, bidId: string): Career {
   return n;
 }
 
+/**
+ * The most a bidding club will pay, decided when the bid arrives (fixed for that bid, so asking
+ * twice gives the same answer). Between 100% and 125% of their first offer.
+ */
+export function bidCeiling(bid: Bid): number {
+  const k = (hashString(`ceiling:${bid.id}`) % 1000) / 1000;
+  return Math.round((bid.fee * (1 + 0.25 * k)) / 50) * 50;
+}
+
+export type CounterResult = { outcome: 'accepted'; fee: number } | { outcome: 'final'; fee: number } | { outcome: 'walked' };
+
+/**
+ * Ask a bidding club for more, once. Within their ceiling they pay it and the player is sold.
+ * Up to 20% above it they come back with a final offer at their ceiling; further than that they walk away.
+ */
+export function counterBid(world: World, c: Career, bidId: string, ask: number): { career: Career; result: CounterResult } {
+  const bid = (c.bids ?? []).find((b) => b.id === bidId);
+  if (!bid) throw new Error('That bid is no longer on the table.');
+  if (bid.countered) throw new Error('They have made their final offer.');
+  if (!Number.isFinite(ask) || ask <= bid.fee) throw new Error('Ask for more than they offered.');
+  checkCanLeave(c, bid.cardId);
+  const ceiling = bidCeiling(bid);
+  const team = aiTeamById(c, bid.teamId);
+  const handle = world.profiles.get(bid.playerId)?.record.handle ?? 'your player';
+  if (ask <= ceiling) {
+    const sold = acceptBid(world, { ...c, bids: c.bids.map((b) => (b.id === bidId ? { ...b, fee: Math.round(ask) } : b)) }, bidId);
+    return { career: sold, result: { outcome: 'accepted', fee: Math.round(ask) } };
+  }
+  const n = structuredClone(c);
+  if (ask <= ceiling * 1.2) {
+    const b = n.bids.find((x) => x.id === bidId)!;
+    b.fee = ceiling; b.countered = true;
+    addNews(n, `${team?.tag ?? 'The club'} come back with a final ${ceiling} for ${handle}.`);
+    return { career: n, result: { outcome: 'final', fee: ceiling } };
+  }
+  n.bids = n.bids.filter((x) => x.id !== bidId);
+  addNews(n, `${team?.tag ?? 'The club'} walk away from talks for ${handle}: ${Math.round(ask)} was too much.`);
+  return { career: n, result: { outcome: 'walked' } };
+}
+
 /** Turning a bid down keeps the player, but an ambitious one is disappointed. */
 export function declineBid(world: World, c: Career, bidId: string): Career {
   const bid = (c.bids ?? []).find((b) => b.id === bidId);
@@ -975,6 +1019,12 @@ export function demandOf(world: World, c: Career, playerId: string) {
 
 export const MAX_OFFERS_PER_WEEK = 3;
 
+/** The terms a club and player countered with this week, if any: accepting them always signs the player. */
+export function standingCounter(c: Career, playerId: string): OfferTerms | null {
+  const n = c.negotiations[playerId];
+  return n?.counter && n.season === c.season.number && n.week === c.season.week ? n.counter : null;
+}
+
 export function offersLeft(c: Career, playerId: string): number {
   const n = c.negotiations[playerId];
   if (!n || n.season !== c.season.number || n.week !== c.season.week) return MAX_OFFERS_PER_WEEK;
@@ -988,14 +1038,20 @@ export function makeOffer(world: World, c: Career, playerId: string, terms: Offe
   const st = playerStatus(c, playerId);
   if (st.owner === 'you') return { career: c, result: { ok: false, reason: 'Already at your club.' } };
   if (c.cards.length >= MAX_SQUAD) return { career: c, result: { ok: false, reason: `Squad full (${MAX_SQUAD}). Sell or release a player first.` } };
-  if (offersLeft(c, playerId) <= 0) return { career: c, result: { ok: false, reason: 'They will not talk again this week. Try after your next match.' } };
+  const standing = standingCounter(c, playerId);
+  const meetsCounter = !!standing && terms.weeks === standing.weeks && terms.fee >= standing.fee && terms.wage >= standing.wage;
+  if (!meetsCounter && offersLeft(c, playerId) <= 0) return { career: c, result: { ok: false, reason: 'They will not talk again this week. Try after your next match.' } };
   if (terms.fee > 0 && terms.fee > c.coins) return { career: c, result: { ok: false, reason: `You only have ${c.coins} coins.` } };
   const n = structuredClone(c);
   const prev = n.negotiations[playerId];
   const sameWeek = prev && prev.season === n.season.number && prev.week === n.season.week;
-  n.negotiations[playerId] = { season: n.season.number, week: n.season.week, tries: (sameWeek ? prev.tries : 0) + 1 };
-  const result = judgeOffer(demandOf(world, c, playerId), terms);
-  if (!result.ok) return { career: n, result };
+  n.negotiations[playerId] = { season: n.season.number, week: n.season.week, tries: (sameWeek ? prev.tries : 0) + (meetsCounter ? 0 : 1), counter: sameWeek ? prev.counter : undefined };
+  const result = meetsCounter ? { ok: true as const } : judgeOffer(demandOf(world, c, playerId), terms);
+  if (!result.ok) {
+    // Their counter-offer stands until the week ends, even after your offers run out.
+    if (result.counter) n.negotiations[playerId]!.counter = { ...result.counter, weeks: terms.weeks };
+    return { career: n, result };
+  }
   money(n, -terms.fee, 'transfer', `Signed ${p.record.handle}${st.teamTag ? ` from ${st.teamTag}` : ' (free agent)'}`);
   const card = addToCollection(n.cards, p, n.season.week, newCardId(n)).newCard!;
   card.contract = { wage: Math.round(terms.wage), weeksLeft: terms.weeks };

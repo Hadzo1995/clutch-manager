@@ -1,7 +1,7 @@
 /** Contract management for your players and transfer offers for everyone else. */
 import { useState } from 'react';
 import {
-  MAX_OFFERS_PER_WEEK, acceptBid, cardById, declineBid, teamName, demandOf, makeOffer, offersLeft, playerStatus, releaseCard, renewContract, renewalDemand, salePrice, toggleShortlist,
+  MAX_OFFERS_PER_WEEK, acceptBid, cardById, counterBid, declineBid, standingCounter, teamName, demandOf, makeOffer, offersLeft, playerStatus, releaseCard, renewContract, renewalDemand, salePrice, toggleShortlist,
 } from '../../engine/career';
 import { CONTRACT_LENGTHS, MAX_SQUAD, MIN_SQUAD, marketValue, severance, wageForLength } from '../../engine/economy';
 import type { OfferResult } from '../../engine/economy';
@@ -13,6 +13,7 @@ export function ContractPanel({ cardId, onLeft }: { cardId: string; onLeft: () =
   const { world, career: c, update, toast } = useGame();
   const [confirm, setConfirm] = useState<null | 'sell' | 'release'>(null);
   const [weeks, setWeeks] = useState<number>(18);
+  const [ask, setAsk] = useState<string | null>(null);
   const card = cardById(c, cardId);
   if (!card) return null;
   const ct = card.contract;
@@ -32,10 +33,30 @@ export function ContractPanel({ cardId, onLeft }: { cardId: string; onLeft: () =
           <div className="row spread"><span className="label">Incoming bid</span><span className="small faint">ends this week</span></div>
           <div className="row spread"><strong>{teamName(c, bid.teamId)}</strong><span className="num bid-fee">{fmt(bid.fee)}</span></div>
           <span className="small muted">{bid.fee - price >= 0 ? <><span className="good num">+{fmt(bid.fee - price)}</span> over</> : 'Less than'} a quick sale ({fmt(price)}).{canLeave ? '' : ' You can only accept once the player is free to leave.'}</span>
-          <div className="grid2">
-            <button className="btn small ghost" onClick={() => act(() => update(declineBid(world, c, bid.id), 'Bid turned down.'))}>Turn down</button>
-            <button className="btn small primary" disabled={!canLeave} onClick={() => act(() => { update(acceptBid(world, c, bid.id), `Sold for ${bid.fee}.`); onLeft(); })} aria-label={`Accept ${bid.fee}`}>Accept <span className="num">{fmt(bid.fee)}</span></button>
-          </div>
+          {bid.countered && <span className="chip warn bid-final">Final offer</span>}
+          {ask !== null && !bid.countered ? (
+            <div className="bid-counter">
+              <div className="field fx"><label className="label" htmlFor="bid-ask">Your asking price</label>
+                <div className="input-affix"><input id="bid-ask" inputMode="numeric" value={ask} onChange={(e) => setAsk(e.target.value.replace(/[^0-9]/g, ''))} /><span>coins</span></div>
+                <span className="field-msg">{Number(ask) > bid.fee ? <>+{Math.round((Number(ask) / bid.fee - 1) * 100)}% on their offer. Ask too much and they walk away.</> : 'Ask for more than they offered.'}</span>
+              </div>
+              <div className="grid2">
+                <button className="btn small ghost" onClick={() => setAsk(null)}>Cancel</button>
+                <button className="btn small primary" disabled={!canLeave || !(Number(ask) > bid.fee)} onClick={() => act(() => {
+                  const res = counterBid(world, c, bid.id, Number(ask));
+                  update(res.career, res.result.outcome === 'accepted' ? `They agreed: sold for ${res.result.fee}.` : res.result.outcome === 'final' ? `Final offer: ${res.result.fee}. Take it or leave it.` : 'They walked away from the talks.');
+                  setAsk(null);
+                  if (res.result.outcome === 'accepted') onLeft();
+                })}>Send counter</button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid3">
+              <button className="btn small ghost" onClick={() => act(() => update(declineBid(world, c, bid.id), 'Bid turned down.'))}>Turn down</button>
+              {!bid.countered && <button className="btn small" disabled={!canLeave} onClick={() => setAsk(String(Math.round((bid.fee * 1.15) / 50) * 50))}>Counter</button>}
+              <button className="btn small primary" disabled={!canLeave} onClick={() => act(() => { update(acceptBid(world, c, bid.id), `Sold for ${bid.fee}.`); onLeft(); })} aria-label={`Accept ${bid.fee}`}>Accept <span className="num">{fmt(bid.fee)}</span></button>
+            </div>
+          )}
         </div>
       )}
       <div className="panel-head"><h3>Contract</h3>{expiring && <span className="chip bad">Expiring</span>}</div>
@@ -92,6 +113,7 @@ export function TransferPanel({ playerId }: { playerId: string }) {
   const [wage, setWage] = useState<string>(String(wageForLength(d.wage, 18)));
   const [result, setResult] = useState<OfferResult | null>(null);
   const left = offersLeft(c, playerId);
+  const counter = standingCounter(c, playerId);
   const feeN = Number(fee);
   const wageN = Number(wage);
   const feeOk = fee !== '' && Number.isFinite(feeN) && feeN >= 0;
@@ -103,7 +125,7 @@ export function TransferPanel({ playerId }: { playerId: string }) {
   const tooExpensive = feeOk && feeN > 0 && feeN > c.coins;
   const blocked = full ? 'Squad full. Sell or release someone first.'
     : d.interest === 'none' ? 'They will not talk to you yet.'
-    : left <= 0 ? 'No offers left for this player this week.'
+    : left <= 0 ? (counter ? 'No new offers this week, but their counter-offer still stands.' : 'No offers left for this player this week.')
     : !valid ? 'Enter a fee and a weekly wage.'
     : tooExpensive ? `The fee is more than your ${fmt(c.coins)} coins.`
     : null;
@@ -115,8 +137,8 @@ export function TransferPanel({ playerId }: { playerId: string }) {
   const wageMsg = !wageOk ? { tone: 'bad', text: 'Enter a weekly wage above 0.' }
     : wageN < expectedWage ? { tone: 'warn', text: `Below their ${fmt(expectedWage)}/wk for ${weeks} weeks.` }
     : { tone: 'good', text: `Meets their ${fmt(expectedWage)}/wk demand.` };
-  const send = () => {
-    const r = makeOffer(world, c, playerId, { fee: Math.round(feeN), wage: Math.round(wageN), weeks });
+  const send = (terms = { fee: Math.round(feeN), wage: Math.round(wageN), weeks }) => {
+    const r = makeOffer(world, c, playerId, terms);
     setResult(r.result);
     update(r.career, r.result.ok ? `${p.record.handle} signed!` : undefined);
   };
@@ -160,17 +182,32 @@ export function TransferPanel({ playerId }: { playerId: string }) {
         <div><dt>Offers left</dt><dd className="pips" aria-label={`${left} of ${MAX_OFFERS_PER_WEEK} offers left this week`}>{Array.from({ length: MAX_OFFERS_PER_WEEK }, (_, i) => <i key={i} className={i < left ? 'on' : ''} />)}</dd></div>
       </dl>
 
-      {result && !result.ok && (
+      {result && !result.ok && !counter && (
         <div className="offer-result" role="alert">
           <strong className="bad small">Offer rejected</strong>
           <span className="small">{result.reason}</span>
-          {result.counter && <button className="btn small" onClick={() => { setFee(String(result.counter!.fee)); setWage(String(result.counter!.wage)); setResult(null); }}>Use their terms · <span className="num">{fmt(result.counter.fee)}</span> fee, <span className="num">{fmt(result.counter.wage)}</span>/wk</button>}
+        </div>
+      )}
+      {counter && (
+        <div className="offer-counter" role="status">
+          <div className="row spread"><strong className="small">Counter-offer on the table</strong><span className="small faint">stands until the week ends</span></div>
+          {result && !result.ok && <span className="small muted">{result.reason}</span>}
+          <dl className="offer-counter-terms">
+            <div><dt>Fee</dt><dd className="num">{fmt(counter.fee)}</dd></div>
+            <div><dt>Wage</dt><dd className="num">{fmt(counter.wage)}/wk</dd></div>
+            <div><dt>Length</dt><dd className="num">{counter.weeks} wk</dd></div>
+          </dl>
+          <div className="grid2">
+            <button className="btn small ghost" disabled={left <= 0} onClick={() => { setFee(String(counter.fee)); setWage(String(counter.wage)); setWeeks(counter.weeks); setResult(null); }}>Edit and resend</button>
+            <button className="btn small primary" disabled={full || counter.fee > c.coins} onClick={() => send({ ...counter })}>Accept their terms</button>
+          </div>
+          {counter.fee > c.coins && <span className="small bad">Their fee is more than your {fmt(c.coins)} coins.</span>}
         </div>
       )}
       {blocked && <p className="small bad offer-blocked" role="status">{blocked}</p>}
       <div className="offer-actions">
         <button className={`btn small ghost${listed ? ' on' : ''}`} aria-pressed={listed} onClick={() => update(toggleShortlist(c, playerId), listed ? 'Removed from shortlist.' : 'Added to shortlist.')}>{listed ? '★ Shortlisted' : '☆ Shortlist'}</button>
-        <button className="btn primary" disabled={!!blocked} onClick={send}>Make offer</button>
+        <button className="btn primary" disabled={!!blocked} onClick={() => send()}>Make offer</button>
       </div>
       <p className="small faint">Fees, wages and interest are game values, not real-world figures.</p>
     </div>
