@@ -51,3 +51,35 @@
   .cmd-go { min-height: 38px; white-space: nowrap; }
   @keyframes cmd-pop { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
 }
+
+/* ---------- Phone: alerts bell, season strip and touch sizes ---------- */
+.ph-bell { position: relative; }
+.ph-bell b { position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; display: grid; place-items: center; font-size: 0.62rem; background: var(--panel-3); color: var(--ink); border: 1px solid var(--line-strong); }
+.ph-bell.urgent b { background: var(--bad); border-color: transparent; color: #1a0705; }
+.ph-sheet { gap: 6px; }
+.ph-sheet .cmd-item { display: grid; grid-template-columns: 3px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 8px; min-height: 52px; border-radius: 8px; border: 0; background: rgba(255, 255, 255, 0.025); color: var(--ink); text-align: left; font-size: var(--fs-sm); }
+.ph-sheet .cmd-item i { align-self: stretch; border-radius: 2px; background: var(--ink-3); }
+.ph-sheet .cmd-item.urgent i { background: var(--bad); } .ph-sheet .cmd-item.good i { background: var(--good); } .ph-sheet .cmd-item.info i { background: var(--ct); }
+.ph-sheet .cmd-item em { font-style: normal; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--t); white-space: nowrap; }
+.cmd-track { display: flex; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.cmd-track li { flex: 1; height: 4px; border-radius: 2px; background: rgba(160, 190, 220, 0.12); }
+.cmd-track li.playoff { background: rgba(240, 163, 58, 0.16); } .cmd-track li.cup { background: rgba(90, 169, 230, 0.16); }
+.cmd-track li.done { background: var(--ink-3); } .cmd-track li.done.playoff { background: var(--t-dim); } .cmd-track li.done.cup { background: var(--ct-dim); }
+.cmd-track li.now { background: var(--t); box-shadow: 0 0 8px rgba(240, 163, 58, 0.8); }
+.ph-track { position: absolute; left: 16px; right: 16px; bottom: -1px; gap: 2px; }
+.ph-track li { height: 2px; }
+@media (min-width: 1024px) { .ph-track { display: none; } }
+
+/* Touch screens: every control at least 40px tall, no grey tap flash, no rubber-band scroll of the shell. */
+@media (pointer: coarse) {
+  .btn.small, .seg button, .icon-btn, select, .chip-btn, .ps-tabs button, .co-tools .btn { min-height: 40px; }
+  .seg.compact button { min-height: 38px; }
+}
+:root.native body { -webkit-user-select: none; user-select: none; overscroll-behavior-y: none; -webkit-touch-callout: none; }
+:root.native input, :root.native textarea { -webkit-user-select: text; user-select: text; }
+/* The native app draws under the status bar; the top bar pads itself down instead of floating below it. */
+.topbar { top: 0; padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+/* The first screen has no top bar, so it keeps clear of the status bar itself. */
+.ob { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+/* Phone top bar: club name and week on one line each, so the bar keeps one height. */
+.topbar .team .team-name, .topbar .team .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -2,11 +2,14 @@ import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './ui/App';
 import { TournamentApp } from './ui/tournament/TournamentApp';
+import './ui/fonts';
 import './ui/styles.css';
 import './ui/styles/premium.css';
 import { applyMotion } from './ui/motion';
+import { registerOffline, restoreFromNative, setupNative } from './platform';
 
 applyMotion();
+registerOffline();
 
 /** The career game, or the beta tournament when the address ends in #tournament. */
 function Root() {
@@ -20,8 +23,12 @@ function Root() {
   return tournament ? <TournamentApp onExit={() => { location.hash = ''; }} /> : <App />;
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Root />
-  </StrictMode>,
-);
+// The native app first copies its saves back from native storage (see platform.ts), then hides the splash.
+void restoreFromNative().then(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <Root />
+    </StrictMode>,
+  );
+  void setupNative();
+});
