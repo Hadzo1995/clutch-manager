@@ -6,11 +6,10 @@ import './ui/fonts';
 import './ui/styles.css';
 import './ui/styles/premium.css';
 import { applyMotion } from './ui/motion';
-import { registerOffline, setupNative } from './platform';
+import { registerOffline, restoreFromNative, setupNative } from './platform';
 
 applyMotion();
 registerOffline();
-void setupNative();
 
 /** The career game, or the beta tournament when the address ends in #tournament. */
 function Root() {
@@ -24,8 +23,12 @@ function Root() {
   return tournament ? <TournamentApp onExit={() => { location.hash = ''; }} /> : <App />;
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Root />
-  </StrictMode>,
-);
+// The native app first copies its saves back from native storage (see platform.ts), then hides the splash.
+void restoreFromNative().then(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <Root />
+    </StrictMode>,
+  );
+  void setupNative();
+});

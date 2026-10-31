@@ -27,10 +27,41 @@ export async function setupNative(): Promise<void> {
   try {
     const { StatusBar, Style } = await import('@capacitor/status-bar');
     await StatusBar.setStyle({ style: Style.Dark });
-    if (nativePlatform() === 'android') { await StatusBar.setOverlaysWebView({ overlay: true }); }
   } catch { /* the plugin is optional */ }
   try {
     const { SplashScreen } = await import('@capacitor/splash-screen');
-    await SplashScreen.hide({ fadeOutDuration: 250 });
+    await SplashScreen.hide();
   } catch { /* the plugin is optional */ }
+}
+
+/*
+ * Saves in the native app. The WebView's localStorage is not reliable there: Android only writes it
+ * to disk now and then (progress was lost when the app was closed from the app switcher), and iOS
+ * may clear it when the phone is short of space. So every save is also kept in native storage
+ * (SharedPreferences / UserDefaults) and copied back into localStorage before the game starts.
+ */
+const NATIVE_KEYS = ['clutch-manager.save.v1', 'clutch-manager.dataset.v1'];
+
+export function mirrorToNative(key: string, value: string | null): void {
+  if (!isNativeApp()) return;
+  void import('@capacitor/preferences').then(({ Preferences }) => (value === null ? Preferences.remove({ key }) : Preferences.set({ key, value }))).catch(() => { /* localStorage still has it */ });
+}
+
+/** Copies the native copy of each save back into localStorage when it is newer (or localStorage lost it). */
+export async function restoreFromNative(): Promise<void> {
+  if (!isNativeApp()) return;
+  try {
+    const { Preferences } = await import('@capacitor/preferences');
+    for (const key of NATIVE_KEYS) {
+      const { value } = await Preferences.get({ key });
+      if (value === null) continue;
+      const local = localStorage.getItem(key);
+      if (local === value) continue;
+      if (local === null || savedAt(value) >= savedAt(local)) localStorage.setItem(key, value);
+    }
+  } catch { /* fall back to whatever localStorage has */ }
+}
+
+function savedAt(raw: string): number {
+  try { const t = Date.parse((JSON.parse(raw) as { savedAt?: string }).savedAt ?? ''); return Number.isFinite(t) ? t : 0; } catch { return 0; }
 }

@@ -2,6 +2,7 @@
 import type { Career } from '../engine/career';
 import { deserializeCareer, serializeCareer } from '../engine/save';
 import type { Dataset } from '../engine/types';
+import { mirrorToNative } from '../platform';
 
 const SAVE_KEY = 'clutch-manager.save.v1';
 const DATASET_KEY = 'clutch-manager.dataset.v1';
@@ -17,7 +18,9 @@ export function loadCareer(): Career | null {
 
 export function storeCareer(c: Career | null): boolean {
   try {
-    if (c) localStorage.setItem(SAVE_KEY, serializeCareer(c));
+    const raw = c ? serializeCareer(c) : null;
+    mirrorToNative(SAVE_KEY, raw);
+    if (raw) localStorage.setItem(SAVE_KEY, raw);
     else localStorage.removeItem(SAVE_KEY);
     return true;
   } catch {
@@ -36,7 +39,9 @@ export function loadDataset(): Dataset | null {
 
 export function storeDataset(d: Dataset | null): boolean {
   try {
-    if (d) localStorage.setItem(DATASET_KEY, JSON.stringify(d));
+    const raw = d ? JSON.stringify(d) : null;
+    mirrorToNative(DATASET_KEY, raw);
+    if (raw) localStorage.setItem(DATASET_KEY, raw);
     else localStorage.removeItem(DATASET_KEY);
     return true;
   } catch {

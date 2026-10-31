@@ -84,3 +84,46 @@ export function CommandBar({ weekText, goTo, onPlay }: { weekText: string; goTo:
     </div>
   );
 }
+
+/**
+ * The phone version of the HUD: a bell in the top bar with what needs you, opened as a bottom
+ * sheet, and a thin season track under the bar.
+ */
+export function PhoneHud({ goTo }: { goTo: Go }) {
+  const { world, career: c, openClub, openPlayer } = useGame();
+  const [open, setOpen] = useState(false);
+  const alerts = buildAlerts(world, c, today());
+  const urgent = alerts.some((a) => a.tone === 'urgent');
+  const go = (t: AlertTarget) => { setOpen(false); if (typeof t === 'object') openPlayer(t.cardId); else if (t === 'club') openClub(); else goTo(t); };
+  return (
+    <>
+      <button type="button" className={`icon-btn ph-bell${urgent ? ' urgent' : ''}`} aria-label={`${alerts.length} things need you`} onClick={() => setOpen(true)}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15zM10 20.5a2 2 0 004 0" /></svg>
+        {alerts.length > 0 && <b className="num">{alerts.length}</b>}
+      </button>
+      {open && (
+        <div className="overlay" onClick={() => setOpen(false)}>
+          <div className="sheet ph-sheet" role="dialog" aria-label="Needs you" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head"><h2>Needs you</h2><button className="btn small ghost" onClick={() => setOpen(false)}>Close</button></div>
+            {alerts.length ? alerts.map((a) => (
+              <button key={a.key} className={`cmd-item ${a.tone}`} onClick={() => go(a.target)}>
+                <i aria-hidden="true" /><span>{a.text}</span><em>{a.cta} ›</em>
+              </button>
+            )) : <p className="small muted">Nothing needs you right now. Train, then play.</p>}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Season progress as a thin strip, for the phone top bar. */
+export function SeasonTrack() {
+  const { career: c } = useGame();
+  const week = c.season.week;
+  return (
+    <ol className="cmd-track ph-track" aria-label={`Season ${c.season.number}, week ${week} of ${SEASON.length}`}>
+      {SEASON.map((s) => <li key={s.w} className={`${s.kind}${s.w < week ? ' done' : s.w === week ? ' now' : ''}`} title={s.label} />)}
+    </ol>
+  );
+}

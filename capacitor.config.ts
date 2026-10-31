@@ -13,8 +13,9 @@ const config: CapacitorConfig = {
   android: { backgroundColor: '#0a0e13' },
   ios: { backgroundColor: '#0a0e13', contentInset: 'never' },
   plugins: {
-    SplashScreen: { launchAutoHide: false, backgroundColor: '#0a0e13', showSpinner: false },
-    StatusBar: { style: 'DARK', backgroundColor: '#0a0e13' },
+    SplashScreen: { launchAutoHide: false, launchFadeOutDuration: 250, backgroundColor: '#0a0e13', showSpinner: false },
+    // Light bar icons on the dark game; the page pads itself with env(safe-area-inset-*).
+    SystemBars: { style: 'DARK', insetsHandling: 'css' },
   },
 };
 
