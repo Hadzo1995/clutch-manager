@@ -3,7 +3,7 @@
  * career, works on a deep copy, and returns the new career, so the UI can keep
  * state immutable and saves are plain JSON.
  */
-import { Rng, clamp } from './rng';
+import { Rng, clamp, hashString } from './rng';
 import { addToCollection, CASES, rollPlayer } from './cases';
 import type { CaseId, CaseOutcome } from './cases';
 import { generateCoaches } from './data/coaches';
@@ -19,14 +19,15 @@ import type { FacilityId, Facilities } from './economy';
 import type { Contract, LedgerEntry, LedgerKind, OfferResult, OfferTerms, Sponsor } from './economy';
 import { buildProfiles, cardOvr, effectiveOvr } from './ratings';
 import {
-  DIVISIONS, HUMAN_ID, LEAGUE_WEEKS, SEASON_WEEKS, CUP_START, cupName, PLAYOFF_END, CUP_PRIZE, allAiTeams, advanceCup, cupResult, generateAiTeams, scheduleCupQuarterfinals, finalPlacements, newSeason, schedulePlayoffs, seriesToFixtureResult,
+  DIVISIONS, HUMAN_ID, LEAGUE_WEEKS, SEASON_WEEKS, CUP_START, cupName, PLAYOFF_END, CUP_PRIZE, allAiTeams, advanceCup, cupResult, generateAiTeams, scheduleCupQuarterfinals, finalPlacements, newSeason, schedulePlayoffs, seriesToFixtureResult, standings,
 } from './season';
 import type { AiTeam, Fixture, SeasonState } from './season';
-import { aiToMatchPlayer, cardToMatchPlayer, emptyMapPractice, roleFit, validateLineup } from './team';
+import { aiToMatchPlayer, cardToMatchPlayer, emptyMapPractice, roleFit, teamStrength, validateLineup } from './team';
 import type { LineupSlot, TeamSnapshot } from './team';
 import { defaultPlan, planCost, runTraining, validatePlan } from './training';
 import type { TrainingOutcome, TrainingPlan } from './training';
 import { autoVeto } from './veto';
+import type { PresetId } from './tactics';
 import type { CardStats, Coach, Dataset, MapName, OwnedCard, PlayerProfile, Role, Tactics } from './types';
 import { ATTRIBUTES, MAPS, ROLES } from './types';
 
@@ -64,7 +65,19 @@ export interface SeasonSummary {
   losses: number;
   movement: 'promoted' | 'relegated' | 'stayed';
   prize: number;
+  /** Cup finish: 1 winner, 2 finalist, 3 semifinal, 4 quarterfinal; absent when not in the cup. */
+  cup?: number;
+  /** The board's target for the season and whether it was met. */
+  board?: { goal: BoardGoal; met: boolean };
 }
+
+/** The board's target for a season: a finishing place, set from how strong the squad is when the season starts. */
+export type BoardGoal = 'top2' | 'top4' | 'top6';
+export const BOARD_GOAL_LABEL: Record<BoardGoal, string> = { top2: 'Finish in the top 2', top4: 'Reach the playoffs (top 4)', top6: 'Finish 6th or better' };
+export const BOARD_GOAL_PLACE: Record<BoardGoal, number> = { top2: 2, top4: 4, top6: 6 };
+/** Paid when the target is met, by division. Missing it costs reputation, never the job. */
+export const BOARD_BONUS = [500, 900, 1500, 2500];
+export interface Board { season: number; goal: BoardGoal; confidence: number }
 
 export interface TrainingReport {
   week: number;
@@ -106,6 +119,8 @@ export interface Career {
   chemistry: number;
   mapPractice: Record<MapName, number>;
   tactics: Tactics;
+  /** A preset game plan for particular maps; the main plan is used everywhere else. */
+  mapPlans?: Partial<Record<MapName, PresetId>>;
   plan: TrainingPlan;
   season: SeasonState;
   phase: 'training' | 'matchday';
@@ -126,8 +141,10 @@ export interface Career {
   sponsor: Sponsor | null;
   ledger: LedgerEntry[];
   /** Offers made this week, by player id, to limit retries. */
-  negotiations: Record<string, { season: number; week: number; tries: number }>;
+  negotiations: Record<string, { season: number; week: number; tries: number; counter?: OfferTerms }>;
   shortlist: string[];
+  /** The board's target and confidence for the current season (missing in old saves until the next match). */
+  board?: Board;
   /** Offers from AI clubs for your players. */
   bids: Bid[];
   facilities: Facilities;
@@ -142,7 +159,11 @@ export interface Career {
   tournament?: { id: string; seat: number; applied: string[]; lastTrainDate?: string; restedDay?: number; mapPrefs?: MapName[] };
 }
 
-export interface Bid { id: string; cardId: string; playerId: string; teamId: string; fee: number; season: number; expiresWeek: number }
+export interface Bid {
+  id: string; cardId: string; playerId: string; teamId: string; fee: number; season: number; expiresWeek: number;
+  /** You asked for more once; the fee is now their final offer. */
+  countered?: boolean;
+}
 
 export const ACHIEVEMENTS: Record<string, { name: string; description: string }> = {
   'first-win': { name: 'First blood', description: 'Win your first match.' },
@@ -306,6 +327,8 @@ export function createCareer(world: World, opts: NewCareerOptions): Career {
   career.plan = defaultPlan(MAPS[0]);
   addNews(career, `${career.teamName} enter the ${DIVISIONS[0]!.name}. Season 1 starts now.`);
   addNews(career, fieldNews(career.season));
+  career.board = { season: 1, goal: boardGoalFor(world, career), confidence: 60 };
+  addNews(career, `Board target for season 1: ${BOARD_GOAL_LABEL[career.board.goal].toLowerCase()}.`);
   return career;
 }
 
@@ -343,9 +366,10 @@ export function setLineup(c: Career, lineup: LineupSlot[]): Career {
   return n;
 }
 
-export function setTactics(c: Career, tactics: Tactics): Career {
+export function setTactics(c: Career, tactics: Tactics, mapPlans?: Partial<Record<MapName, PresetId>>): Career {
   const n = structuredClone(c);
   n.tactics = { ...tactics };
+  if (mapPlans) n.mapPlans = { ...mapPlans };
   return n;
 }
 
@@ -630,9 +654,34 @@ export function seedForFixture(c: Career, f: Fixture): number {
  * Finishes the week: stores the human's result (if they played), simulates every
  * other fixture, pays rewards, updates cards and advances the season.
  */
+/** Where the squad ranks by strength among this season's league teams (1 = strongest). */
+export function expectedPlace(world: World, c: Career): number {
+  let mine: number;
+  try { mine = teamStrength(humanSnapshot(world, c)); } catch { return c.season.aiTeams.length + 1; }
+  return 1 + c.season.aiTeams.filter((t) => teamStrength(aiSnapshot(world, c, t)) > mine).length;
+}
+
+export function boardGoalFor(world: World, c: Career): BoardGoal {
+  const place = expectedPlace(world, c);
+  return place <= 2 ? 'top2' : place <= 4 ? 'top4' : 'top6';
+}
+
+/** Sets this season's board target if it is missing (new season, or a save from before the board existed). */
+export function ensureBoard(world: World, c: Career): Career {
+  if (c.board && c.board.season === c.season.number) return c;
+  const n = structuredClone(c);
+  const carried = c.board ? 50 + (c.board.confidence - 50) / 2 : 60;
+  n.board = { season: n.season.number, goal: boardGoalFor(world, n), confidence: Math.round(clamp(carried, 20, 80)) };
+  return n;
+}
+
+export function boardMood(confidence: number): string {
+  return confidence >= 80 ? 'Delighted' : confidence >= 60 ? 'Pleased' : confidence >= 40 ? 'Watching closely' : confidence >= 20 ? 'Concerned' : 'Losing patience';
+}
+
 export function completeMatchday(world: World, c: Career, humanResult: SeriesResult | null): Career {
   if (c.phase !== 'matchday') throw new Error('Train first');
-  const n = structuredClone(c);
+  const n = ensureBoard(world, structuredClone(c));
   const season = n.season;
   const div = DIVISIONS[season.division]!;
   const mine = humanFixture(n);
@@ -667,6 +716,7 @@ export function completeMatchday(world: World, c: Career, humanResult: SeriesRes
     }
     n.chemistry = clamp(n.chemistry + 1, 0, 100);
     growPairs(n, 1.2 * humanResult.maps.length);
+    n.board!.confidence = clamp(n.board!.confidence + (won ? 4 : -4), 0, 100);
   }
 
   // Simulate the rest of the week.
@@ -678,6 +728,11 @@ export function completeMatchday(world: World, c: Career, humanResult: SeriesRes
     f.result = seriesToFixtureResult(f, res);
   }
 
+  // League weeks: the board also judges where the table has you against the target.
+  if (mine && mine.stage === 'league') {
+    const pos = standings(season).findIndex((row) => row.teamId === HUMAN_ID) + 1;
+    n.board!.confidence = clamp(n.board!.confidence + (pos <= BOARD_GOAL_PLACE[n.board!.goal] ? 1 : -2), 0, 100);
+  }
   n.prepBonus = 0;
   weeklyBusiness(world, n);
   season.week++;
@@ -773,7 +828,22 @@ function finishSeason(world: World, n: Career): void {
   if (nextDiv === 3) unlock(n, 'elite-series');
   const record = season.fixtures.filter((f) => f.result && (f.home === HUMAN_ID || f.away === HUMAN_ID));
   const wins = record.filter((f) => f.result!.winner === HUMAN_ID).length;
-  n.history.push({ season: season.number, division: season.division, placement, wins, losses: record.length - wins, movement, prize });
+  const board = n.board && n.board.season === season.number ? n.board : null;
+  const met = board ? placement <= BOARD_GOAL_PLACE[board.goal] : false;
+  if (board) {
+    if (met) {
+      const bonus = BOARD_BONUS[season.division] ?? 500;
+      money(n, bonus, 'prize', `Board bonus: ${BOARD_GOAL_LABEL[board.goal].toLowerCase()}`);
+      board.confidence = clamp(board.confidence + 15, 0, 100);
+      n.reputation = clamp(n.reputation + 3, 0, 100);
+      addNews(n, `The board's target is met (${BOARD_GOAL_LABEL[board.goal].toLowerCase()}). Bonus ${bonus} coins.`);
+    } else {
+      board.confidence = clamp(board.confidence - 20, 0, 100);
+      n.reputation = clamp(n.reputation - 4, 0, 100);
+      addNews(n, `The board's target was missed (${BOARD_GOAL_LABEL[board.goal].toLowerCase()}). Reputation suffers.`);
+    }
+  }
+  n.history.push({ season: season.number, division: season.division, placement, wins, losses: record.length - wins, movement, prize, ...(cup ? { cup } : {}), ...(board ? { board: { goal: board.goal, met } } : {}) });
   addNews(n, `Season ${season.number} over: ${ordinal(placement)} in the ${div.name}. Prize ${prize} coins.${movement === 'promoted' ? ' Promoted!' : movement === 'relegated' ? ' Relegated.' : ''}`);
   const rng = rngFor(n);
   const owned = new Set(n.cards.map((x) => x.playerId));
@@ -786,6 +856,10 @@ function finishSeason(world: World, n: Career): void {
   n.season.placement = undefined;
   // Off-season: everyone recovers.
   for (const card of n.cards) { card.fatigue = 0; card.morale = clamp(card.morale + 5, 0, 100); }
+  // A new target for the new season, judged on the squad as it stands.
+  const next = ensureBoard(world, n);
+  n.board = next.board;
+  addNews(n, `Board target for season ${n.season.number}: ${BOARD_GOAL_LABEL[n.board!.goal].toLowerCase()}.`);
 }
 
 export function ordinal(n: number): string {
@@ -910,6 +984,46 @@ export function acceptBid(world: World, c: Career, bidId: string): Career {
   return n;
 }
 
+/**
+ * The most a bidding club will pay, decided when the bid arrives (fixed for that bid, so asking
+ * twice gives the same answer). Between 100% and 125% of their first offer.
+ */
+export function bidCeiling(bid: Bid): number {
+  const k = (hashString(`ceiling:${bid.id}`) % 1000) / 1000;
+  return Math.round((bid.fee * (1 + 0.25 * k)) / 50) * 50;
+}
+
+export type CounterResult = { outcome: 'accepted'; fee: number } | { outcome: 'final'; fee: number } | { outcome: 'walked' };
+
+/**
+ * Ask a bidding club for more, once. Within their ceiling they pay it and the player is sold.
+ * Up to 20% above it they come back with a final offer at their ceiling; further than that they walk away.
+ */
+export function counterBid(world: World, c: Career, bidId: string, ask: number): { career: Career; result: CounterResult } {
+  const bid = (c.bids ?? []).find((b) => b.id === bidId);
+  if (!bid) throw new Error('That bid is no longer on the table.');
+  if (bid.countered) throw new Error('They have made their final offer.');
+  if (!Number.isFinite(ask) || ask <= bid.fee) throw new Error('Ask for more than they offered.');
+  checkCanLeave(c, bid.cardId);
+  const ceiling = bidCeiling(bid);
+  const team = aiTeamById(c, bid.teamId);
+  const handle = world.profiles.get(bid.playerId)?.record.handle ?? 'your player';
+  if (ask <= ceiling) {
+    const sold = acceptBid(world, { ...c, bids: c.bids.map((b) => (b.id === bidId ? { ...b, fee: Math.round(ask) } : b)) }, bidId);
+    return { career: sold, result: { outcome: 'accepted', fee: Math.round(ask) } };
+  }
+  const n = structuredClone(c);
+  if (ask <= ceiling * 1.2) {
+    const b = n.bids.find((x) => x.id === bidId)!;
+    b.fee = ceiling; b.countered = true;
+    addNews(n, `${team?.tag ?? 'The club'} come back with a final ${ceiling} for ${handle}.`);
+    return { career: n, result: { outcome: 'final', fee: ceiling } };
+  }
+  n.bids = n.bids.filter((x) => x.id !== bidId);
+  addNews(n, `${team?.tag ?? 'The club'} walk away from talks for ${handle}: ${Math.round(ask)} was too much.`);
+  return { career: n, result: { outcome: 'walked' } };
+}
+
 /** Turning a bid down keeps the player, but an ambitious one is disappointed. */
 export function declineBid(world: World, c: Career, bidId: string): Career {
   const bid = (c.bids ?? []).find((b) => b.id === bidId);
@@ -971,6 +1085,12 @@ export function demandOf(world: World, c: Career, playerId: string) {
 
 export const MAX_OFFERS_PER_WEEK = 3;
 
+/** The terms a club and player countered with this week, if any: accepting them always signs the player. */
+export function standingCounter(c: Career, playerId: string): OfferTerms | null {
+  const n = c.negotiations[playerId];
+  return n?.counter && n.season === c.season.number && n.week === c.season.week ? n.counter : null;
+}
+
 export function offersLeft(c: Career, playerId: string): number {
   const n = c.negotiations[playerId];
   if (!n || n.season !== c.season.number || n.week !== c.season.week) return MAX_OFFERS_PER_WEEK;
@@ -984,14 +1104,20 @@ export function makeOffer(world: World, c: Career, playerId: string, terms: Offe
   const st = playerStatus(c, playerId);
   if (st.owner === 'you') return { career: c, result: { ok: false, reason: 'Already at your club.' } };
   if (c.cards.length >= MAX_SQUAD) return { career: c, result: { ok: false, reason: `Squad full (${MAX_SQUAD}). Sell or release a player first.` } };
-  if (offersLeft(c, playerId) <= 0) return { career: c, result: { ok: false, reason: 'They will not talk again this week. Try after your next match.' } };
+  const standing = standingCounter(c, playerId);
+  const meetsCounter = !!standing && terms.weeks === standing.weeks && terms.fee >= standing.fee && terms.wage >= standing.wage;
+  if (!meetsCounter && offersLeft(c, playerId) <= 0) return { career: c, result: { ok: false, reason: 'They will not talk again this week. Try after your next match.' } };
   if (terms.fee > 0 && terms.fee > c.coins) return { career: c, result: { ok: false, reason: `You only have ${c.coins} coins.` } };
   const n = structuredClone(c);
   const prev = n.negotiations[playerId];
   const sameWeek = prev && prev.season === n.season.number && prev.week === n.season.week;
-  n.negotiations[playerId] = { season: n.season.number, week: n.season.week, tries: (sameWeek ? prev.tries : 0) + 1 };
-  const result = judgeOffer(demandOf(world, c, playerId), terms);
-  if (!result.ok) return { career: n, result };
+  n.negotiations[playerId] = { season: n.season.number, week: n.season.week, tries: (sameWeek ? prev.tries : 0) + (meetsCounter ? 0 : 1), counter: sameWeek ? prev.counter : undefined };
+  const result = meetsCounter ? { ok: true as const } : judgeOffer(demandOf(world, c, playerId), terms);
+  if (!result.ok) {
+    // Their counter-offer stands until the week ends, even after your offers run out.
+    if (result.counter) n.negotiations[playerId]!.counter = { ...result.counter, weeks: terms.weeks };
+    return { career: n, result };
+  }
   money(n, -terms.fee, 'transfer', `Signed ${p.record.handle}${st.teamTag ? ` from ${st.teamTag}` : ' (free agent)'}`);
   const card = addToCollection(n.cards, p, n.season.week, newCardId(n)).newCard!;
   card.contract = { wage: Math.round(terms.wage), weeksLeft: terms.weeks };
