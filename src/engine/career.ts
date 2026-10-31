@@ -27,6 +27,7 @@ import type { LineupSlot, TeamSnapshot } from './team';
 import { defaultPlan, planCost, runTraining, validatePlan } from './training';
 import type { TrainingOutcome, TrainingPlan } from './training';
 import { autoVeto } from './veto';
+import type { PresetId } from './tactics';
 import type { CardStats, Coach, Dataset, MapName, OwnedCard, PlayerProfile, Role, Tactics } from './types';
 import { ATTRIBUTES, MAPS, ROLES } from './types';
 
@@ -106,6 +107,8 @@ export interface Career {
   chemistry: number;
   mapPractice: Record<MapName, number>;
   tactics: Tactics;
+  /** A preset game plan for particular maps; the main plan is used everywhere else. */
+  mapPlans?: Partial<Record<MapName, PresetId>>;
   plan: TrainingPlan;
   season: SeasonState;
   phase: 'training' | 'matchday';
@@ -343,9 +346,10 @@ export function setLineup(c: Career, lineup: LineupSlot[]): Career {
   return n;
 }
 
-export function setTactics(c: Career, tactics: Tactics): Career {
+export function setTactics(c: Career, tactics: Tactics, mapPlans?: Partial<Record<MapName, PresetId>>): Career {
   const n = structuredClone(c);
   n.tactics = { ...tactics };
+  if (mapPlans) n.mapPlans = { ...mapPlans };
   return n;
 }
 
