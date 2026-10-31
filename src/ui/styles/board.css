@@ -1,0 +1,27 @@
+/* Board expectations and the trophy cabinet (BoardPanel.tsx). Prefixes bd- and tc-. */
+.bd { display: flex; flex-direction: column; gap: 10px; }
+.bd-goal { display: grid; gap: 2px; }
+.bd-goal strong { font-family: var(--font-display); font-size: var(--fs-lg); letter-spacing: 0.02em; }
+.bd-track { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; }
+.bd-track i { position: relative; height: 22px; border-radius: 3px; background: rgba(160, 190, 220, 0.08); display: grid; place-items: center; }
+.bd-track i.in { background: color-mix(in srgb, var(--good) 22%, transparent); box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--good) 60%, transparent); }
+.bd-track i.me { background: var(--t); box-shadow: 0 0 14px -2px var(--t); }
+.bd-track i.me b { font-family: var(--font-display); font-size: 0.6rem; letter-spacing: 0.06em; color: #1b1206; }
+.bd-row { display: flex; justify-content: space-between; gap: 8px; }
+.bd-conf { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.bd-meter { height: 6px; border-radius: 3px; background: rgba(160, 190, 220, 0.1); overflow: hidden; }
+.bd-meter i { display: block; height: 100%; border-radius: 3px; background: var(--good); transition: width 600ms var(--ease); }
+.bd-meter.warn i { background: var(--warn); } .bd-meter.bad i { background: var(--bad); }
+
+.tc-shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.tc-item { position: relative; display: grid; justify-items: center; text-align: center; gap: 4px; padding: 14px 10px 12px; border-radius: 8px; overflow: hidden;
+  background: radial-gradient(90% 70% at 50% 0%, color-mix(in srgb, var(--tc) 22%, transparent), transparent 70%), #0e141b; border: 1px solid color-mix(in srgb, var(--tc) 35%, var(--line-soft)); }
+.tc-item::after { content: ''; position: absolute; left: 12%; right: 12%; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--tc); box-shadow: 0 0 14px var(--tc); }
+.tc-item.league { --tc: var(--gold); } .tc-item.cup { --tc: var(--legend); } .tc-item.promotion { --tc: var(--good); } .tc-item.board { --tc: var(--ct); }
+.tc-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: var(--tc); background: color-mix(in srgb, var(--tc) 12%, transparent); }
+.tc-icon svg { width: 24px; height: 24px; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--tc) 60%, transparent)); }
+.tc-t { font-family: var(--font-display); font-size: var(--fs-sm); letter-spacing: 0.03em; }
+.tc-empty { display: grid; justify-items: center; gap: 10px; padding: 8px 0; text-align: center; }
+.tc-ghosts { display: flex; gap: 10px; }
+.tc-icon.ghost { --tc: var(--ink-3); opacity: 0.45; border: 1px dashed var(--line-strong); background: none; }
+.tc-icon.ghost svg { filter: none; }

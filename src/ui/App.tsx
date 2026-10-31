@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Career, Difficulty, World } from '../engine/career';
 import { DIFFICULTY_LABEL, DIFFICULTY_TIP } from '../engine/career';
-import { aiSnapshot, aiTeamById, canClaimDaily, createCareer, createWorld, ensureContracts, humanFixture, humanSnapshot, starterCoaches } from '../engine/career';
+import { aiSnapshot, aiTeamById, canClaimDaily, createCareer, createWorld, ensureBoard, ensureContracts, humanFixture, humanSnapshot, starterCoaches } from '../engine/career';
 import { HUMAN_ID } from '../engine/season';
 import { coachOverall } from '../engine/data/coaches';
 import { generateSyntheticDataset } from '../engine/data/generateDataset';
@@ -61,7 +61,7 @@ export function App() {
   const [world, setWorld] = useState<World>(initialWorld);
   const [career, setCareer] = useState<Career | null>(() => {
     const c = loadCareer();
-    return c && c.cards.every((card) => world.profiles.has(card.playerId)) ? ensureContracts(world, c) : null;
+    return c && c.cards.every((card) => world.profiles.has(card.playerId)) ? ensureBoard(world, ensureContracts(world, c)) : null;
   });
   const [tab, setTab] = useState<Tab>('home');
   const [toastMsg, setToastMsg] = useState<string | null>(null);

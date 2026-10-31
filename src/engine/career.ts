@@ -19,10 +19,10 @@ import type { FacilityId, Facilities } from './economy';
 import type { Contract, LedgerEntry, LedgerKind, OfferResult, OfferTerms, Sponsor } from './economy';
 import { buildProfiles, cardOvr, effectiveOvr } from './ratings';
 import {
-  DIVISIONS, HUMAN_ID, LEAGUE_WEEKS, SEASON_WEEKS, CUP_START, cupName, PLAYOFF_END, CUP_PRIZE, allAiTeams, advanceCup, cupResult, generateAiTeams, scheduleCupQuarterfinals, finalPlacements, newSeason, schedulePlayoffs, seriesToFixtureResult,
+  DIVISIONS, HUMAN_ID, LEAGUE_WEEKS, SEASON_WEEKS, CUP_START, cupName, PLAYOFF_END, CUP_PRIZE, allAiTeams, advanceCup, cupResult, generateAiTeams, scheduleCupQuarterfinals, finalPlacements, newSeason, schedulePlayoffs, seriesToFixtureResult, standings,
 } from './season';
 import type { AiTeam, Fixture, SeasonState } from './season';
-import { aiToMatchPlayer, cardToMatchPlayer, emptyMapPractice, roleFit, validateLineup } from './team';
+import { aiToMatchPlayer, cardToMatchPlayer, emptyMapPractice, roleFit, teamStrength, validateLineup } from './team';
 import type { LineupSlot, TeamSnapshot } from './team';
 import { defaultPlan, planCost, runTraining, validatePlan } from './training';
 import type { TrainingOutcome, TrainingPlan } from './training';
@@ -65,7 +65,19 @@ export interface SeasonSummary {
   losses: number;
   movement: 'promoted' | 'relegated' | 'stayed';
   prize: number;
+  /** Cup finish: 1 winner, 2 finalist, 3 semifinal, 4 quarterfinal; absent when not in the cup. */
+  cup?: number;
+  /** The board's target for the season and whether it was met. */
+  board?: { goal: BoardGoal; met: boolean };
 }
+
+/** The board's target for a season: a finishing place, set from how strong the squad is when the season starts. */
+export type BoardGoal = 'top2' | 'top4' | 'top6';
+export const BOARD_GOAL_LABEL: Record<BoardGoal, string> = { top2: 'Finish in the top 2', top4: 'Reach the playoffs (top 4)', top6: 'Finish 6th or better' };
+export const BOARD_GOAL_PLACE: Record<BoardGoal, number> = { top2: 2, top4: 4, top6: 6 };
+/** Paid when the target is met, by division. Missing it costs reputation, never the job. */
+export const BOARD_BONUS = [500, 900, 1500, 2500];
+export interface Board { season: number; goal: BoardGoal; confidence: number }
 
 export interface TrainingReport {
   week: number;
@@ -131,6 +143,8 @@ export interface Career {
   /** Offers made this week, by player id, to limit retries. */
   negotiations: Record<string, { season: number; week: number; tries: number; counter?: OfferTerms }>;
   shortlist: string[];
+  /** The board's target and confidence for the current season (missing in old saves until the next match). */
+  board?: Board;
   /** Offers from AI clubs for your players. */
   bids: Bid[];
   facilities: Facilities;
@@ -313,6 +327,8 @@ export function createCareer(world: World, opts: NewCareerOptions): Career {
   career.plan = defaultPlan(MAPS[0]);
   addNews(career, `${career.teamName} enter the ${DIVISIONS[0]!.name}. Season 1 starts now.`);
   addNews(career, fieldNews(career.season));
+  career.board = { season: 1, goal: boardGoalFor(world, career), confidence: 60 };
+  addNews(career, `Board target for season 1: ${BOARD_GOAL_LABEL[career.board.goal].toLowerCase()}.`);
   return career;
 }
 
@@ -638,9 +654,34 @@ export function seedForFixture(c: Career, f: Fixture): number {
  * Finishes the week: stores the human's result (if they played), simulates every
  * other fixture, pays rewards, updates cards and advances the season.
  */
+/** Where the squad ranks by strength among this season's league teams (1 = strongest). */
+export function expectedPlace(world: World, c: Career): number {
+  let mine: number;
+  try { mine = teamStrength(humanSnapshot(world, c)); } catch { return c.season.aiTeams.length + 1; }
+  return 1 + c.season.aiTeams.filter((t) => teamStrength(aiSnapshot(world, c, t)) > mine).length;
+}
+
+export function boardGoalFor(world: World, c: Career): BoardGoal {
+  const place = expectedPlace(world, c);
+  return place <= 2 ? 'top2' : place <= 4 ? 'top4' : 'top6';
+}
+
+/** Sets this season's board target if it is missing (new season, or a save from before the board existed). */
+export function ensureBoard(world: World, c: Career): Career {
+  if (c.board && c.board.season === c.season.number) return c;
+  const n = structuredClone(c);
+  const carried = c.board ? 50 + (c.board.confidence - 50) / 2 : 60;
+  n.board = { season: n.season.number, goal: boardGoalFor(world, n), confidence: Math.round(clamp(carried, 20, 80)) };
+  return n;
+}
+
+export function boardMood(confidence: number): string {
+  return confidence >= 80 ? 'Delighted' : confidence >= 60 ? 'Pleased' : confidence >= 40 ? 'Watching closely' : confidence >= 20 ? 'Concerned' : 'Losing patience';
+}
+
 export function completeMatchday(world: World, c: Career, humanResult: SeriesResult | null): Career {
   if (c.phase !== 'matchday') throw new Error('Train first');
-  const n = structuredClone(c);
+  const n = ensureBoard(world, structuredClone(c));
   const season = n.season;
   const div = DIVISIONS[season.division]!;
   const mine = humanFixture(n);
@@ -675,6 +716,7 @@ export function completeMatchday(world: World, c: Career, humanResult: SeriesRes
     }
     n.chemistry = clamp(n.chemistry + 1, 0, 100);
     growPairs(n, 1.2 * humanResult.maps.length);
+    n.board!.confidence = clamp(n.board!.confidence + (won ? 4 : -4), 0, 100);
   }
 
   // Simulate the rest of the week.
@@ -686,6 +728,11 @@ export function completeMatchday(world: World, c: Career, humanResult: SeriesRes
     f.result = seriesToFixtureResult(f, res);
   }
 
+  // League weeks: the board also judges where the table has you against the target.
+  if (mine && mine.stage === 'league') {
+    const pos = standings(season).findIndex((row) => row.teamId === HUMAN_ID) + 1;
+    n.board!.confidence = clamp(n.board!.confidence + (pos <= BOARD_GOAL_PLACE[n.board!.goal] ? 1 : -2), 0, 100);
+  }
   n.prepBonus = 0;
   weeklyBusiness(world, n);
   season.week++;
@@ -781,7 +828,22 @@ function finishSeason(world: World, n: Career): void {
   if (nextDiv === 3) unlock(n, 'elite-series');
   const record = season.fixtures.filter((f) => f.result && (f.home === HUMAN_ID || f.away === HUMAN_ID));
   const wins = record.filter((f) => f.result!.winner === HUMAN_ID).length;
-  n.history.push({ season: season.number, division: season.division, placement, wins, losses: record.length - wins, movement, prize });
+  const board = n.board && n.board.season === season.number ? n.board : null;
+  const met = board ? placement <= BOARD_GOAL_PLACE[board.goal] : false;
+  if (board) {
+    if (met) {
+      const bonus = BOARD_BONUS[season.division] ?? 500;
+      money(n, bonus, 'prize', `Board bonus: ${BOARD_GOAL_LABEL[board.goal].toLowerCase()}`);
+      board.confidence = clamp(board.confidence + 15, 0, 100);
+      n.reputation = clamp(n.reputation + 3, 0, 100);
+      addNews(n, `The board's target is met (${BOARD_GOAL_LABEL[board.goal].toLowerCase()}). Bonus ${bonus} coins.`);
+    } else {
+      board.confidence = clamp(board.confidence - 20, 0, 100);
+      n.reputation = clamp(n.reputation - 4, 0, 100);
+      addNews(n, `The board's target was missed (${BOARD_GOAL_LABEL[board.goal].toLowerCase()}). Reputation suffers.`);
+    }
+  }
+  n.history.push({ season: season.number, division: season.division, placement, wins, losses: record.length - wins, movement, prize, ...(cup ? { cup } : {}), ...(board ? { board: { goal: board.goal, met } } : {}) });
   addNews(n, `Season ${season.number} over: ${ordinal(placement)} in the ${div.name}. Prize ${prize} coins.${movement === 'promoted' ? ' Promoted!' : movement === 'relegated' ? ' Relegated.' : ''}`);
   const rng = rngFor(n);
   const owned = new Set(n.cards.map((x) => x.playerId));
@@ -794,6 +856,10 @@ function finishSeason(world: World, n: Career): void {
   n.season.placement = undefined;
   // Off-season: everyone recovers.
   for (const card of n.cards) { card.fatigue = 0; card.morale = clamp(card.morale + 5, 0, 100); }
+  // A new target for the new season, judged on the squad as it stands.
+  const next = ensureBoard(world, n);
+  n.board = next.board;
+  addNews(n, `Board target for season ${n.season.number}: ${BOARD_GOAL_LABEL[n.board!.goal].toLowerCase()}.`);
 }
 
 export function ordinal(n: number): string {

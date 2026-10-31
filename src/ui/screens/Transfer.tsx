@@ -51,7 +51,7 @@ export function ContractPanel({ cardId, onLeft }: { cardId: string; onLeft: () =
               </div>
             </div>
           ) : (
-            <div className="grid3">
+            <div className={bid.countered ? 'grid2' : 'grid3'}>
               <button className="btn small ghost" onClick={() => act(() => update(declineBid(world, c, bid.id), 'Bid turned down.'))}>Turn down</button>
               {!bid.countered && <button className="btn small" disabled={!canLeave} onClick={() => setAsk(String(Math.round((bid.fee * 1.15) / 50) * 50))}>Counter</button>}
               <button className="btn small primary" disabled={!canLeave} onClick={() => act(() => { update(acceptBid(world, c, bid.id), `Sold for ${bid.fee}.`); onLeft(); })} aria-label={`Accept ${bid.fee}`}>Accept <span className="num">{fmt(bid.fee)}</span></button>
@@ -204,7 +204,7 @@ export function TransferPanel({ playerId }: { playerId: string }) {
           {counter.fee > c.coins && <span className="small bad">Their fee is more than your {fmt(c.coins)} coins.</span>}
         </div>
       )}
-      {blocked && <p className="small bad offer-blocked" role="status">{blocked}</p>}
+      {blocked && <p className={`small ${counter && left <= 0 && !full ? 'muted' : 'bad'} offer-blocked`} role="status">{blocked}</p>}
       <div className="offer-actions">
         <button className={`btn small ghost${listed ? ' on' : ''}`} aria-pressed={listed} onClick={() => update(toggleShortlist(c, playerId), listed ? 'Removed from shortlist.' : 'Added to shortlist.')}>{listed ? '★ Shortlisted' : '☆ Shortlist'}</button>
         <button className="btn primary" disabled={!!blocked} onClick={() => send()}>Make offer</button>
