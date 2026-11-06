@@ -103,6 +103,7 @@ export interface LeagueSeason {
 }
 
 export type LeagueStage = 'league' | 'quarter' | 'semi' | 'final';
+export const STAGE_LABEL: Record<LeagueStage, string> = { league: 'League', quarter: 'Quarterfinal', semi: 'Semifinal', final: 'Grand final' };
 
 export interface LMatch {
   id: string; // s2d7m3: season 2, day 7, match 3; s2qf1, s2sf1, s2gf for the playoffs
