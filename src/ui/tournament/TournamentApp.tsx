@@ -90,7 +90,7 @@ function Unavailable() {
 
 // ------------------------------------------------------------------ sign in
 
-function AuthForm() {
+export function AuthForm() {
   const [mode, setMode] = useState<'in' | 'up'>('in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

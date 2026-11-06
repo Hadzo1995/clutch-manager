@@ -122,7 +122,8 @@ export function applyMatch(world: World, c: LeagueClub, m: LMatch, series: Serie
   }
   // Growth from playing well (before chemistry moves, so the match is judged as it was played).
   const roleOf = (card: typeof n.cards[number]) => n.lineup.find((s) => s.cardId === card.cardId)?.role ?? cardRole(profileOf(world, card), card);
-  const grown = applyPlayGrowth(n.cards.filter((card) => played.has(card.cardId)), roleOf, (card) => profileOf(world, card), mine.maps, c.chemistry);
+  // A match from a season the squad has already moved on from (settled late) still counts on the books, but grows nobody.
+  const grown = m.season < lc.season ? {} : applyPlayGrowth(n.cards.filter((card) => played.has(card.cardId)), roleOf, (card) => profileOf(world, card), mine.maps, c.chemistry);
   n.chemistry = clamp(n.chemistry + 1, 0, 100);
   const best = Object.entries(grown).sort((a, b) => b[1] - a[1])[0];
   const label = m.stage === 'league' ? `Day ${m.day}` : STAGE_LABEL[m.stage];

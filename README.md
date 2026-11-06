@@ -15,5 +15,5 @@ Liquipedia (CC BY-SA 3.0); see the in-game credits.
     npm run build    # single-file build in dist/
 
 Pushes to `main` deploy to GitHub Pages (`.github/workflows/pages.yml`).
-The database schema and rules are in `supabase/schema.sql`; `tools/db-test` checks the rules
+The database schema and rules are in `supabase/schema.sql` (plus `supabase/pvp.sql` and `supabase/league.sql` for 1-on-1 rooms and the Clutch League; run each once in the Supabase SQL editor); `tools/db-test` checks the rules
 against a local Postgres.
