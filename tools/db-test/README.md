@@ -14,3 +14,8 @@ The PvP rooms have their own file and check:
 
     psql -d sb -f ../../supabase/pvp.sql
     ./pvp-rls.sh
+
+The Clutch League has its own file and check too:
+
+    psql -d sb -f ../../supabase/league.sql
+    ./league-rls.sh
