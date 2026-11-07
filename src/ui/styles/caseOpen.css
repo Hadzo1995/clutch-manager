@@ -88,6 +88,9 @@
 .co-streak { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: calc(var(--speed) * 0.85);
   background: repeating-linear-gradient(90deg, transparent 0 86px, rgba(255, 255, 255, 0.05) 86px 88px, transparent 88px 174px); }
 .co-spin-note { text-align: center; }
+/* The strip stands on a dark glossy floor: a faint reflection below it (Chromium and Safari). */
+.co-reel { -webkit-box-reflect: below 10px linear-gradient(180deg, transparent 62%, rgba(255, 255, 255, 0.16)); }
+.co-item { padding-top: 10px; }
 
 .co-item { position: relative; flex: none; height: 208px; border-radius: 3px; overflow: hidden; isolation: isolate;
   display: grid; grid-template-rows: 1fr auto; justify-items: center; align-items: center; padding: 14px 8px 16px;

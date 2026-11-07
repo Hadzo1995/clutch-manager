@@ -42,7 +42,7 @@ const ReelItem = memo(function ReelItem({ profile }: { profile: PlayerProfile })
   return (
     <div className={`co-item r-${profile.rarity}`} style={{ width: ITEM_W }}>
       <WeaponArt kind={weaponFor(profile.record.primaryRole)} className="co-item-wpn" />
-      <div className="co-item-face"><Avatar seed={profile.record.id} size={88} accent={RARITY_HEX[profile.rarity]} jersey={playerJersey(profile.record.team)} eager /></div>
+      <div className="co-item-face"><Avatar seed={profile.record.id} size={104} accent={RARITY_HEX[profile.rarity]} jersey={playerJersey(profile.record.team)} eager /></div>
       <div className="co-item-txt">
         <b className="co-item-name">{profile.record.handle}</b>
         <span className="co-item-sub">{ROLE_LABEL[profile.record.primaryRole]} · <span className="num">{profile.ovr}</span></span>
