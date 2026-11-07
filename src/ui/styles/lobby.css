@@ -77,4 +77,11 @@ main > .lb-lobby { grid-column: 1 / -1; }
   .lb-lobby > .lb-side { justify-content: flex-start; background: rgba(12, 16, 21, 0.92); border-left-color: rgba(255, 255, 255, 0.08); }
   .lb-side > .hm-hero { background: linear-gradient(180deg, rgba(240, 163, 58, 0.08), transparent 70%); }
   .lb-over .lb-edit { position: absolute; top: 28px; right: 28px; pointer-events: auto; background: rgba(5, 7, 10, 0.6); }
+  /* A compact right column, as in the mockup, so the whole stage and its numbers fit on a 900 px-high screen.
+     The board's long note moves into a tooltip on its confidence row. */
+  .lb-side > .hm-hero { padding: 18px 22px; gap: 14px; }
+  .lb-side > .panel { padding: 14px 22px; }
+  .lb-side > .bd { gap: 8px; }
+  .lb-side > .bd > .bd-note { display: none; }
+  .lb-side > .hm-tile .hm-foot { display: none; }
 }
