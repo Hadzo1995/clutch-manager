@@ -12,6 +12,14 @@ import { FormPills, money, signed } from './leagueUtil';
 import type { Result } from './leagueUtil';
 import { Crest, orgTextStyle } from '../crest';
 import '../styles/home.css';
+import { LineupStage } from '../home3d/LineupStage';
+import type { LineupMember } from '../home3d/LineupStage';
+import { MY_HUE } from '../crest';
+import { profileOf } from '../../engine/career';
+import { cardOvr } from '../../engine/ratings';
+import type { Role } from '../../engine/types';
+
+const LOBBY_ORDER: Role[] = ['entry', 'awp', 'igl', 'support', 'lurker'];
 import { buildAlerts } from '../alerts';
 import { BoardPanel } from '../BoardPanel';
 import { weeklyWages } from '../../engine/career';
@@ -41,6 +49,15 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
   const avgFatigue = lineupCards.length ? Math.round(lineupCards.reduce((sum, x) => sum + x.fatigue, 0) / lineupCards.length) : 0;
   const tr = c.lastTraining && c.lastTraining.week === c.season.week && c.lastTraining.season === c.season.number ? c.lastTraining : null;
   const myForm: Result[] = c.matches.slice(0, 5).reverse().map((m) => (m.won ? 'W' : 'L'));
+  // The lobby: the starting five in role order with the IGL in the middle, in the club colour.
+  const members: LineupMember[] = LOBBY_ORDER.flatMap((role) => {
+    const slot = c.lineup.find((x) => x.role === role);
+    const card = slot ? c.cards.find((x) => x.cardId === slot.cardId) : undefined;
+    if (!slot || !card) return [];
+    const p = profileOf(world, card);
+    return [{ cardId: card.cardId, handle: p.record.handle, role, ovr: cardOvr(p, card), rarity: p.rarity }];
+  });
+  const clubColor = `hsl(${c.crest?.hue ?? MY_HUE}, 62%, 52%)`;
 
   const cost = planCost(c.plan);
   const worn = starterFatigue(c) >= 60;
@@ -63,6 +80,7 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
   return (
     <>
       <Tutorial goTo={goTo} openClub={openClub} />
+      <LineupStage members={members} color={clubColor} tag={c.teamTag} onOpen={(id) => openPlayer(id)} fallback={null}>
       <section className="hm-hero span-8" aria-label="Next match">
         {fixture && opp ? (
           <>
@@ -125,6 +143,7 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
         )}
         {!valid.ok && <div className="hm-alert" role="alert"><span>{valid.errors[0]}</span><button className="btn small" onClick={() => goTo('squad')}>Fix squad</button></div>}
       </section>
+      </LineupStage>
 
       <NextActions goTo={goTo} openClub={openClub} openPlayer={openPlayer} />
 
