@@ -5,6 +5,7 @@ import { TournamentApp } from './ui/tournament/TournamentApp';
 import './ui/fonts';
 import './ui/styles.css';
 import './ui/styles/premium.css';
+import './ui/styles/tactical.css';
 import { applyMotion } from './ui/motion';
 import { registerOffline, restoreFromNative, setupNative } from './platform';
 

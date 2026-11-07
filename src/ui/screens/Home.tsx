@@ -80,7 +80,36 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
   return (
     <>
       <Tutorial goTo={goTo} openClub={openClub} />
-      <LineupStage members={members} color={clubColor} tag={c.teamTag} onOpen={(id) => openPlayer(id)} fallback={null}>
+      <LineupStage members={members} color={clubColor} tag={c.teamTag} onOpen={(id) => openPlayer(id)} fallback={null}
+        title={c.teamName} subtitle={`${div.name} · Season ${c.season.number} · Week ${Math.min(c.season.week, 12)}`} onEdit={() => goTo('squad')}
+        stats={[
+          { label: 'Strength', value: strength === null ? '—' : Math.round(strength) },
+          { label: 'Chemistry', value: Math.round(c.chemistry) },
+          { label: 'Fatigue', value: avgFatigue },
+          { label: 'Squad', value: `${c.cards.length}/${MAX_SQUAD}` },
+        ]}
+        side={<>
+          <BoardPanel className="span-4" />
+          <button className="panel hm-tile span-4" onClick={() => goTo('league')} aria-label={`League: ${ordinal(pos)} in the ${div.name}. Open the league`}>
+            <div className="hm-tile-head"><span className="label">{div.name}</span><span className="hm-go" aria-hidden="true">League ›</span></div>
+            <div className="hm-kpi"><span className="hm-big">{ordinal(pos)}</span><span className="faint small">of {table.length}</span><span className="hm-kpi-r num">{me.points} <span className="faint">pts</span></span></div>
+            <div className="hm-mini" role="presentation">
+              {mini.map((r) => {
+                const i = table.indexOf(r);
+                const zone = i < 2 && c.season.division < DIVISIONS.length - 1 ? 'up' : i >= table.length - 2 && c.season.division > 0 ? 'down' : '';
+                return (
+                  <div key={r.teamId} className={`hm-mini-row ${r.teamId === HUMAN_ID ? 'me' : ''} ${zone}`}>
+                    <span className="num">{i + 1}</span>
+                    <span className="hm-mini-n">{r.teamId === HUMAN_ID ? c.teamName : teamName(c, r.teamId)}</span>
+                    <span className="num faint">{r.wins}-{r.losses}</span>
+                    <span className="num">{r.points}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <span className="hm-foot">Top 2 go up{c.season.division > 0 ? ' · bottom 2 go down' : ''}</span>
+          </button>
+        </>}>
       <section className="hm-hero span-8" aria-label="Next match">
         {fixture && opp ? (
           <>
@@ -147,26 +176,6 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
 
       <NextActions goTo={goTo} openClub={openClub} openPlayer={openPlayer} />
 
-      <button className="panel hm-tile span-4" onClick={() => goTo('league')} aria-label={`League: ${ordinal(pos)} in the ${div.name}. Open the league`}>
-        <div className="hm-tile-head"><span className="label">{div.name}</span><span className="hm-go" aria-hidden="true">League ›</span></div>
-        <div className="hm-kpi"><span className="hm-big">{ordinal(pos)}</span><span className="faint small">of {table.length}</span><span className="hm-kpi-r num">{me.points} <span className="faint">pts</span></span></div>
-        <div className="hm-mini" role="presentation">
-          {mini.map((r) => {
-            const i = table.indexOf(r);
-            const zone = i < 2 && c.season.division < DIVISIONS.length - 1 ? 'up' : i >= table.length - 2 && c.season.division > 0 ? 'down' : '';
-            return (
-              <div key={r.teamId} className={`hm-mini-row ${r.teamId === HUMAN_ID ? 'me' : ''} ${zone}`}>
-                <span className="num">{i + 1}</span>
-                <span className="hm-mini-n">{r.teamId === HUMAN_ID ? c.teamName : teamName(c, r.teamId)}</span>
-                <span className="num faint">{r.wins}-{r.losses}</span>
-                <span className="num">{r.points}</span>
-              </div>
-            );
-          })}
-        </div>
-        <span className="hm-foot">Top 2 go up{c.season.division > 0 ? ' · bottom 2 go down' : ''}</span>
-      </button>
-
       <button className="panel hm-tile span-4" onClick={openClub} aria-label={`Club money: ${c.coins} coins. Open finances`}>
         <div className="hm-tile-head"><span className="label">Club money</span><span className="hm-go" aria-hidden="true">Finances ›</span></div>
         <div className="hm-kpi"><span className={`hm-big num ${c.coins < 0 ? 'bad' : ''}`}>{money(c.coins)}</span><span className="faint small">coins</span></div>
@@ -197,8 +206,6 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
           <span><span className="label">Rep</span><span className="num">{Math.round(c.reputation)}</span></span>
         </div>
       </button>
-
-      <BoardPanel className="span-4" />
 
       {tr && (
         <section className="panel span-8" aria-label="Training result">
