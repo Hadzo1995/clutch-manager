@@ -11,6 +11,7 @@ import { FormPills, signed, teamForm } from './leagueUtil';
 import { Crest } from '../crest';
 import { TrophyCabinet } from '../BoardPanel';
 import '../styles/home.css';
+import '../styles/leagueFx.css';
 
 function weekName(w: number): string {
   if (w <= 7) return `Week ${w}`;
