@@ -7,13 +7,13 @@
  * so what the panels say always matches what the map shows.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { orgJersey } from '../../engine/data/realTeams';
+import { orgGlow, orgJersey, realTeamByName } from '../../engine/data/realTeams';
 import type { RoundResult, TeamIdx } from '../../engine/match';
 import type { TeamSnapshot } from '../../engine/team';
 import type { MapName } from '../../engine/types';
 import { geometryFor } from '../../maps';
 import { Avatar } from '../avatar/Avatar';
-import { Crest } from '../crest';
+import { Crest, crestLook, myCrestHue } from '../crest';
 import { RoleIcon, useGame } from '../common';
 import { ROLE_LABEL } from '../../engine/types';
 import type { UtilityKind } from '../../engine/match';
@@ -62,7 +62,8 @@ export function RoundViewer(props: RoundViewerProps) {
   const tRef = useRef(0);
   const [t, setT] = useState(0);
   const [localPaused, setLocalPaused] = useState(false);
-  const [camMode, setCamMode] = useState<CameraMode>('overview');
+  // The TV camera is the default; a viewer who picks another camera keeps it for the next match.
+  const [camMode, setCamMode] = useState<CameraMode>(preferredCam);
   const [tilt, setTilt] = useState<Tilt>(() => { try { return localStorage.getItem('clutch-manager.tilt') === 'top' ? 'top' : 'iso'; } catch { return 'iso'; } });
   const [followId, setFollowId] = useState<string | null>(null);
   const [labels, setLabels] = useState(true);
@@ -90,6 +91,7 @@ export function RoundViewer(props: RoundViewerProps) {
         });
         v.setTilt(tilt);
         v.resetView(true);
+        v.setKits([kitColor(teams[0]), kitColor(teams[1])], humanIdx);
         stage.current = v;
       } else {
         stage.current = new Viewer2D(canvas, geo, cssColors());
@@ -102,7 +104,7 @@ export function RoundViewer(props: RoundViewerProps) {
       // Carry a follow chosen in radar view over to the 3D camera.
       if (stage.current instanceof Viewer3D) {
         if (followRef.current && tlRef.current.byId.has(followRef.current)) stage.current.follow(followRef.current);
-        else setCamMode('overview');
+        else stage.current.setMode(preferredCam());
       }
     } catch {
       try { stage.current?.dispose(); } catch { /* half-built viewer */ }
@@ -195,6 +197,11 @@ export function RoundViewer(props: RoundViewerProps) {
   }, []);
 
   const seek = (v: number) => { tRef.current = Math.max(0, Math.min(tl.duration, v)); setT(tRef.current); };
+  // Dev builds: let screenshot scripts jump to the round's kills.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    (window as unknown as { __round?: unknown }).__round = { kills: tl.shots.filter((s) => s.lethal).map((s) => s.t), seek, hold: (v: boolean) => setLocalPaused(v) };
+  }, [tl]); // eslint-disable-line react-hooks/exhaustive-deps
   const playing = !(paused || localPaused) && t < tl.duration;
   const togglePlay = () => {
     if (t >= tl.duration - 0.01) { seek(0); setLocalPaused(false); return; }
@@ -216,6 +223,7 @@ export function RoundViewer(props: RoundViewerProps) {
     const inViewer = !!(el && el.closest('.tv'));
     if (k === ' ' && (!el || el.tagName !== 'BUTTON' || inViewer)) { e.preventDefault(); togglePlay(); return; }
     if (k === 'escape') { setFollowId(null); setCamera('overview'); return; }
+    if (k === 't') { setCamera('director'); return; }
     if (k === 'v') { setVision((x) => !x); return; }
     if (k === 'n') { setLabels((x) => !x); return; }
     if (k === 'r') { setRadar((x) => !x); return; }
@@ -239,9 +247,10 @@ export function RoundViewer(props: RoundViewerProps) {
         const first = tl.players.find((p) => p.team === humanIdx && (p.deathT === null || p.deathT > tRef.current));
         if (first) setFollowId(first.id);
       }
-      if (m === 'overview') setFollowId(null);
+      if (m === 'overview' || m === 'director') setFollowId(null);
       s.setMode(m);
     }
+    if (m === 'overview' || m === 'director') { try { localStorage.setItem(CAM_KEY, m); } catch { /* storage blocked */ } }
     setCamMode(m);
   };
   const chooseTilt = (v: Tilt) => {
@@ -431,6 +440,7 @@ export function RoundViewer(props: RoundViewerProps) {
 
           <div className="tv-cam" role="toolbar" aria-label="Camera and overlays">
             {view === '3d' && <div className="tv-cam-group">
+              <button aria-pressed={camMode === 'director'} onClick={() => setCamera('director')} data-tip="TV camera: finds the action and cuts between shots (T)" aria-keyshortcuts="T"><CamIcon kind="tv" /><span>TV</span></button>
               <button aria-pressed={camMode === 'overview'} onClick={() => setCamera('overview')} data-tip="Whole map (Esc)" aria-keyshortcuts="Escape"><CamIcon kind="overview" /><span>Overview</span></button>
               <button aria-pressed={camMode === 'follow'} onClick={() => setCamera('follow')} data-tip="Follow a player (1–5 yours, 6–0 theirs)"><CamIcon kind="follow" /><span>Follow</span></button>
               <button aria-pressed={tilt === 'top'} onClick={() => chooseTilt(tilt === 'top' ? 'iso' : 'top')} data-tip="Top-down camera"><CamIcon kind="top" /><span>Top</span></button>
@@ -579,10 +589,25 @@ function UtilIcon({ kind }: { kind: UtilityKind }) {
   );
 }
 
-function CamIcon({ kind }: { kind: 'overview' | 'follow' | 'top' | 'vision' | 'tags' | 'radar' | 'steps' }) {
+const CAM_KEY = 'clutch-manager.camera';
+/** The TV camera unless the viewer last chose the whole-map overview. */
+function preferredCam(): 'overview' | 'director' {
+  try { return localStorage.getItem(CAM_KEY) === 'overview' ? 'overview' : 'director'; } catch { return 'director'; }
+}
+
+/** A team's kit colour in the 3D match: your club's crest colour, a real org's brand colour, or the generated crest's hue. */
+function kitColor(team: TeamSnapshot): string {
+  if (team.isHuman) return `hsl(${myCrestHue()}, 62%, 50%)`;
+  const org = realTeamByName(team.name);
+  if (org) return orgGlow(org);
+  return `hsl(${crestLook(team.name).hue}, 55%, 48%)`;
+}
+
+function CamIcon({ kind }: { kind: 'overview' | 'follow' | 'top' | 'vision' | 'tags' | 'radar' | 'steps' | 'tv' }) {
   const c = { viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true, className: 'ico' };
   switch (kind) {
     case 'overview': return <svg {...c}><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3" /><rect x="5.5" y="5.5" width="5" height="5" rx="1" /></svg>;
+    case 'tv': return <svg {...c}><rect x="1.5" y="4" width="9" height="8" rx="1.5" /><path d="M10.5 7 14.5 4.8v6.4L10.5 9" /><circle cx="4.5" cy="6.8" r="0.9" fill="currentColor" stroke="none" /></svg>;
     case 'follow': return <svg {...c}><circle cx="8" cy="8" r="5.5" /><circle cx="8" cy="8" r="1.6" fill="currentColor" /><path d="M8 1v2M8 13v2M1 8h2M13 8h2" /></svg>;
     case 'top': return <svg {...c}><path d="M8 1.5 14 5 8 8.5 2 5Z" /><path d="M2 8.5 8 12l6-3.5" /></svg>;
     case 'vision': return <svg {...c}><path d="M3 13 8 3l5 10" /><path d="M5 9h6" opacity="0.6" /></svg>;
