@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState } from 'react';
+import { StrictMode, Suspense, lazy, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './ui/App';
 import { TournamentApp } from './ui/tournament/TournamentApp';
@@ -23,11 +23,14 @@ function Root() {
   return tournament ? <TournamentApp onExit={() => { location.hash = ''; }} /> : <App />;
 }
 
+/** Development only: a gallery of the collectible cards at #dev-cards. */
+const DevCards = import.meta.env.DEV ? lazy(() => import('./ui/dev/DevCards')) : null;
+
 // The native app first copies its saves back from native storage (see platform.ts), then hides the splash.
 void restoreFromNative().then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <Root />
+      {DevCards && location.hash === '#dev-cards' ? <Suspense fallback={null}><DevCards /></Suspense> : <Root />}
     </StrictMode>,
   );
   void setupNative();
