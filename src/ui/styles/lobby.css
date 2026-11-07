@@ -48,4 +48,10 @@ main > .lb-lobby { grid-column: 1 / -1; }
   .lb-name { font-size: 0.78rem; }
   .lb-role { display: none; }
 }
-@media (max-width: 560px) { .lb-stage { height: 260px; } .lb-name { max-width: 64px; overflow: hidden; text-overflow: ellipsis; } }
+@media (max-width: 560px) {
+  .lb-stage { height: 260px; }
+  .lb-name { max-width: 64px; overflow: hidden; text-overflow: ellipsis; }
+  /* The title moves down to the stage floor (the stage is 260px tall) so it never sits under a name tag. */
+  .lb-kicker { top: 260px; left: 14px; transform: translateY(calc(-100% - 10px)); grid-auto-flow: column; align-items: baseline; gap: 8px; }
+  .lb-kicker b { font-size: 0.95rem; }
+}

@@ -149,9 +149,22 @@ class Lobby {
     const distH = fitH / 2 / Math.tan(vfov / 2);
     const distW = fitW / 2 / (Math.tan(vfov / 2) * this.camera.aspect);
     this.dist = Math.max(distH, distW) + 1.2;
+    // On small stages, aim a little higher so the five sit lower in the frame and two rows of
+    // name tags fit above their heads.
+    const pxPerM = this.size.h / (2 * this.dist * Math.tan(vfov / 2));
+    const room = (this.size.h / 2 / pxPerM - (1.78 - 1.02)) * pxPerM;
+    const need = 0.4 * pxPerM + 2 * (this.tagH || 30) + 16;
+    this.lookY = 1.02 + THREE.MathUtils.clamp((need - room) / pxPerM, 0, 0.5);
+    this.tagW = 0; // measure the tags again at the new size
     this.camera.updateProjectionMatrix();
   }
   private dist = 7.6;
+  private lookY = 1.02;
+  private tagW = 0;
+  private tagH = 0;
+  private stacked = false;
+  private lift = 0;
+  private pts: { x: number; y: number; up: number }[] = [];
 
   setRunning(on: boolean) {
     if (on === this.running) return;
@@ -175,7 +188,7 @@ class Lobby {
     // A slow drift, as if a camera on a crane were sweeping the stage.
     const sway = Math.sin(t * 0.12) * 0.3;
     this.camera.position.set(Math.sin(sway) * this.dist, 1.5 + Math.sin(t * 0.2) * 0.05, Math.cos(sway) * this.dist - 0.4);
-    this.camera.lookAt(0, 1.02, -0.45);
+    this.camera.lookAt(0, this.lookY, -0.45);
     this.figures.forEach((f, i) => {
       f.h.mixer.update(dt);
       const lit = this.hover === i;
@@ -184,15 +197,29 @@ class Lobby {
       if (s) s.material.uniforms.uOpacity!.value += ((lit ? 0.32 : i === 2 ? 0.2 : 0.13) - s.material.uniforms.uOpacity!.value) * Math.min(1, dt * 6);
     });
     this.renderer.render(this.scene, this.camera);
-    // Name tags follow the heads.
+    // Name tags follow the heads, every other one a little higher. When the stage is too narrow
+    // for the tags to sit side by side (phones), every other tag moves up a whole row instead.
+    if (!this.tagW) for (const el of this.labels) if (el) { this.tagW = Math.max(this.tagW, el.offsetWidth); this.tagH = Math.max(this.tagH, el.offsetHeight); }
+    let gap = Infinity;
     this.figures.forEach((f, i) => {
-      const el = this.labels[i];
-      if (!el) return;
       f.head.getWorldPosition(this.v);
-      this.v.y += i % 2 ? 0.66 : 0.4; // neighbours' tags at different heights so they never overlap
+      const hy = this.v.y;
+      this.v.y = hy + 0.4;
       this.v.project(this.camera);
       const x = (this.v.x * 0.5 + 0.5) * this.size.w, y = (-this.v.y * 0.5 + 0.5) * this.size.h;
-      el.style.transform = `translate(-50%, -100%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      f.head.getWorldPosition(this.v);
+      this.v.y = hy + 0.66;
+      this.v.project(this.camera);
+      this.pts[i] = { x, y, up: y - (-this.v.y * 0.5 + 0.5) * this.size.h };
+      if (i) gap = Math.min(gap, Math.abs(x - this.pts[i - 1]!.x) - this.tagW);
+    });
+    if (this.tagW) this.stacked = this.stacked ? gap < 14 : gap < 4;
+    this.lift += ((this.stacked ? 1 : 0) - this.lift) * Math.min(1, dt * 8);
+    this.figures.forEach((_, i) => {
+      const el = this.labels[i], p = this.pts[i];
+      if (!el || !p) return;
+      const up = i % 2 ? p.up + (this.tagH + 6 - p.up) * this.lift : 0;
+      el.style.transform = `translate(-50%, -100%) translate(${p.x.toFixed(1)}px, ${(p.y - up).toFixed(1)}px)`;
     });
   }
 
