@@ -313,12 +313,12 @@ button.pcard.pc:focus-visible { outline: 2px solid var(--t); outline-offset: 2px
 .fp.hot { background: color-mix(in srgb, var(--good) 14%, var(--panel-3)); } .fp.hot .num { color: var(--good); }
 .fp.cold .num { color: var(--bad); }
 
-.legend { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); }
-.legend i { display: inline-block; width: 14px; height: 8px; border-radius: 2px; margin-left: 6px; }
-.legend .lg-fill { background: color-mix(in srgb, var(--t) 40%, transparent); border: 1.5px solid var(--t); }
-.legend .lg-dash { height: 0; border-top: 1.5px dashed var(--ink-2); border-radius: 0; }
-.legend .lg-gain { background: var(--good); }
-.legend .lg-ghost { background: repeating-linear-gradient(135deg, rgba(255,255,255,0.3) 0 2px, transparent 2px 4px); }
+span.legend { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); }
+span.legend i { display: inline-block; width: 14px; height: 8px; border-radius: 2px; margin-left: 6px; }
+span.legend .lg-fill { background: color-mix(in srgb, var(--t) 40%, transparent); border: 1.5px solid var(--t); }
+span.legend .lg-dash { height: 0; border-top: 1.5px dashed var(--ink-2); border-radius: 0; }
+span.legend .lg-gain { background: var(--good); }
+span.legend .lg-ghost { background: repeating-linear-gradient(135deg, rgba(255,255,255,0.3) 0 2px, transparent 2px 4px); }
 
 /* =====================================================================
    PLAYER PROFILE
