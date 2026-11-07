@@ -50,6 +50,17 @@ export function groundDetail(g: MapGeometry, origin: THREE.Vector3, cell: number
     return 0;
   };
   const span = Math.ceil(REACH);
+  // The patch noise changes slowly: sample it once per cell corner and blend inside the cell.
+  const CW = g.w + 1;
+  const patchN = new Float32Array(CW * (g.h + 1));
+  for (let y = 0; y <= g.h; y++) for (let x = 0; x <= g.w; x++) {
+    patchN[y * CW + x] = smooth(0.5, 0.82, fbm(x / 9, y / 9, 11));
+  }
+  const lerp2 = (n: Float32Array, x: number, y: number, fx: number, fy: number) => {
+    const i = y * CW + x;
+    return (n[i]! * (1 - fx) + n[i + 1]! * fx) * (1 - fy) + (n[i + CW]! * (1 - fx) + n[i + CW + 1]! * fx) * fy;
+  };
+  const R2 = REACH * REACH;
   for (let cy = 0; cy < g.h; cy++) for (let cx = 0; cx < g.w; cx++) {
     const i = cy * g.w + cx, k = g.kind[i];
     const open = k === 'floor' || k === 'low' || k === 'tall' || k === 'rail';
@@ -65,16 +76,17 @@ export function groundDetail(g: MapGeometry, origin: THREE.Vector3, cell: number
       const px = cx * RES + sx, py = cy * RES + sy;
       const o = (py * W + px) * 4;
       if (!open) { data[o] = 255; data[o + 1] = 0; data[o + 2] = 0; data[o + 3] = 255; continue; }
-      const u = cx + (sx + 0.5) / RES, v = cy + (sy + 0.5) / RES;
+      const fx = (sx + 0.5) / RES, fy = (sy + 0.5) / RES;
+      const u = cx + fx, v = cy + fy;
       let sum = 0;
       for (const [ox, oy, w] of occ) {
         const ddx = Math.max(ox - u, 0, u - (ox + 1)), ddy = Math.max(oy - v, 0, v - (oy + 1));
-        const d = Math.hypot(ddx, ddy);
-        if (d < REACH) { const f = 1 - d / REACH; sum += w * f * f; }
+        const d2 = ddx * ddx + ddy * ddy;
+        if (d2 < R2) { const f = 1 - Math.sqrt(d2) / REACH; sum += w * f * f; }
       }
       const ao = 1 - 0.55 * (1 - Math.exp(-sum * 0.55));
-      const drift = smooth(0.35, 2.2, sum) * smooth(0.3, 0.75, fbm(u / 2.6, v / 2.6, 3));
-      const patch = smooth(0.5, 0.82, fbm(u / 9, v / 9, 11));
+      const drift = sum > 0.35 ? smooth(0.35, 2.2, sum) * smooth(0.3, 0.75, fbm(u / 2.6, v / 2.6, 3)) : 0;
+      const patch = lerp2(patchN, cx, cy, fx, fy);
       data[o] = Math.round(ao * 255);
       data[o + 1] = Math.round(drift * 255);
       data[o + 2] = Math.round(patch * 255);
