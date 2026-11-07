@@ -1,0 +1,19 @@
+/*
+ * Scout list in the CS2 inventory style: every player carries their card's rarity, as a bar on
+ * the row's left edge and a faint wash of the rarity colour behind the photo and name. A player
+ * picked for comparison keeps the blue comparison bar instead.
+ */
+.scout-results .r-bronze { --rc: var(--bronze); } .scout-results .r-silver { --rc: var(--silver); } .scout-results .r-gold { --rc: var(--gold); }
+.scout-results .r-elite { --rc: var(--elite); } .scout-results .r-legend { --rc: var(--legend); }
+
+/* Phones: the card list. */
+.scout-results .scout-list .scout-row[class*='r-'] { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--rc) 85%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 9%, transparent), transparent 55%); }
+.scout-results .scout-list .scout-row[class*='r-']:hover { background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 15%, transparent), var(--hover) 60%); }
+.scout-results .scout-list .scout-row.cmp-on { background: var(--ct-soft); box-shadow: inset 3px 0 0 var(--ct); }
+
+/* Wider screens: the table. */
+.scout-table tbody tr[class*='r-'] td.c-star { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--rc) 85%, transparent); }
+.scout-table tbody tr[class*='r-'] td.c-player { background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 10%, transparent), transparent); }
+.scout-table tbody tr[class*='r-']:hover td.c-player { background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 20%, transparent), transparent); }
+.scout-table tbody tr.cmp-on td.c-star { box-shadow: inset 3px 0 0 var(--ct); }
