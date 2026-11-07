@@ -44,9 +44,11 @@ export interface MapStyle {
   vegetation: 'cypress' | 'palm' | 'jungle' | 'pine' | 'none';
   hills: string;
   /** Rooftop details. */
-  extras: { chimney?: number; tank?: number; ac?: number; dome?: number; hut?: number; vent?: number; beams?: boolean; cornice?: string; plants?: number };
+  extras: { chimney?: number; tank?: number; ac?: number; dome?: number; hut?: number; vent?: number; beams?: boolean; cornice?: string; plants?: number; dish?: number; tarp?: number };
   /** Distant landmark silhouettes. */
   landmarks: ('belltower' | 'minaret' | 'dome' | 'pyramid' | 'cooling' | 'stack' | 'wheel' | 'temple' | 'mesa')[];
+  /** What gathers on the streets: its colour and grain, how much along walls and in open patches. */
+  grit: { color: string; tex: 'sand' | 'concrete' | 'grass'; walls: number; patches: number };
 }
 
 export const MAP_STYLES: Record<string, MapStyle> = {
@@ -60,6 +62,7 @@ export const MAP_STYLES: Record<string, MapStyle> = {
     windows: [['shutterGreen', 3], ['shutterOpen', 2]], doors: ['doorWood'],
     ground: { tex: 'grass', color: '#9a9466', scale: 1 / 6 }, surround: 'town', vegetation: 'cypress', hills: '#7d8a55',
     extras: { chimney: 0.45, plants: 0.2 }, landmarks: ['belltower'],
+    grit: { color: '#66563f', tex: 'concrete', walls: 0.55, patches: 0.22 },
   },
   // Desert town: sandstone and dusty plaster, flat roofs with low parapets, timber beam ends.
   Dust2: {
@@ -67,10 +70,11 @@ export const MAP_STYLES: Record<string, MapStyle> = {
     sun: { color: '#fff0d0', intensity: 2.35, dir: [0.35, 0.85, 0.4] },
     hemi: { sky: '#d9e6f2', ground: '#8a6a44', intensity: 1.0 }, exposure: 1.02,
     facadeTex: 'sandstone', facade: ['#dcc596', '#d4b886', '#e2cfa4', '#cdb184', '#d9bf8e'], coping: '#e8d6ad',
-    roofs: [['flat', 1]], roofColors: ['#cdb68a', '#c4ab7d', '#d3bf95'],
+    roofs: [['flat', 1]], roofColors: ['#b9a27a', '#ad9670', '#c2ad86', '#a89275'],
     windows: [['square', 3]], doors: ['doorWood'],
     ground: { tex: 'sand', color: '#cfae78', scale: 1 / 9 }, surround: 'desert', vegetation: 'palm', hills: '#b88a5c',
-    extras: { tank: 0.12, hut: 0.1, beams: true }, landmarks: ['mesa'],
+    extras: { tank: 0.22, hut: 0.16, dish: 0.3, tarp: 0.22, beams: true }, landmarks: ['mesa'],
+    grit: { color: '#ecd3a2', tex: 'sand', walls: 0.85, patches: 0.55 },
   },
   // North African medina: cream and ochre plaster, flat roofs, domes, blue-green trim.
   Mirage: {
@@ -78,10 +82,11 @@ export const MAP_STYLES: Record<string, MapStyle> = {
     sun: { color: '#ffe9c8', intensity: 2.2, dir: [0.5, 0.8, 0.3] },
     hemi: { sky: '#d6e4f3', ground: '#7d6040', intensity: 1.05 }, exposure: 1.03,
     facadeTex: 'plaster', facade: ['#e6d0a6', '#dcc092', '#ecdcbc', '#d6b588', '#e2c79a'], coping: '#efe2c4',
-    roofs: [['flat', 1]], roofColors: ['#d2bb92', '#c9b085', '#dac7a2'],
+    roofs: [['flat', 1]], roofColors: ['#bfa983', '#b39d78', '#c8b490', '#b8a07c'],
     windows: [['arch', 3], ['square', 1]], doors: ['doorWood'],
     ground: { tex: 'sand', color: '#c9ab7e', scale: 1 / 8 }, surround: 'town', vegetation: 'palm', hills: '#b0916a',
-    extras: { dome: 0.12, tank: 0.15, ac: 0.12, hut: 0.08 }, landmarks: ['minaret', 'dome'],
+    extras: { dome: 0.12, tank: 0.18, ac: 0.12, hut: 0.1, dish: 0.25, tarp: 0.28, plants: 0.12 }, landmarks: ['minaret', 'dome'],
+    grit: { color: '#eedcb6', tex: 'sand', walls: 0.7, patches: 0.3 },
   },
   // Egyptian river town: big sandstone blocks, flat roofs with flared cornices, teal painted bands.
   Anubis: {
@@ -93,6 +98,7 @@ export const MAP_STYLES: Record<string, MapStyle> = {
     windows: [['arch', 1], ['square', 2], ['ornament', 1]], doors: ['doorWood'],
     ground: { tex: 'sand', color: '#d2b682', scale: 1 / 9 }, surround: 'town', vegetation: 'palm', hills: '#c29a62',
     extras: { cornice: '#2f9fa3', tank: 0.06, plants: 0.12 }, landmarks: ['pyramid', 'pyramid'],
+    grit: { color: '#ead4a6', tex: 'sand', walls: 0.75, patches: 0.35 },
   },
   // Overgrown temple ruins: mossy stone, stepped stone roofs, jungle all around.
   Ancient: {
@@ -104,6 +110,7 @@ export const MAP_STYLES: Record<string, MapStyle> = {
     windows: [], doors: [],
     ground: { tex: 'jungle', color: '#56703c', scale: 1 / 5 }, surround: 'jungle', vegetation: 'jungle', hills: '#3f5a33',
     extras: { plants: 0.55 }, landmarks: ['temple'],
+    grit: { color: '#5d6d3b', tex: 'grass', walls: 0.7, patches: 0.35 },
   },
   // Nuclear plant: white and blue cladding, corrugated metal sheds, flat roofs with vents.
   Nuke: {
@@ -115,6 +122,7 @@ export const MAP_STYLES: Record<string, MapStyle> = {
     windows: [['industrial', 1]], doors: ['doorMetal'],
     ground: { tex: 'asphalt', color: '#8a8f93', scale: 1 / 6 }, surround: 'industrial', vegetation: 'none', hills: '#6f7f63',
     extras: { vent: 0.4, ac: 0.3 }, landmarks: ['cooling', 'cooling', 'stack'],
+    grit: { color: '#7b7e80', tex: 'concrete', walls: 0.4, patches: 0.2 },
   },
   // Abandoned Soviet industry: grey concrete panels, rusted metal roofs, birch and pine around.
   Cache: {
@@ -126,6 +134,7 @@ export const MAP_STYLES: Record<string, MapStyle> = {
     windows: [['industrial', 2], ['square', 1]], doors: ['doorMetal'],
     ground: { tex: 'grass', color: '#6d7a52', scale: 1 / 5 }, surround: 'industrial', vegetation: 'pine', hills: '#5d6b4b',
     extras: { vent: 0.3, ac: 0.15 }, landmarks: ['wheel', 'stack'],
+    grit: { color: '#7a7969', tex: 'concrete', walls: 0.5, patches: 0.25 },
   },
 };
 
@@ -484,10 +493,11 @@ export function buildEnvironment(geo: MapGeometry, S: SurfaceSet, disposables: {
       }
       return;
     }
-    // Flat roof: membrane inside a parapet, with rooftop clutter.
+    // Flat roof: membrane inside a parapet, with rooftop clutter. The membrane sits a shade below
+    // the walls so roofs in full sun don't bleach out to white.
     const par = 0.25, ph = 0.45;
     const pc = C(style.coping);
-    A.facade.box(x0, E - 0.02, z0, x1, E, z1, roofCol, true);
+    A.facade.box(x0, E - 0.02, z0, x1, E, z1, roofCol.clone().multiplyScalar(0.84), true);
     if (style.extras.cornice) {
       // Egyptian cavetto cornice: a flared lip with a painted band.
       A.trim.box(x0 - 0.22, E - 0.1, z0 - 0.22, x1 + 0.22, E + 0.25, z1 + 0.22, pc);
@@ -530,6 +540,22 @@ export function buildEnvironment(geo: MapGeometry, S: SurfaceSet, disposables: {
       const [vx, vz] = spot(0.8);
       A.trim.cyl(vx + 0.4, E, vz + 0.4, 0.3, 0.3, 0.9, C('#8b9298'), 8);
       A.trim.cyl(vx + 0.4, E + 0.9, vz + 0.4, 0.42, 0.05, 0.3, C('#6f767c'), 8);
+    }
+    if (X.dish && R() < X.dish) {
+      // Satellite dish on a short mast, tipped towards the sky.
+      const [dx, dz] = spot(1);
+      A.trim.cyl(dx + 0.5, E, dz + 0.5, 0.05, 0.05, 0.9, C('#7b8187'), 6);
+      A.trim.cyl(dx + 0.5, E + 0.8, dz + 0.5, 0.52, 0.44, 0.12, C('#e4e2dc'), 14);
+    }
+    if (X.tarp && w > 4 && d > 4 && R() < X.tarp) {
+      // A cloth shade on four poles, sloping to one side.
+      const tw = Math.min(ix1 - ix0, 2 + R() * 1.4), td = Math.min(iz1 - iz0, 1.8 + R() * 1.2);
+      const [tx, tz] = spot(Math.max(tw, td));
+      const hi = E + 2.1, lo = E + 1.7;
+      for (const [px, pz, py] of [[tx, tz, hi], [tx + tw, tz, hi], [tx, tz + td, lo], [tx + tw, tz + td, lo]] as const) A.trim.box(px - 0.04, E, pz - 0.04, px + 0.04, py, pz + 0.04, C('#5a4632'));
+      const cloth = C(pick(R, ['#8c4a32', '#3d6f78', '#b08a4a', '#d9d2c0', '#6b3f5c']));
+      A.trim.quad(V(tx, hi, tz), V(tx + tw, hi, tz), V(tx + tw, lo, tz + td), V(tx, lo, tz + td), cloth, V(0, 1, 0.2));
+      A.trim.quad(V(tx, hi - 0.02, tz), V(tx + tw, hi - 0.02, tz), V(tx + tw, lo - 0.02, tz + td), V(tx, lo - 0.02, tz + td), cloth.clone().multiplyScalar(0.7), V(0, -1, -0.2));
     }
     if (X.plants && R() < X.plants) {
       const [px, pz] = spot(1);

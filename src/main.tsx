@@ -23,14 +23,16 @@ function Root() {
   return tournament ? <TournamentApp onExit={() => { location.hash = ''; }} /> : <App />;
 }
 
-/** Development only: a gallery of the collectible cards at #dev-cards. */
+/** Development only: a gallery of the collectible cards at #dev-cards, a map on its own at #dev-map=Name. */
 const DevCards = import.meta.env.DEV ? lazy(() => import('./ui/dev/DevCards')) : null;
+const DevMap = import.meta.env.DEV ? lazy(() => import('./ui/dev/DevMap')) : null;
 
 // The native app first copies its saves back from native storage (see platform.ts), then hides the splash.
 void restoreFromNative().then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      {DevCards && location.hash === '#dev-cards' ? <Suspense fallback={null}><DevCards /></Suspense> : <Root />}
+      {DevCards && location.hash === '#dev-cards' ? <Suspense fallback={null}><DevCards /></Suspense>
+        : DevMap && location.hash.startsWith('#dev-map') ? <Suspense fallback={null}><DevMap /></Suspense> : <Root />}
     </StrictMode>,
   );
   void setupNative();

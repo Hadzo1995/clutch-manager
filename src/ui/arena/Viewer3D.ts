@@ -16,6 +16,7 @@ import { buildEnvironment, mapStyle, skyDome, type MapStyle } from './environmen
 import { BOMB_SECONDS, HEAR_RUN, PLANT_SECONDS, WALK_RING, aimAt, blindAmount, bombAt, hpAt, isMoving, isSpotted, paceAt, posAt, weaponAt } from './timeline';
 import { activeSmokes, visionFan } from './vision';
 import { floorStyle, releaseSurfaces, surfaces, worldMaterial } from './materials';
+import { groundDetail } from './ground';
 import type { SurfaceSet } from './materials';
 import { buildProps } from './props';
 import { PostFX, wantsPostFx } from './postfx';
@@ -519,7 +520,12 @@ export class Viewer3D {
     const S = this.surf;
     const stoneMap = g.name === 'Ancient' || g.name === 'Anubis';
     const sideTex = g.name === 'Nuke' || g.name === 'Cache' ? S.concrete : stoneMap ? S.blocks : S.plaster;
-    const floorMat = worldMaterial({ top: S[floorStyle(g.name)], side: S.blocks, topScale: 1 / 4, sideScale: 1 / 3, roughness: 0.92 });
+    // Contact shadow and street grit over the whole floor (ground.ts), in the map's own grit.
+    const grit = mapStyle(g.name).grit;
+    const detail = groundDetail(g, this.cellToWorld(0, 0), CELL);
+    this.disposables.push(detail.texture);
+    const floorMat = worldMaterial({ top: S[floorStyle(g.name)], side: S.blocks, topScale: 1 / 4, sideScale: 1 / 3, roughness: 0.92,
+      ground: { map: detail.texture, rect: detail.rect, color: grit.color, tex: S[grit.tex], walls: grit.walls, patches: grit.patches } });
     const wallMat = worldMaterial({ top: S.plaster, side: sideTex, topScale: 1 / 4, sideScale: 1 / 3.5, roughness: 0.88, baseShade: 0.35 });
     const capMat = worldMaterial({ top: stoneMap ? S.blocks : S.concrete, topScale: 1 / 3, roughness: 0.8 });
     const coverMat = new THREE.MeshStandardMaterial({ map: S.crate, roughness: 0.8, metalness: 0.02 });
@@ -559,19 +565,6 @@ export class Viewer3D {
       const a = hash(x0, y0), b = hash(x0 + 1, y0), c2 = hash(x0, y0 + 1), d = hash(x0 + 1, y0 + 1);
       return (a * (1 - sx) + b * sx) * (1 - sy) + (c2 * (1 - sx) + d * sx) * sy;
     };
-    // Contact shadow: floor cells next to walls and tall cover are a little darker.
-    const occ = (x: number, y: number, h: number) => {
-      let n = 0;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        if (!dx && !dy) continue;
-        const nx = x + dx, ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= g.w || ny >= g.h) continue;
-        const j = ny * g.w + nx, k = g.kind[j];
-        if (k === 'wall' || k === 'tall') n += dx && dy ? 0.6 : 1;
-        else if (k === 'floor' && g.height[j]! > h + 1.5) n += dx && dy ? 0.4 : 0.8;
-      }
-      return 1 - Math.min(0.32, n * 0.07);
-    };
     for (let y = 0; y < g.h; y++) for (let x = 0; x < g.w; x++) {
       const i = y * g.w + x;
       const k = g.kind[i]!;
@@ -610,7 +603,6 @@ export class Viewer3D {
       if (tSp.has(i)) c.lerp(tTint, 0.12);
       if (ctSp.has(i)) c.lerp(ctTint, 0.12);
       c.offsetHSL(0, 0, Math.min(0.06, g.height[i]! * 0.02));
-      c.multiplyScalar(occ(x, y, g.height[i]!));
       floors.setColorAt(fi, c);
       fi++;
       if ((k === 'low' || k === 'tall' || k === 'rail') && !props.skinned.has(i)) {
