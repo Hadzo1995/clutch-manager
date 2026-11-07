@@ -1,5 +1,6 @@
 import { Avatar } from './avatar/Avatar';
 import './styles/team.css';
+import './styles/inventory.css';
 import { createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 import type { Career, World } from '../engine/career';
@@ -52,6 +53,8 @@ export function fmt(n: number): string {
   return n.toLocaleString('en-US');
 }
 
+/** Rarity colours as hex, for drawn portraits (CSS uses the --bronze..--legend variables). */
+export const RARITY_ACCENT: Record<Rarity, string> = { bronze: '#c08552', silver: '#a9b6c4', gold: '#e3b23c', elite: '#49b6ff', legend: '#d46cff' };
 export const RARITY_LABEL: Record<Rarity, string> = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold', elite: 'Elite', legend: 'Legend' };
 
 export function today(): string {
@@ -140,7 +143,7 @@ export function PlayerCard({ world, card, profile, compact = false, selected = f
           <TierChip tier={p.tier} cap={p.potential} />
           <span className="pc-role" title={ROLE_LABEL[role]}><RoleIcon role={role} /></span>
         </div>
-        <div className="pcard-face"><Avatar seed={p.record.id} size={compact ? 64 : 76} accent="#f0a33a" /></div>
+        <div className="pcard-face"><Avatar seed={p.record.id} size={compact ? 64 : 76} accent={RARITY_ACCENT[p.rarity]} /></div>
       </div>
       <div className="pc-name">
         <div className="handle">{p.record.handle}</div>
@@ -163,6 +166,6 @@ export function PlayerCard({ world, card, profile, compact = false, selected = f
       {children}
     </>
   );
-  const cls = `pcard pc ${p.rarity}${compact ? ' compact' : ''}${selected ? ' selected' : ''}`;
+  const cls = `pcard pc inv ${p.rarity}${compact ? ' compact' : ''}${selected ? ' selected' : ''}`;
   return onClick ? <button type="button" className={cls} onClick={onClick}>{body}</button> : <div className={cls}>{body}</div>;
 }
