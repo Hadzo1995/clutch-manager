@@ -21,7 +21,7 @@ import type { SurfaceSet } from './materials';
 import { buildProps } from './props';
 import { PostFX, wantsPostFx } from './postfx';
 import type { PropAnim } from './props';
-import { CARRY, addRim, buildSoldier, gunClassOf, poseSoldier, setDead, setGun, soldierKit } from './models';
+import { CARRY, addRim, buildSoldier, gunClassOf, gunHold, poseSoldier, setDead, setGun, soldierKit } from './models';
 import { driveHuman, humanReady, loadHuman, makeHuman, type Human } from './human';
 import type { Gait } from './models';
 import type { Soldier, SoldierKit } from './models';
@@ -748,7 +748,7 @@ export class Viewer3D {
    */
   private attachHuman(rig: Rig) {
     const team = this.teamColor(rig.track);
-    const h = makeHuman(rig.track.side, (m) => addRim(m, team));
+    const h = makeHuman(rig.track.side, (m) => addRim(m, team), rig.soldier.variant);
     rig.human = h;
     if (!h) return;
     const sd = rig.soldier;
@@ -782,21 +782,21 @@ export class Viewer3D {
     const h = rig.human;
     if (!h || !this.kits) return;
     const kit = this.kits[rig.track.team];
+    // Shirts and jackets in the team colour (a little greyed), patches in the colour itself; helmets,
+    // vests and the rest of the gear keep the operator's own colours.
     const tint = kit.clone().lerp(KIT_GREY, kit.equals(AWAY_KIT) ? 0.12 : 0.42);
-    for (const m of h.meshes) {
-      const mat = m.material as THREE.MeshStandardMaterial;
-      if (!/visor/i.test(mat.name)) mat.color.copy(tint);
-    }
+    for (const m of h.kit) m.color.copy(tint);
+    h.accent.color.copy(kit);
   }
 
   /** World positions of the gun's grip and handguard for the figure's hands (none while throwing). */
   private holdFor(sd: Soldier) {
     if (!sd.gun.visible) return { grip: null, guard: null, right: new THREE.Vector3() };
     sd.body.updateMatrixWorld(true);
-    const pistol = sd.gunClass === 'pistol';
-    // Gun geometry is relative to the waist joint (0.98 m up).
-    const grip = sd.gun.localToWorld(new THREE.Vector3(pistol ? 0.05 : 0.075, (pistol ? 1.25 : 1.24) - 0.98, pistol ? 0.44 : 0.1));
-    const guard = sd.gun.localToWorld(new THREE.Vector3(pistol ? 0.04 : 0.065, (pistol ? 1.27 : 1.29) - 0.98, pistol ? 0.46 : sd.gunClass === 'smg' ? 0.36 : 0.46));
+    const grip = new THREE.Vector3(), guard = new THREE.Vector3();
+    gunHold(sd, grip, guard);
+    sd.gun.localToWorld(grip);
+    sd.gun.localToWorld(guard);
     const right = new THREE.Vector3(-1, 0, 0).applyQuaternion(sd.body.getWorldQuaternion(new THREE.Quaternion()));
     return { grip, guard, right };
   }
