@@ -59,6 +59,8 @@ export function setMyCrest(d: CrestDesign | undefined) {
 }
 const subscribe = (l: () => void) => { listeners.add(l); return () => listeners.delete(l); };
 const getMine = () => myDesign;
+/** The hue of the player's own club colour (the crest editor's choice, amber by default). */
+export function myCrestHue(): number { return myDesign?.hue ?? MY_HUE; }
 
 export function crestLook(name: string, hue?: number): CrestLook {
   const h = hash(name || '?');
