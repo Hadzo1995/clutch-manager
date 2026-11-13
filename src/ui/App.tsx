@@ -31,9 +31,11 @@ import { League } from './screens/League';
 import { MatchFlow } from './screens/Match';
 import { PlayerSheet } from './screens/PlayerSheet';
 import { Settings } from './screens/Settings';
+import { SeasonReview } from './screens/SeasonReview';
 import { onlineAvailable } from '../online/supa';
 import { reducedMotion } from './motion';
 import { CommandBar } from './CommandBar';
+import { formatDate, matchDate } from '../engine/calendar';
 
 const openTournament = () => { location.hash = '#tournament'; };
 
@@ -182,6 +184,7 @@ export function App() {
               <div className="team-name">{career.teamName}</div>
               <div className="small muted">{div.name}</div>
               <div className="small faint">Season {career.season.number} · {weekLabel(career.season.week)}</div>
+              <div className="small faint num">{formatDate(matchDate(career.season.number, career.season.week))}</div>
             </div>
           </div>
           <nav className="side-nav" aria-label="Main">
@@ -206,7 +209,7 @@ export function App() {
             <Crest name={career.teamName} tag={career.teamTag} mine size={34} />
             <div style={{ minWidth: 0 }}>
               <div className="team-name">{career.teamName}</div>
-              <div className="small muted">{div.name} · S{career.season.number} · {weekLabel(career.season.week)}</div>
+              <div className="small muted">{div.name} · S{career.season.number} · {weekLabel(career.season.week)} · {formatDate(matchDate(career.season.number, career.season.week), { year: false })}</div>
             </div>
           </div>
           {onlineAvailable() && <button className="icon-btn" aria-label="Beta tournament" title="Beta tournament" onClick={openTournament}><TabIcon name="league" /></button>}
@@ -239,6 +242,7 @@ export function App() {
           </nav>
         </div>
         {matchOpen && <MatchFlow onClose={() => { setMatchOpen(false); setTab('home'); }} />}
+        {!matchOpen && !player && !clubOpen && <SeasonReview />}
         {player && <PlayerSheet cardId={player.cardId} playerId={player.playerId} onClose={() => setPlayer(null)} />}
         {clubOpen && <ClubSheet onClose={() => setClubOpen(false)} />}
         {crestOpen && <CrestEditor onClose={() => setCrestOpen(false)} />}
