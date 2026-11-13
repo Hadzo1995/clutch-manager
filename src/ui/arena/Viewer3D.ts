@@ -19,7 +19,7 @@ import { floorStyle, releaseSurfaces, surfaces, worldMaterial } from './material
 import { groundDetail } from './ground';
 import type { SurfaceSet } from './materials';
 import { buildProps } from './props';
-import { PostFX, wantsPostFx } from './postfx';
+import { PostFX, postFxTier } from './postfx';
 import type { PropAnim } from './props';
 import { CARRY, addRim, buildSoldier, gunClassOf, gunHold, poseSoldier, setDead, setGun, soldierKit } from './models';
 import { driveHuman, humanReady, loadHuman, makeHuman, type Human } from './human';
@@ -353,9 +353,7 @@ export class Viewer3D {
     canvas.addEventListener('contextmenu', this.onCtx);
     if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) (window as unknown as { __viewer: Viewer3D }).__viewer = this;
     if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) (window as unknown as { __vinfo: () => unknown }).__vinfo = () => ({ ...this.renderer.info.render, ...this.renderer.info.memory, objects: this.scene.children.length, pixelRatio: this.renderer.getPixelRatio(), shadow: this.sun?.shadow.mapSize.x });
-    if (wantsPostFx()) {
-      try { this.fx = new PostFX(this.renderer, this.scene, this.camera, Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight)); } catch { this.fx = null; }
-    }
+    try { this.fx = new PostFX(this.renderer, this.scene, this.camera, Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight), postFxTier()); } catch { this.fx = null; }
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(canvas);
     this.resize();
@@ -1012,7 +1010,7 @@ export class Viewer3D {
   // Frame
 
   /**
-   * Dynamic resolution: if frames stay slow (under ~30 fps), render at a
+   * Dynamic resolution: if frames stay slow (under ~30 fps), drop ambient occlusion, then the post-processing chain, then render at a
    * lower pixel ratio (2 -> 1.5 -> 1), then use a smaller shadow map. Never goes back up within a session.
    */
   private sun: THREE.DirectionalLight | null = null;
@@ -1026,8 +1024,11 @@ export class Viewer3D {
     if (P.n < 90 && (P.sum < 3000 || P.n < 5)) return;
     const avg = P.sum / P.n;
     P.n = 0; P.sum = 0;
-    if (avg > 34 && this.fx) {
-      // First step: drop the post-processing chain.
+    if (avg > 34 && this.fx?.tier === 'full') {
+      // First step: drop ambient occlusion, keep the rest of the look.
+      this.fx.toLite();
+    } else if (avg > 34 && this.fx) {
+      // Then drop the post-processing chain.
       this.fx.dispose();
       this.fx = null;
     } else if (avg > 34 && P.ratio > 1) {
@@ -1070,7 +1071,7 @@ export class Viewer3D {
     }
     this.updateCamera(dt);
     this.scaleSprites();
-    if (this.fx) this.fx.render(); else this.renderer.render(this.scene, this.camera);
+    if (this.fx) this.fx.render(dt); else this.renderer.render(this.scene, this.camera);
   }
 
   private updatePlayers(tl: RoundTimeline, t: number) {

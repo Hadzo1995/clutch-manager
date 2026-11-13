@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion, MotionConfig } from 'motion/react';
 import type { Career, Difficulty, World } from '../engine/career';
 import { DIFFICULTY_LABEL, DIFFICULTY_TIP } from '../engine/career';
 import { aiSnapshot, aiTeamById, canClaimDaily, createCareer, createWorld, ensureBoard, ensureContracts, humanFixture, humanSnapshot, starterCoaches } from '../engine/career';
@@ -25,16 +26,19 @@ import { Train } from './screens/Train';
 import { Scout } from './screens/Scout';
 import { ClubSheet } from './screens/Club';
 import { Cases } from './screens/Cases';
-import { Pvp } from './screens/Pvp';
+import { PvpHub } from './screens/Ladder';
 import { League } from './screens/League';
 import { MatchFlow } from './screens/Match';
 import { PlayerSheet } from './screens/PlayerSheet';
 import { Settings } from './screens/Settings';
+import { SeasonReview } from './screens/SeasonReview';
 import { onlineAvailable } from '../online/supa';
 import { reducedMotion } from './motion';
 import { CommandBar, PhoneHud, SeasonTrack } from './CommandBar';
+import { formatDate, matchDate } from '../engine/calendar';
 
 const openTournament = () => { location.hash = '#tournament'; };
+const openLeague = () => { location.hash = '#league'; };
 
 type Tab = 'home' | 'squad' | 'train' | 'scout' | 'cases' | 'league' | 'pvp';
 const TABS: { id: Tab; label: string }[] = [
@@ -56,6 +60,9 @@ function initialWorld(): World {
   if (loadCareer()?.datasetId === demo.id) return createWorld(demo);
   return createWorld(realDataset() ?? demo);
 }
+
+/** The active-tab marker glides to the new tab instead of jumping. */
+const NAV_SPRING = { type: 'spring', stiffness: 520, damping: 40, mass: 0.8 } as const;
 
 export function App() {
   const [world, setWorld] = useState<World>(initialWorld);
@@ -166,6 +173,7 @@ export function App() {
   const dailyReady = canClaimDaily(career, today());
 
   return (
+    <MotionConfig reducedMotion={reducedMotion() ? 'always' : 'never'}>
     <GameCtx.Provider value={game}>
       <div className={`app${stadium ? ' has-stadium' : ''}`}>
         {stadium && <><StadiumScene teamName={career.teamName} teamTag={career.teamTag} active={!matchOpen} five={stageFive} opponent={stageOpp} /><i className="stadium-shade" aria-hidden="true" /></>}
@@ -177,11 +185,13 @@ export function App() {
               <div className="team-name">{career.teamName}</div>
               <div className="small muted">{div.name}</div>
               <div className="small faint">Season {career.season.number} · {weekLabel(career.season.week)}</div>
+              <div className="small faint num">{formatDate(matchDate(career.season.number, career.season.week))}</div>
             </div>
           </div>
           <nav className="side-nav" aria-label="Main">
             {TABS.map((t) => (
               <button key={t.id} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
+                {tab === t.id && <motion.span layoutId="side-pill" className="nav-pill" transition={NAV_SPRING} aria-hidden="true" />}
                 <TabIcon name={t.id} />
                 <span>{t.label}</span>
                 {t.id === 'cases' && dailyReady ? <span className="dot" aria-label="Free daily case available" /> : <span />}
@@ -189,7 +199,8 @@ export function App() {
             ))}
           </nav>
           <div className="side-foot">
-            {onlineAvailable() && <button className="btn sf-tour" onClick={openTournament} aria-label="Beta tournament"><span className="small">Beta tournament</span><TabIcon name="league" /></button>}
+            {onlineAvailable() && <button className="btn sf-league" onClick={openLeague} aria-label="Clutch League" title="Clutch League"><span className="small">Clutch League</span><TabIcon name="league" /></button>}
+            {onlineAvailable() && <button className="btn sf-tour" onClick={openTournament} aria-label="Beta tournament" title="Beta tournament"><span className="small">Beta tournament</span><TabIcon name="league" /></button>}
             <button className="btn ghost sf-coins" onClick={() => setClubOpen(true)} aria-label={`Club finances, balance ${career.coins}`}><span className="small muted">Club finances</span><Coin amount={career.coins} /></button>
             <button className="btn ghost sf-music" onClick={toggleMusic} aria-pressed={musicEnabled} aria-label="Music"><span className="small muted">Music</span><svg className="sf-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />{!musicEnabled && <path d="M3 3l18 18" />}</svg><span className="small sf-state">{musicEnabled ? 'On' : 'Off'}</span></button>
             <button className="btn ghost sf-settings" onClick={() => setSettingsOpen(true)} aria-label="Settings and data"><span className="small muted">Settings &amp; data</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" /></svg></button>
@@ -200,10 +211,10 @@ export function App() {
             <Crest name={career.teamName} tag={career.teamTag} mine size={34} />
             <div style={{ minWidth: 0 }}>
               <div className="team-name">{career.teamName}</div>
-              <div className="small muted">{div.name} · S{career.season.number} · {weekLabel(career.season.week)}</div>
+              <div className="small muted">{div.name} · S{career.season.number} · {weekLabel(career.season.week)} · {formatDate(matchDate(career.season.number, career.season.week), { year: false })}</div>
             </div>
           </div>
-          {onlineAvailable() && <button className="icon-btn" aria-label="Beta tournament" title="Beta tournament" onClick={openTournament}><TabIcon name="league" /></button>}
+          {onlineAvailable() && <button className="icon-btn" aria-label="Clutch League" title="Clutch League" onClick={openLeague}><TabIcon name="league" /></button>}
           <PhoneHud goTo={setTab} />
           <button className="coin-btn" aria-label={`Club finances, balance ${career.coins}`} onClick={() => setClubOpen(true)}><Coin amount={career.coins} /></button>
           <button className="icon-btn" aria-label="Settings and data" onClick={() => setSettingsOpen(true)}>
@@ -220,12 +231,13 @@ export function App() {
           {tab === 'scout' && <Scout />}
           {tab === 'cases' && <Cases goSquad={() => setTab('squad')} />}
           {tab === 'league' && <League />}
-          {tab === 'pvp' && <Pvp />}
+          {tab === 'pvp' && <PvpHub />}
         </main>
         <div className="tabbar">
           <nav aria-label="Main">
             {TABS.map((t) => (
               <button key={t.id} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
+                {tab === t.id && <motion.span layoutId="tab-pill" className="tab-pill" transition={NAV_SPRING} aria-hidden="true" />}
                 <TabIcon name={t.id} />
                 {t.label}
                 {t.id === 'cases' && dailyReady && <span className="dot" aria-label="Free daily case available" />}
@@ -234,6 +246,7 @@ export function App() {
           </nav>
         </div>
         {matchOpen && <MatchFlow onClose={() => { setMatchOpen(false); setTab('home'); }} />}
+        {!matchOpen && !player && !clubOpen && <SeasonReview />}
         {player && <PlayerSheet cardId={player.cardId} playerId={player.playerId} onClose={() => setPlayer(null)} />}
         {clubOpen && <ClubSheet onClose={() => setClubOpen(false)} />}
         {crestOpen && <CrestEditor onClose={() => setCrestOpen(false)} />}
@@ -241,6 +254,7 @@ export function App() {
         {toastMsg && <div className="toast" role="status">{toastMsg}</div>}
       </div>
     </GameCtx.Provider>
+    </MotionConfig>
   );
 }
 
@@ -278,7 +292,7 @@ function Onboarding({ world, onStart }: { world: World; onStart: (c: Career) => 
           <ol className="ob-ladder" aria-label="Divisions">
             {DIVISIONS.map((d, i) => <li key={d.id} className={i === 0 ? 'on' : ''}><i aria-hidden="true" />{d.name}</li>)}
           </ol>
-          {onlineAvailable() && <p className="ob-data"><button type="button" className="btn small" onClick={openTournament}>Playing in the beta tournament? Go there</button></p>}
+          {onlineAvailable() && <p className="ob-data"><button type="button" className="btn small" onClick={openLeague}>Playing in the Clutch League? Go there</button> <button type="button" className="btn small ghost" onClick={openTournament}>Beta tournament</button></p>}
           <p className="ob-data">
             {world.dataset.isSynthetic
               ? 'Demo data: all 200 players are fictional, with statistics generated to resemble top-200 pro play. No real player names or stats are used.'

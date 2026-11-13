@@ -58,10 +58,10 @@ body::before {
     min-height: 40px; padding: 8px 12px; gap: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.09); box-shadow: none; text-transform: none; letter-spacing: 0.02em;
   }
   .side-foot .btn:hover { background: rgba(255, 255, 255, 0.07); }
-  .side-foot .btn > .small.muted, .side-foot .sf-state, .side-foot .sf-tour > .small { display: none; }
-  .side-foot .sf-music, .side-foot .sf-settings, .side-foot .sf-tour { width: 40px; padding: 0; justify-content: center; }
+  .side-foot .btn > .small.muted, .side-foot .sf-state, .side-foot .sf-tour > .small, .side-foot .sf-league > .small { display: none; }
+  .side-foot .sf-music, .side-foot .sf-settings, .side-foot .sf-tour, .side-foot .sf-league { width: 40px; padding: 0; justify-content: center; }
   .side-foot .sf-music[aria-pressed='false'] { color: var(--ink-3); }
-  .side-foot .sf-tour svg { width: 18px; height: 18px; }
+  .side-foot .sf-tour svg, .side-foot .sf-league svg { width: 18px; height: 18px; }
 
   .side-team, .app.has-stadium .side-team {
     order: 3; display: flex; align-items: center; gap: 10px; padding: 4px 12px 4px 4px; border-radius: 0; overflow: visible;
