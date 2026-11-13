@@ -10,6 +10,7 @@
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import soldierUrl from './assets/soldier.glb?url';
 
@@ -22,7 +23,8 @@ let failed = false;
 /** Start loading the figure (once). Resolves when ready; never rejects. */
 export function loadHuman(): Promise<void> {
   if (loading) return loading;
-  loading = new GLTFLoader().loadAsync(soldierUrl).then((g) => {
+  // The file is packed with gltf-transform (meshopt geometry, WebP textures): about 0.7 MB instead of 2.2 MB.
+  loading = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(soldierUrl).then((g) => {
     // Skinned bounding boxes ignore the armature's scale, so measure the skeleton instead:
     // the head joint of a 1.84 m figure sits about 1.6 m above the soles.
     g.scene.updateMatrixWorld(true);
