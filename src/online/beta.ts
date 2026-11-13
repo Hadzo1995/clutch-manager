@@ -27,6 +27,8 @@ export type BetaAccess =
 
 const CACHE = 'clutch-manager.beta';
 const PENDING = 'clutch-manager.beta-code';
+/** Set while the server reports a beta gate, so an offline start knows whether to wait for it. */
+const GATE = 'clutch-manager.beta-gate';
 /** Why the code typed at sign-up didn't work, shown on the enter-code screen. */
 let pendingError: string | undefined;
 export const SURVEYS = { week2: 14, final: 26 } as const;
@@ -57,9 +59,12 @@ export async function betaAccess(signedIn: boolean): Promise<BetaAccess> {
   let s: BetaStatus | null;
   try { s = await betaStatus(); } catch {
     const cached = Number(read(CACHE) ?? 0);
-    return cached > Date.now() ? { kind: 'in', s: { gate: true, startsAt: 0, endsAt: cached, maxPlayers: 0, players: 0, invited: true, now: Date.now() } } : { kind: 'offline' };
+    if (cached > Date.now()) return { kind: 'in', s: { gate: true, startsAt: 0, endsAt: cached, maxPlayers: 0, players: 0, invited: true, now: Date.now() } };
+    // Never seen a gate on this device (offline page, phone app without signal): the offline career stays playable.
+    return read(GATE) ? { kind: 'offline' } : { kind: 'open' };
   }
-  if (!s || !s.gate) { write(CACHE, null); return { kind: 'open' }; }
+  if (!s || !s.gate) { write(CACHE, null); write(GATE, null); return { kind: 'open' }; }
+  write(GATE, '1');
   if (!signedIn) return { kind: 'signed-out', s };
   if (!s.invited) {
     // A code typed at sign-up is redeemed here, once the new account has its first session.

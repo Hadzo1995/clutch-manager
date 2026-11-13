@@ -33,7 +33,7 @@ import { Settings } from './screens/Settings';
 import { SeasonReview } from './screens/SeasonReview';
 import { onlineAvailable } from '../online/supa';
 import { reducedMotion } from './motion';
-import { CommandBar } from './CommandBar';
+import { CommandBar, PhoneHud, SeasonTrack } from './CommandBar';
 import { formatDate, matchDate } from '../engine/calendar';
 
 const openTournament = () => { location.hash = '#tournament'; };
@@ -209,10 +209,12 @@ export function App() {
             </div>
           </div>
           {onlineAvailable() && <button className="icon-btn" aria-label="Clutch League" title="Clutch League" onClick={openLeague}><TabIcon name="league" /></button>}
+          <PhoneHud goTo={setTab} />
           <button className="coin-btn" aria-label={`Club finances, balance ${career.coins}`} onClick={() => setClubOpen(true)}><Coin amount={career.coins} /></button>
           <button className="icon-btn" aria-label="Settings and data" onClick={() => setSettingsOpen(true)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
+          <SeasonTrack />
         </header>
         <main>
           <CommandBar weekText={weekLabel(career.season.week)} goTo={setTab} onPlay={() => setMatchOpen(true)} />

@@ -223,3 +223,15 @@
 @keyframes co-rare-pulse { from { box-shadow: inset 0 0 0 2px var(--rc), 0 0 30px -4px var(--rc); filter: brightness(1.1); } to { box-shadow: inset 0 0 0 3px #fff, 0 0 70px 6px var(--rc); filter: brightness(1.5); } }
 .co-reel.rare .co-glowfloor { width: 720px; margin-left: -360px; height: 100%; opacity: 0.9; background: radial-gradient(closest-side, color-mix(in srgb, var(--rc) 55%, transparent), transparent); }
 html[data-motion="reduced"] .co-reel, html[data-motion="reduced"] .co-reel * , html[data-motion="reduced"] .co-stopflash { animation: none !important; }
+
+/* Phones: a smaller card so the drop and its actions fit, and the actions pinned to the bottom edge. */
+.co-stage { padding-top: max(18px, env(safe-area-inset-top, 0px)); padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 560px) {
+  .co-drop { min-height: 330px; }
+  .co-card { width: 230px; padding: 14px 14px 18px; gap: 8px; }
+  .co-card-face img { width: 132px; height: 132px; }
+  .co-card-ovr { font-size: 2.1rem; }
+  .co-name { font-size: 2.3rem; }
+  .co-btns { position: sticky; bottom: calc(-28px - env(safe-area-inset-bottom, 0px)); z-index: 3; margin: 0 -14px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(0deg, #05080b 70%, transparent); }
+}
