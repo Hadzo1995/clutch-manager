@@ -56,7 +56,6 @@ export function ClubSheet({ onClose }: { onClose: () => void }) {
             <span className="cl-kpi-d">{runway === null ? 'covered by sponsor' : 'without match income'}</span>
           </div>
         </section>
-        {c.coins < 0 && <p className="cl-debt">You are in debt. Cases, transfer fees, coach hiring and paid training are blocked until the balance is positive. Sell a player or win matches to recover.</p>}
 
         <section className="panel" aria-label="Weekly budget">
           <div className="panel-head"><h3>Every week</h3><span className="small muted">{c.cards.length}/{MAX_SQUAD} players</span></div>
