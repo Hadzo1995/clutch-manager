@@ -1,0 +1,36 @@
+/*
+ * The live 3D case on the opening screen (case3d/CaseStage.tsx). The canvas fills the overlay
+ * behind the interface; the case is framed onto the element with data-case-anchor.
+ */
+.co3d { position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0; transition: opacity 500ms var(--ease); }
+.co3d.ready { opacity: 1; }
+.co3d canvas { display: block; width: 100%; height: 100%; }
+.co-overlay.has3d .co-stage { position: relative; z-index: 1; }
+.co-overlay.has3d .co-pedestal { height: 340px; cursor: grab; touch-action: pan-y; }
+.co-overlay.has3d .co-pedestal:active { cursor: grabbing; }
+.co-overlay.has3d .co-showcase { gap: 6px; }
+
+/* The opening: the anchor the camera frames, centred and large. */
+.co-unlocking.co-unlocking-3d { background: none; overflow: visible; }
+.co-open-anchor { width: min(760px, 86vw); height: min(58vh, 540px); }
+
+/* A flash of the case colour that covers the cut from the opening to the strip. */
+.co-flash { position: absolute; inset: 0; z-index: 6; pointer-events: none; opacity: 0;
+  background: radial-gradient(60% 60% at 50% 52%, #ffffff, color-mix(in srgb, var(--cc) 55%, #ffffff) 38%, color-mix(in srgb, var(--cc) 30%, transparent) 70%, transparent); }
+.co-overlay.flash .co-flash { animation: co3d-flash 900ms cubic-bezier(0.3, 0, 0.2, 1) both; }
+@keyframes co3d-flash { 0% { opacity: 0; } 28% { opacity: 1; } 100% { opacity: 0; } }
+
+@media (max-width: 760px) {
+  .co-overlay.has3d .co-pedestal { height: 250px; }
+  .co-open-anchor { width: 92vw; height: 46vh; }
+}
+:root[data-motion="reduced"] .co-overlay.flash .co-flash { animation: none; }
+
+/* The case list: a still of the 3D case floating over its pedestal glow. */
+.cs-art3d .case-thumb { position: relative; display: block; width: 168px; height: 126px; margin-bottom: -6px; object-fit: contain;
+  animation: pm-float 5s ease-in-out infinite, co3d-thumb-in 500ms var(--ease) both; transition: transform 500ms var(--spring); }
+.cs-art3d .case-thumb.pending { animation: none; opacity: 0; }
+.cs-case:hover .cs-art3d .case-thumb { transform: scale(1.06) rotate(-1.5deg); }
+@keyframes co3d-thumb-in { from { opacity: 0; transform: translateY(6px) scale(0.96); } }
+@media (max-width: 420px) { .cs-art3d .case-thumb { width: 100px; height: 75px; } }
+:root[data-motion="reduced"] .cs-art3d .case-thumb { animation: none; }

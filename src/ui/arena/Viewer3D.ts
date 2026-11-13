@@ -16,17 +16,29 @@ import { buildEnvironment, mapStyle, skyDome, type MapStyle } from './environmen
 import { BOMB_SECONDS, HEAR_RUN, PLANT_SECONDS, WALK_RING, aimAt, blindAmount, bombAt, hpAt, isMoving, isSpotted, paceAt, posAt, weaponAt } from './timeline';
 import { activeSmokes, visionFan } from './vision';
 import { floorStyle, releaseSurfaces, surfaces, worldMaterial } from './materials';
+import { groundDetail } from './ground';
 import type { SurfaceSet } from './materials';
 import { buildProps } from './props';
 import { PostFX, postFxTier } from './postfx';
 import type { PropAnim } from './props';
-import { CARRY, addRim, buildSoldier, gunClassOf, poseSoldier, setDead, setGun, soldierKit } from './models';
+import { CARRY, addRim, buildSoldier, gunClassOf, gunHold, poseSoldier, setDead, setGun, soldierKit } from './models';
 import { driveHuman, humanReady, loadHuman, makeHuman, type Human } from './human';
 import type { Gait } from './models';
 import type { Soldier, SoldierKit } from './models';
 import type { PlayerTrack, RoundTimeline, UtilityObject, Vec } from './timeline';
+import { glowTexture, ringTexture } from '../case3d/textures';
+import { shaftMaterial } from '../case3d/fx';
 
-export type CameraMode = 'overview' | 'follow' | 'free';
+/** One kill's light on the floor: a ring that runs out, a short pillar and, for headshots, a spark. */
+interface KillFx { ring: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>; pillar: THREE.Mesh<THREE.CylinderGeometry, THREE.ShaderMaterial>; spark: THREE.Sprite }
+/** The TV camera frames two opponents together only when they are at most this far apart. */
+const DIRECTOR_PAIR = 30;
+const KILL_FX_SECONDS = 0.9;
+const KIT_GREY = new THREE.Color('#3b4047');
+const AWAY_KIT = new THREE.Color('#d6dbe1');
+
+/** 'director' is the TV camera: it finds the action itself and cuts between shots. */
+export type CameraMode = 'overview' | 'follow' | 'free' | 'director';
 export type Tilt = 'top' | 'iso';
 
 export interface ViewerColors { t: string; ct: string }
@@ -169,6 +181,14 @@ export class Viewer3D {
   private utils: UtilRig[] = [];
   private tl: RoundTimeline | null = null;
   private disposables: { dispose(): void }[] = [];
+  /** Kit colours per team index (the organisations' colours); null keeps the side colours. */
+  private kits: [THREE.Color, THREE.Color] | null = null;
+  private killFx: KillFx[] = [];
+  /** Who killed each victim, for the kill effect's colour and headshot spark. */
+  private killInfo = new Map<string, { killer: string | null; headshot: boolean }>();
+  /** The director's current shot. */
+  private dir = { until: -1, a: null as string | null, b: null as string | null, cuts: 0, lastT: -1, at: new THREE.Vector3() };
+  private nowT = 0;
   private ro: ResizeObserver;
   private events: ViewerEvents;
 
@@ -284,6 +304,23 @@ export class Viewer3D {
     this.followRing.rotation.x = -Math.PI / 2;
     this.followRing.visible = false;
     this.dynGroup.add(this.followRing);
+    {
+      const ringMap = ringTexture(), sparkMap = glowTexture(0.2);
+      this.disposables.push(ringMap, sparkMap);
+      const ringGeo = new THREE.PlaneGeometry(1, 1), pillarGeo = new THREE.CylinderGeometry(0.75, 0.45, 7, 24, 1, true);
+      pillarGeo.translate(0, 3.5, 0);
+      this.disposables.push(ringGeo, pillarGeo);
+      for (let i = 0; i < 6; i++) {
+        const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ map: ringMap, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+        ring.rotation.x = -Math.PI / 2;
+        const pillar = new THREE.Mesh(pillarGeo, shaftMaterial('#ffffff', 'base', 1.6));
+        const spark = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkMap, color: '#ffffff', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+        ring.visible = pillar.visible = spark.visible = false;
+        this.disposables.push(ring.material, pillar.material, spark.material);
+        this.dynGroup.add(ring, pillar, spark);
+        this.killFx.push({ ring, pillar, spark });
+      }
+    }
     const heardGeo = new THREE.BufferGeometry();
     heardGeo.setAttribute('position', new THREE.BufferAttribute(this.heardPos, 3));
     heardGeo.setAttribute('color', new THREE.BufferAttribute(this.heardCol, 3));
@@ -481,7 +518,12 @@ export class Viewer3D {
     const S = this.surf;
     const stoneMap = g.name === 'Ancient' || g.name === 'Anubis';
     const sideTex = g.name === 'Nuke' || g.name === 'Cache' ? S.concrete : stoneMap ? S.blocks : S.plaster;
-    const floorMat = worldMaterial({ top: S[floorStyle(g.name)], side: S.blocks, topScale: 1 / 4, sideScale: 1 / 3, roughness: 0.92 });
+    // Contact shadow and street grit over the whole floor (ground.ts), in the map's own grit.
+    const grit = mapStyle(g.name).grit;
+    const detail = groundDetail(g, this.cellToWorld(0, 0), CELL);
+    this.disposables.push(detail.texture);
+    const floorMat = worldMaterial({ top: S[floorStyle(g.name)], side: S.blocks, topScale: 1 / 4, sideScale: 1 / 3, roughness: 0.92,
+      ground: { map: detail.texture, rect: detail.rect, color: grit.color, tex: S[grit.tex], walls: grit.walls, patches: grit.patches } });
     const wallMat = worldMaterial({ top: S.plaster, side: sideTex, topScale: 1 / 4, sideScale: 1 / 3.5, roughness: 0.88, baseShade: 0.35 });
     const capMat = worldMaterial({ top: stoneMap ? S.blocks : S.concrete, topScale: 1 / 3, roughness: 0.8 });
     const coverMat = new THREE.MeshStandardMaterial({ map: S.crate, roughness: 0.8, metalness: 0.02 });
@@ -521,19 +563,6 @@ export class Viewer3D {
       const a = hash(x0, y0), b = hash(x0 + 1, y0), c2 = hash(x0, y0 + 1), d = hash(x0 + 1, y0 + 1);
       return (a * (1 - sx) + b * sx) * (1 - sy) + (c2 * (1 - sx) + d * sx) * sy;
     };
-    // Contact shadow: floor cells next to walls and tall cover are a little darker.
-    const occ = (x: number, y: number, h: number) => {
-      let n = 0;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        if (!dx && !dy) continue;
-        const nx = x + dx, ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= g.w || ny >= g.h) continue;
-        const j = ny * g.w + nx, k = g.kind[j];
-        if (k === 'wall' || k === 'tall') n += dx && dy ? 0.6 : 1;
-        else if (k === 'floor' && g.height[j]! > h + 1.5) n += dx && dy ? 0.4 : 0.8;
-      }
-      return 1 - Math.min(0.32, n * 0.07);
-    };
     for (let y = 0; y < g.h; y++) for (let x = 0; x < g.w; x++) {
       const i = y * g.w + x;
       const k = g.kind[i]!;
@@ -572,7 +601,6 @@ export class Viewer3D {
       if (tSp.has(i)) c.lerp(tTint, 0.12);
       if (ctSp.has(i)) c.lerp(ctTint, 0.12);
       c.offsetHSL(0, 0, Math.min(0.06, g.height[i]! * 0.02));
-      c.multiplyScalar(occ(x, y, g.height[i]!));
       floors.setColorAt(fi, c);
       fi++;
       if ((k === 'low' || k === 'tall' || k === 'rail') && !props.skinned.has(i)) {
@@ -682,6 +710,9 @@ export class Viewer3D {
   setTimeline(tl: RoundTimeline) {
     this.clearRound();
     this.tl = tl;
+    this.killInfo.clear();
+    for (const s of tl.shots) if (s.lethal && !this.killInfo.has(s.to)) this.killInfo.set(s.to, { killer: s.from, headshot: s.headshot });
+    this.dir.until = -1;
     for (const track of tl.players) this.addRig(track);
     for (const u of tl.utility) this.addUtil(u);
     if (this.followId && !this.rigById.has(this.followId)) this.followId = null;
@@ -715,7 +746,7 @@ export class Viewer3D {
    */
   private attachHuman(rig: Rig) {
     const team = this.teamColor(rig.track);
-    const h = makeHuman(rig.track.side, (m) => addRim(m, team));
+    const h = makeHuman(rig.track.side, (m) => addRim(m, team), rig.soldier.variant);
     rig.human = h;
     if (!h) return;
     const sd = rig.soldier;
@@ -727,16 +758,43 @@ export class Viewer3D {
     sd.meshes.push(...h.meshes);
     sd.originals.push(...h.meshes.map((m) => m.material as THREE.Material));
     rig.mat = h.body;
+    this.dressKit(rig);
+  }
+
+  /** Team kits in the organisations' colours (by team index); the rim light keeps the side colour. */
+  /**
+   * Each team plays in its own colours. When the two are too alike to tell apart, the team other
+   * than `keep` changes into a light away kit, as in football.
+   */
+  setKits(kits: [THREE.ColorRepresentation, THREE.ColorRepresentation], keep: 0 | 1 = 0) {
+    const pair: [THREE.Color, THREE.Color] = [new THREE.Color(kits[0]), new THREE.Color(kits[1])];
+    const [a, b] = pair.map((c) => c.getHSL({ h: 0, s: 0, l: 0 }));
+    const dh = Math.min(Math.abs(a!.h - b!.h), 1 - Math.abs(a!.h - b!.h));
+    const alike = (dh < 0.09 || (a!.s < 0.2 && b!.s < 0.2)) && Math.abs(a!.l - b!.l) < 0.25;
+    if (alike) pair[keep === 0 ? 1 : 0].copy(AWAY_KIT);
+    this.kits = pair;
+    for (const rig of this.rigs) this.dressKit(rig);
+  }
+
+  private dressKit(rig: Rig) {
+    const h = rig.human;
+    if (!h || !this.kits) return;
+    const kit = this.kits[rig.track.team];
+    // Shirts and jackets in the team colour (a little greyed), patches in the colour itself; helmets,
+    // vests and the rest of the gear keep the operator's own colours.
+    const tint = kit.clone().lerp(KIT_GREY, kit.equals(AWAY_KIT) ? 0.12 : 0.42);
+    for (const m of h.kit) m.color.copy(tint);
+    h.accent.color.copy(kit);
   }
 
   /** World positions of the gun's grip and handguard for the figure's hands (none while throwing). */
   private holdFor(sd: Soldier) {
     if (!sd.gun.visible) return { grip: null, guard: null, right: new THREE.Vector3() };
     sd.body.updateMatrixWorld(true);
-    const pistol = sd.gunClass === 'pistol';
-    // Gun geometry is relative to the waist joint (0.98 m up).
-    const grip = sd.gun.localToWorld(new THREE.Vector3(pistol ? 0.05 : 0.075, (pistol ? 1.25 : 1.24) - 0.98, pistol ? 0.44 : 0.1));
-    const guard = sd.gun.localToWorld(new THREE.Vector3(pistol ? 0.04 : 0.065, (pistol ? 1.27 : 1.29) - 0.98, pistol ? 0.46 : sd.gunClass === 'smg' ? 0.36 : 0.46));
+    const grip = new THREE.Vector3(), guard = new THREE.Vector3();
+    gunHold(sd, grip, guard);
+    sd.gun.localToWorld(grip);
+    sd.gun.localToWorld(guard);
     const right = new THREE.Vector3(-1, 0, 0).applyQuaternion(sd.body.getWorldQuaternion(new THREE.Quaternion()));
     return { grip, guard, right };
   }
@@ -993,6 +1051,7 @@ export class Viewer3D {
   }
 
   render(t: number) {
+    this.nowT = t;
     const now = performance.now();
     this.adaptQuality(now - this.lastFrame);
     const dt = Math.min(0.1, (now - this.lastFrame) / 1000);
@@ -1008,6 +1067,7 @@ export class Viewer3D {
     for (const a of this.anims) a.tick(this.elapsed);
     if (tl) {
       this.updateBomb(tl, t);
+      this.updateKillFx(tl, t);
     }
     this.updateCamera(dt);
     this.scaleSprites();
@@ -1353,6 +1413,7 @@ export class Viewer3D {
   setMode(mode: CameraMode) {
     this.mode = mode;
     if (mode === 'overview') this.resetView(false);
+    if (mode === 'director') this.dir.until = -1;
     if (mode === 'follow') { this.dist = Math.min(this.dist, this.canvas.clientWidth < 520 ? 19 : 26); if (this.tilt === 'iso') this.pitch = 1.2; if (!this.followId) this.followId = this.rigs.find((r) => r.track.deathT === null)?.track.id ?? this.rigs[0]?.track.id ?? null; }
     this.events.onCameraMode?.(mode);
   }
@@ -1360,6 +1421,107 @@ export class Viewer3D {
   follow(id: string | null) {
     this.followId = id;
     if (id) { this.mode = 'follow'; this.dist = Math.min(this.dist, this.canvas.clientWidth < 520 ? 19 : 26); if (this.tilt === 'iso') this.pitch = 1.2; this.events.onCameraMode?.('follow'); }
+  }
+
+  /**
+   * The TV director. Looks a little ahead in the round for the next kill and frames killer and
+   * victim side by side before the shot; otherwise a plant or defuse, otherwise the closest
+   * pair of opponents. Holds each shot a few seconds and cuts (returns true) when the new shot
+   * is far from the old one. Scrubbing backwards re-plans from the new time.
+   */
+  private direct(tl: RoundTimeline, t: number, dt: number): boolean {
+    const d = this.dir;
+    if (t < d.lastT - 0.5) d.until = -1;
+    d.lastT = t;
+    const alive = (id: string | null, at: number) => { const r = id ? this.rigById.get(id) : undefined; return !!r && (r.track.deathT === null || r.track.deathT > at); };
+    const posOf = (id: string | null) => (id ? this.rigById.get(id)?.root.position : undefined);
+    let fresh = false;
+    if (t >= d.until || (!alive(d.a, t - 1.2) && !alive(d.b, t - 1.2))) {
+      fresh = true;
+      d.a = d.b = null;
+      const kill = tl.shots.find((s) => s.lethal && s.t >= t - 0.6 && s.t <= t + 3);
+      const b = tl.bomb;
+      // The plant (from a moment before the planter kneels) and any defuse attempt are shots of their own.
+      const planter = b.plantT !== null && t > b.plantT - PLANT_SECONDS - 1.5 && t < b.plantT + 0.6 ? bombAt(tl, Math.max(0, b.plantT - 0.2)).carrier : null;
+      const defuse = b.attempts.find(([start, stop, , need]) => t > start - 1.2 && t < (stop ?? start + need));
+      if (kill) { d.a = kill.from; d.b = kill.to; d.until = kill.t + 1.5; }
+      else if (planter || defuse) { d.a = planter ?? defuse![2]; d.until = t + 3; }
+      else {
+        let best = Infinity;
+        const live = this.rigs.filter((r) => r.track.deathT === null || r.track.deathT > t);
+        for (const x of live) for (const y of live) {
+          if (x.track.team >= y.track.team) continue;
+          const dd = x.root.position.distanceToSquared(y.root.position);
+          if (dd < best) { best = dd; d.a = x.track.id; d.b = y.track.id; }
+        }
+        // Too far apart for one frame: ride along with one of them instead, a different side each time.
+        if (best > DIRECTOR_PAIR * DIRECTOR_PAIR && d.a && d.b) { if (d.cuts % 2) d.a = d.b; d.b = null; }
+        d.until = t + (d.b ? 3.5 : 4.5);
+      }
+    }
+    const pa = posOf(d.a), pb = posOf(d.b);
+    if (!pa && !pb) { this.target.set(0, 0, 0); this.dist = this.overviewDist; this.pitch = 0.95; return false; }
+    const before = this.target.clone();
+    if (pa && pb) this.target.copy(pa).lerp(pb, 0.5); else this.target.copy((pa ?? pb)!);
+    this.target.y += 1.2;
+    const sep = pa && pb ? Math.hypot(pa.x - pb.x, pa.z - pb.z) : 0;
+    // Far enough back that both fit across the frame, whatever its shape.
+    const tanH = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.aspect;
+    const want = pa && pb ? THREE.MathUtils.clamp((sep / 2 + 6) / tanH, 17, this.overviewDist * 0.85) : 19;
+    if (fresh) {
+      d.cuts++;
+      // Side-on to the line between the two, alternating sides each cut; from behind for one player.
+      const rig = d.a ? this.rigById.get(d.a) : undefined;
+      const yaw = pa && pb ? Math.atan2(-(pb.z - pa.z), pb.x - pa.x) + (d.cuts % 2 ? Math.PI : 0) + 0.35 : (rig ? rig.body.rotation.y + Math.PI + 0.5 : this.yaw);
+      this.yaw = yaw;
+      this.pitch = this.tilt === 'top' ? 1.4 : 0.78 + (d.cuts % 3) * 0.06;
+      this.dist = want;
+      return before.distanceTo(this.target) > 26;
+    }
+    // Within a shot: stay behind a lone player as they turn, or drift slowly round a pair.
+    if (pa && !pb && d.a) {
+      const rig = this.rigById.get(d.a);
+      if (rig) {
+        const wantYaw = rig.body.rotation.y + Math.PI + 0.5;
+        const diff = Math.atan2(Math.sin(wantYaw - this.yaw), Math.cos(wantYaw - this.yaw));
+        this.yaw += diff * Math.min(1, dt * 0.7);
+      }
+    } else this.yaw += dt * 0.05;
+    this.dist += (want - this.dist) * Math.min(1, dt * 1.5);
+    return false;
+  }
+
+  /** Clean kill effects: a ring of the killer's colour runs out across the floor, a short pillar of light, a spark on headshots. */
+  private updateKillFx(tl: RoundTimeline, t: number) {
+    let n = 0;
+    for (const tr of tl.players) {
+      if (tr.deathT === null || t < tr.deathT || t > tr.deathT + KILL_FX_SECONDS || n >= this.killFx.length) continue;
+      const fx = this.killFx[n++]!;
+      const rig = this.rigById.get(tr.id);
+      if (!rig) continue;
+      const info = this.killInfo.get(tr.id);
+      const killer = info?.killer ? this.rigById.get(info.killer) : undefined;
+      const color = killer ? (this.kits ? this.kits[killer.track.team] : this.teamColor(killer.track)) : new THREE.Color('#ffffff');
+      const p = (t - tr.deathT) / KILL_FX_SECONDS;
+      const at = rig.root.position;
+      fx.ring.visible = true;
+      fx.ring.position.set(at.x, at.y + 0.08, at.z);
+      fx.ring.scale.setScalar(2 + p * 9);
+      fx.ring.material.color.copy(color).lerp(new THREE.Color('#ffffff'), 0.25);
+      fx.ring.material.opacity = (1 - p) * (1 - p) * 0.95;
+      fx.pillar.visible = p < 0.75;
+      fx.pillar.position.set(at.x, at.y, at.z);
+      fx.pillar.scale.set(1, 0.4 + p * 0.8, 1);
+      fx.pillar.material.uniforms.uColor!.value.copy(color).lerp(new THREE.Color('#ffffff'), 0.5);
+      fx.pillar.material.uniforms.uOpacity!.value = Math.max(0, 1 - p / 0.75) * 0.9;
+      fx.spark.visible = !!info?.headshot && p < 0.4;
+      if (fx.spark.visible) {
+        fx.spark.position.set(at.x, at.y + 2.1, at.z);
+        fx.spark.scale.setScalar(1.2 + p * 7);
+        fx.spark.material.opacity = 1 - p / 0.4;
+      }
+    }
+    for (let i = n; i < this.killFx.length; i++) { const fx = this.killFx[i]!; fx.ring.visible = fx.pillar.visible = fx.spark.visible = false; }
   }
 
   resetView(instant: boolean) {
@@ -1406,7 +1568,11 @@ export class Viewer3D {
       const rig = this.rigById.get(this.followId);
       if (rig) this.target.set(rig.root.position.x, rig.root.position.y, rig.root.position.z);
     }
-    const k = 1 - Math.exp(-dt * 7);
+    if (this.mode === 'director' && this.tl && this.direct(this.tl, this.nowT, dt)) {
+      // A cut: jump straight to the new shot, like a broadcast switching cameras.
+      this.cur.target.copy(this.target); this.cur.dist = this.dist; this.cur.yaw = this.yaw; this.cur.pitch = this.pitch;
+    }
+    const k = 1 - Math.exp(-dt * (this.mode === 'director' ? 2.6 : 7));
     this.cur.target.lerp(this.target, k);
     this.cur.dist += (this.dist - this.cur.dist) * k;
     this.cur.yaw += (this.yaw - this.cur.yaw) * k;

@@ -1,0 +1,87 @@
+/*
+ * Home lobby (home3d/LineupStage.tsx): the starting five on a lit stage in the club colour
+ * (--club), with the next-match panel docked on the right like a game's main menu.
+ */
+main > .lb-lobby { grid-column: 1 / -1; }
+.lb-lobby { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 420px); align-items: stretch; min-height: 470px;
+  border-radius: var(--r-lg); border: 1px solid var(--line); overflow: hidden; isolation: isolate;
+  background:
+    radial-gradient(55% 70% at 33% 105%, color-mix(in srgb, var(--club) 26%, transparent), transparent 70%),
+    radial-gradient(40% 60% at 33% -10%, rgba(255, 255, 255, 0.06), transparent 70%),
+    repeating-linear-gradient(90deg, transparent 0 79px, rgba(255, 255, 255, 0.018) 79px 80px),
+    linear-gradient(180deg, #0d1218, #06090c); }
+.lb-lobby::after { content: ''; position: absolute; inset: auto 0 0 0; height: 30%; pointer-events: none; z-index: 1; background: linear-gradient(0deg, rgba(5, 7, 10, 0.75), transparent); }
+.lb-stage { position: absolute; inset: 0 400px 0 0; z-index: 0; }
+.lb-stage canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 900ms var(--ease); }
+.lb-lobby.ready .lb-stage canvas { opacity: 1; }
+.lb-tags { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.lb-tag { position: absolute; left: 0; top: 0; pointer-events: auto; display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; align-items: center; gap: 0 8px;
+  padding: 5px 11px 6px 8px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--rc) 45%, transparent); cursor: pointer; color: var(--ink); text-align: left;
+  background: linear-gradient(180deg, rgba(14, 19, 26, 0.86), rgba(8, 11, 15, 0.86)); box-shadow: 0 8px 20px -10px #000, inset 0 2px 0 var(--rc);
+  opacity: 0; transition: opacity 500ms 300ms, border-color 160ms, background 160ms; will-change: transform; }
+.lb-lobby.ready .lb-tag { opacity: 1; }
+.lb-tag:hover, .lb-tag:focus-visible { border-color: var(--rc); background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 22%, #0e131a), rgba(8, 11, 15, 0.92)); outline: none; }
+.lb-tag::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -5px; border: 5px solid transparent; border-bottom: 0; border-top-color: color-mix(in srgb, var(--rc) 45%, transparent); }
+.lb-ovr { grid-row: 1 / 3; font-family: var(--font-display); font-weight: 700; font-size: 1.35rem; line-height: 1; color: var(--rc); text-shadow: 0 0 12px color-mix(in srgb, var(--rc) 50%, transparent); }
+.lb-name { font-family: var(--font-display); font-weight: 600; font-size: 0.92rem; line-height: 1.1; white-space: nowrap; }
+.lb-role { display: inline-flex; align-items: center; gap: 4px; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+.lb-role svg { width: 11px; height: 11px; color: var(--club); }
+.lb-tag.r-bronze { --rc: var(--bronze); } .lb-tag.r-silver { --rc: var(--silver); } .lb-tag.r-gold { --rc: var(--gold); } .lb-tag.r-elite { --rc: var(--elite); } .lb-tag.r-legend { --rc: var(--legend); }
+/* The next match (and any panels passed as `side`) dock on the right as a glass column. */
+.lb-lobby > .lb-side { grid-column: 2; position: relative; z-index: 3; display: flex; flex-direction: column; min-width: 0; border-left: 1px solid rgba(255, 255, 255, 0.07);
+  justify-content: center; background: linear-gradient(180deg, rgba(14, 19, 26, 0.82), rgba(9, 12, 17, 0.9)); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: -30px 0 60px -30px #000; }
+.lb-side > .hm-hero { margin: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.lb-side > .panel { margin: 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.07); border-radius: 0; background: none; box-shadow: none; }
+.lb-side > .hm-hero .hm-vs { gap: 8px; }
+.lb-side > .hm-hero .hm-tag { font-size: clamp(1.6rem, 2.6vw, 2.2rem); }
+.lb-side > .hm-hero .hm-actions { flex-direction: column; align-items: stretch; }
+.lb-side > .hm-hero .hm-actions .btn { width: 100%; }
+.lb-kicker { position: absolute; z-index: 2; left: 22px; top: 18px; display: grid; gap: 2px; pointer-events: none; }
+.lb-kicker b { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.04em; text-transform: uppercase; color: #f2f5f8; text-shadow: 0 2px 14px #000; }
+.lb-kicker span { font-size: 0.66rem; letter-spacing: 0.22em; text-transform: uppercase; color: color-mix(in srgb, var(--club) 70%, #cfd6dd); }
+@media (max-width: 1023px) {
+  .lb-lobby { grid-template-columns: 1fr; min-height: 0; }
+  .lb-stage { position: relative; inset: auto; height: 320px; grid-row: 1; }
+  .lb-lobby > .lb-side { grid-column: 1; grid-row: 2; border-left: 0; border-top: 1px solid rgba(255, 255, 255, 0.07); box-shadow: none; }
+  .lb-side > .hm-hero .hm-actions { flex-direction: row; }
+  .lb-lobby::after { display: none; }
+  .lb-tag { padding: 4px 8px 5px 6px; gap: 0 6px; }
+  .lb-ovr { font-size: 1.05rem; }
+  .lb-name { font-size: 0.78rem; }
+  .lb-role { display: none; }
+}
+@media (max-width: 560px) {
+  .lb-stage { height: 260px; }
+  .lb-name { max-width: 64px; overflow: hidden; text-overflow: ellipsis; }
+  /* The title moves down to the stage floor (the stage is 260px tall) so it never sits under a name tag. */
+  .lb-kicker { top: 260px; left: 14px; transform: translateY(calc(-100% - 10px)); grid-auto-flow: column; align-items: baseline; gap: 8px; }
+  .lb-kicker b { font-size: 0.95rem; }
+}
+
+/* Wide screens (Tactical look): the club name over the stage, an Edit lineup button and the team's numbers. */
+.lb-over { display: none; }
+@media (min-width: 1024px) {
+  .lb-lobby { min-height: 600px; border-radius: 0; border-color: rgba(255, 255, 255, 0.07); }
+  .lb-kicker, .lb-lobby::after { display: none; }
+  .lb-over { display: block; position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+  .lb-title { position: absolute; left: 32px; top: 28px; display: grid; gap: 4px; }
+  .lb-title span { font-family: var(--font-display); font-weight: 600; font-size: 0.74rem; letter-spacing: 0.22em; text-transform: uppercase; color: color-mix(in srgb, var(--club) 70%, #f0a33a); }
+  .lb-title h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(2rem, 3.2vw, 2.75rem); line-height: 1; letter-spacing: 0.01em; color: #f2f5f8; text-shadow: 0 2px 18px #000; }
+  .lb-title small { font-size: 0.86rem; color: #a9b4bf; }
+  .lb-stats { position: absolute; left: 32px; bottom: 22px; margin: 0; display: flex; gap: 28px; }
+  .lb-stats div { display: flex; align-items: baseline; gap: 10px; }
+  .lb-stats dt { font-family: var(--font-display); font-weight: 600; font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: #a9b4bf; }
+  .lb-stats dd { margin: 0; font-family: var(--font-data); font-weight: 700; font-size: 0.95rem; color: #f2f5f8; }
+  .lb-tag { border-radius: 0; background: rgba(5, 7, 10, 0.84); border-color: rgba(255, 255, 255, 0.1); box-shadow: 0 8px 20px -10px #000, inset 0 -2px 0 var(--rc); }
+  .lb-tag::after { border-top-color: rgba(255, 255, 255, 0.1); }
+  .lb-lobby > .lb-side { justify-content: flex-start; background: rgba(12, 16, 21, 0.92); border-left-color: rgba(255, 255, 255, 0.08); }
+  .lb-side > .hm-hero { background: linear-gradient(180deg, rgba(240, 163, 58, 0.08), transparent 70%); }
+  .lb-over .lb-edit { position: absolute; top: 28px; right: 28px; pointer-events: auto; background: rgba(5, 7, 10, 0.6); }
+  /* A compact right column, as in the mockup, so the whole stage and its numbers fit on a 900 px-high screen.
+     The board's long note moves into a tooltip on its confidence row. */
+  .lb-side > .hm-hero { padding: 18px 22px; gap: 14px; }
+  .lb-side > .panel { padding: 14px 22px; }
+  .lb-side > .bd { gap: 8px; }
+  .lb-side > .bd > .bd-note { display: none; }
+  .lb-side > .hm-tile .hm-foot { display: none; }
+}

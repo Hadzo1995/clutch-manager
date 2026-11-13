@@ -1,0 +1,110 @@
+/*
+ * The collectible player card (cards/CollectibleCard.tsx). Prefixed col-.
+ * --rc is the rarity colour, --w the card width (everything inside scales with it),
+ * --rx/--ry the tilt and --mx/--my the light position, both set from the pointer.
+ */
+.col-card { --w: 320px; --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 30%; --cut: calc(var(--w) * 0.055);
+  position: relative; flex: none; width: var(--w); aspect-ratio: 5 / 7; perspective: 1100px;
+  filter: drop-shadow(0 26px 34px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 28px color-mix(in srgb, var(--rc) 38%, transparent)); }
+.col-card.lg { --w: min(320px, 74vw); }
+.col-card.md { --w: 236px; }
+.col-card.sm { --w: 196px; }
+.col-card.sm .col-attrs dt { font-size: 0.56rem; }
+.col-body { all: unset; box-sizing: border-box; position: absolute; inset: 0; display: block; transform-style: preserve-3d; cursor: default;
+  transform: rotateX(var(--rx)) rotateY(var(--ry)); transition: transform 420ms var(--ease); }
+button.col-body { cursor: pointer; }
+button.col-body:focus-visible { outline: 2px solid var(--rc); outline-offset: 4px; }
+.col-card.tilting .col-body { transition: transform 80ms linear; }
+
+.col-face { position: absolute; inset: 0; overflow: hidden; isolation: isolate; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut)); }
+.col-front { color: var(--ink); font-family: var(--font-body, inherit);
+  background: radial-gradient(120% 70% at 50% 16%, color-mix(in srgb, var(--rc) 34%, #27303a), #11151b 70%), #11151b; }
+.col-back { transform: rotateY(180deg); display: grid; place-items: center; color: var(--rc);
+  background:
+    radial-gradient(60% 45% at 50% 50%, color-mix(in srgb, var(--rc) 30%, transparent), transparent 70%),
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--rc) 10%, transparent) 0 2px, transparent 2px 12px),
+    linear-gradient(160deg, #1c232c, #0b0e12); }
+.col-back-mark { width: 38%; height: auto; filter: drop-shadow(0 0 14px color-mix(in srgb, var(--rc) 70%, transparent)); }
+
+/* Behind the player: their weapon in the rarity colour and a halftone screen. */
+.col-wpn { position: absolute; z-index: -1; left: -26%; top: 22%; width: 152%; height: auto; transform: rotate(-16deg); opacity: 0.16; fill: var(--rc); }
+.col-dots { position: absolute; inset: 0 0 30% 0; z-index: -1; opacity: 0.55;
+  background: radial-gradient(circle, color-mix(in srgb, var(--rc) 45%, transparent) 0.9px, transparent 1.5px) 0 0 / 7px 7px;
+  -webkit-mask: linear-gradient(180deg, #000, transparent); mask: linear-gradient(180deg, #000, transparent); }
+.col-photo { position: absolute; left: 0; right: 0; top: 0; height: 52%; }
+/* Fine scanlines over the photo, like a broadcast still. */
+.col-photo::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px);
+  -webkit-mask: linear-gradient(180deg, #000 58%, transparent 97%); mask: linear-gradient(180deg, #000 58%, transparent 97%); }
+.col-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; border-radius: 0;
+  -webkit-mask: linear-gradient(180deg, #000 58%, transparent 97%); mask: linear-gradient(180deg, #000 58%, transparent 97%); }
+.col-shade { position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(70% 34% at 0% 0%, rgba(6, 8, 11, 0.78), transparent 75%), linear-gradient(180deg, transparent 36%, rgba(10, 13, 17, 0.55) 52%, transparent 70%); }
+
+.col-top { position: absolute; top: 4.6%; left: 7%; right: 7%; display: flex; align-items: flex-start; gap: calc(var(--w) * 0.03); }
+.col-ovr { display: grid; justify-items: center; font-weight: 700; line-height: 0.9; font-size: calc(var(--w) * 0.16); color: var(--rc);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 22px color-mix(in srgb, var(--rc) 55%, transparent); }
+.col-ovr small { font-family: var(--font-display); font-size: calc(var(--w) * 0.034); letter-spacing: 0.2em; color: #dfe6ec; margin-top: 2px; }
+.col-role { display: grid; place-items: center; width: calc(var(--w) * 0.1); height: calc(var(--w) * 0.1); margin-top: calc(var(--w) * 0.012); border-radius: 50%;
+  background: rgba(6, 8, 11, 0.62); color: var(--rc); box-shadow: 0 0 0 1px color-mix(in srgb, var(--rc) 45%, transparent) inset; }
+.col-role svg { width: 58%; height: 58%; }
+.col-top .tier-chip { margin-left: auto; font-size: calc(var(--w) * 0.036); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); background-color: rgba(6, 8, 11, 0.7); }
+
+.col-plate { position: absolute; left: 6%; right: 6%; top: 47.5%; display: grid; justify-items: center; gap: calc(var(--w) * 0.012); text-align: center; }
+.col-rarity { font-family: var(--font-display); font-size: calc(var(--w) * 0.032); font-weight: 700; letter-spacing: 0.32em; text-transform: uppercase; color: var(--rc); padding-left: 0.32em; }
+.col-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-display); font-weight: 700; font-size: calc(var(--w) * 0.098);
+  line-height: 1.02; letter-spacing: 0.02em; text-transform: uppercase; color: #f7f9fb; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7); }
+.col-meta { display: flex; align-items: center; gap: 5px; font-size: calc(var(--w) * 0.034); color: var(--ink-2); }
+.col-rolename { font-family: var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; font-size: calc(var(--w) * 0.032); }
+.col-stars { position: absolute; left: 0; right: 0; top: 43%; display: flex; justify-content: center; }
+.col-stars .stars { color: var(--gold); font-size: calc(var(--w) * 0.04); }
+
+.col-cap { position: absolute; left: 10%; right: 10%; top: 67.5%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-size: calc(var(--w) * 0.032); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+.col-cap .num { font-size: calc(var(--w) * 0.046); letter-spacing: 0; color: var(--good); font-weight: 700; }
+.col-cap i { position: relative; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.col-cap i b { position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 60%, #fff), var(--rc)); box-shadow: 0 0 8px var(--rc); }
+.col-attrs { position: absolute; left: 8%; right: 8%; bottom: 6.5%; margin: 0; padding-top: calc(var(--w) * 0.03); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(var(--w) * 0.012) calc(var(--w) * 0.02);
+  border-top: 1px solid color-mix(in srgb, var(--rc) 40%, transparent); }
+.col-attrs div { display: flex; align-items: baseline; justify-content: center; gap: 5px; }
+.col-attrs dt { font-family: var(--font-display); font-size: calc(var(--w) * 0.033); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.col-attrs dd { margin: 0; font-size: calc(var(--w) * 0.05); font-weight: 700; color: #f1f4f7; }
+
+/* The frame: a chamfered border in the rarity colour, glowing a little. */
+.col-frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--rc) 80%, transparent)); }
+.col-frame polygon { fill: none; stroke: var(--rc); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.col-frame polygon.inner { stroke: rgba(255, 255, 255, 0.14); stroke-width: 1; filter: none; }
+.col-card.r-bronze .col-frame polygon:not(.inner), .col-card.r-silver .col-frame polygon:not(.inner) { stroke-width: 2; }
+
+/* Foil: gold shimmers, Elite and Legend are holographic. The light follows the pointer. */
+.col-foil { position: absolute; inset: 0; pointer-events: none; opacity: 0; background-size: 260% 260%; background-position: var(--mx) var(--my); transition: background-position 120ms linear; }
+.col-card.foil-gold .col-foil { opacity: 0.5; mix-blend-mode: overlay;
+  background-image: linear-gradient(115deg, transparent 22%, rgba(255, 214, 120, 0.6) 38%, rgba(255, 255, 255, 0.85) 45%, rgba(255, 190, 80, 0.5) 52%, transparent 70%); }
+.col-card.foil-holo .col-foil { opacity: 0.5; mix-blend-mode: overlay;
+  background-image: repeating-linear-gradient(115deg, transparent 0%, rgba(255, 122, 217, 0.55) 3%, rgba(122, 240, 255, 0.6) 6%, rgba(166, 255, 138, 0.5) 9%, rgba(255, 229, 122, 0.5) 12%, transparent 15%, transparent 26%); }
+.col-card.r-legend .col-foil { opacity: 0.6;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0.7px, transparent 1.4px), radial-gradient(circle, rgba(255, 240, 200, 0.85) 0.6px, transparent 1.3px),
+    repeating-linear-gradient(115deg, transparent 0%, rgba(255, 122, 217, 0.6) 3%, rgba(122, 240, 255, 0.65) 6%, rgba(166, 255, 138, 0.55) 9%, rgba(255, 229, 122, 0.55) 12%, transparent 15%, transparent 24%);
+  background-size: 23px 23px, 37px 37px, 260% 260%; background-position: 0 0, 11px 17px, var(--mx) var(--my); }
+.col-glare { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 300ms; mix-blend-mode: soft-light;
+  background: radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, 0.55), transparent 48%); }
+.col-card.tilting .col-glare { opacity: 1; }
+/* A sheen that runs across the face once. */
+.col-front::after { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; transform: translateX(-130%);
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.26) 48%, transparent 60%); }
+
+/* Intros */
+.col-card.intro-flip .col-body { animation: col-flip 1150ms var(--delay) cubic-bezier(0.2, 0.85, 0.25, 1) backwards; }
+.col-card.intro-flip .col-front::after { animation: col-sheen 1200ms calc(var(--delay) + 900ms) ease-out; }
+.col-card.intro-rise { animation: col-rise 560ms var(--delay) var(--ease) backwards; }
+.col-card.intro-rise .col-front::after { animation: col-sheen 1100ms calc(var(--delay) + 300ms) ease-out; }
+@keyframes col-flip {
+  0% { opacity: 0; transform: translateY(60px) scale(0.5) rotateY(-200deg) rotateZ(-8deg); }
+  12% { opacity: 1; }
+  62% { transform: translateY(-6px) scale(1.07) rotateY(14deg) rotateZ(1deg); }
+  82% { transform: scale(0.99) rotateY(-4deg); }
+  100% { transform: rotateX(0deg) rotateY(0deg); }
+}
+@keyframes col-rise { from { opacity: 0; transform: translateY(16px) scale(0.96); } }
+@keyframes col-sheen { from { transform: translateX(-130%); } to { transform: translateX(130%); } }
+:root[data-motion="reduced"] .col-card, :root[data-motion="reduced"] .col-card * { animation: none !important; transition: none !important; }

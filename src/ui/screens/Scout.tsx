@@ -15,6 +15,7 @@ import type { PlayerProfile, Role } from '../../engine/types';
 import { Coin, PlayerCard, RoleIcon, TierChip, useGame, CountryTag, OrgTag } from '../common';
 import { ratingTone } from '../charts';
 import { CompareSheet } from './Compare';
+import '../styles/scoutFx.css';
 
 type Owner = 'all' | 'free' | 'ai' | 'shortlist' | 'you';
 type SortKey = 'ovr' | 'potential' | 'value' | 'rating' | 'adr' | 'opening' | 'clutch' | 'awp' | 'age';
@@ -255,7 +256,7 @@ export function Scout() {
                 const id = p.record.id;
                 const inCmp = compare.includes(id);
                 return (
-                  <tr key={id} className={`${st.owner === 'you' ? 'mine' : ''}${inCmp ? ' cmp-on' : ''}`} onClick={() => openPlayer(null, id)}>
+                  <tr key={id} className={`r-${p.rarity}${st.owner === 'you' ? ' mine' : ''}${inCmp ? ' cmp-on' : ''}`} onClick={() => openPlayer(null, id)}>
                     <td className="c-star">{starBtn(id, p.record.handle)}</td>
                     <td className="c-player">
                       <button className="pl-btn" onClick={(e) => { e.stopPropagation(); openPlayer(null, id); }}>
@@ -288,7 +289,7 @@ export function Scout() {
             const interest = interestOf(id, st.owner);
             const sortedStat = sort === 'rating' ? p.record.stats.rating.toFixed(2) : sort === 'adr' ? (p.record.stats.adr?.toFixed(0) ?? '—') : sort === 'opening' ? pct(p.record.stats.openingSuccess) : sort === 'clutch' ? pct(p.record.stats.clutchWinRate) : sort === 'awp' ? pct(p.record.stats.awpKillShare) : null;
             return (
-              <div key={id} className={`scout-row${compare.includes(id) ? ' cmp-on' : ''}${st.owner === 'you' ? ' mine' : ''}`}>
+              <div key={id} className={`scout-row r-${p.rarity}${compare.includes(id) ? ' cmp-on' : ''}${st.owner === 'you' ? ' mine' : ''}`}>
                 <button className="scout-main" onClick={() => openPlayer(null, id)}>
                   <Avatar seed={id} size={38} accent={st.owner === 'you' ? '#f0a33a' : '#5aa9e6'} jersey={st.owner === 'you' ? undefined : playerJersey(p.record.team)} className={`scout-ava ava-ring ${p.rarity}`} />
                   <span className="who">
@@ -296,7 +297,7 @@ export function Scout() {
                     <span className="small muted"><RoleIcon role={p.record.primaryRole} /> {ROLE_LABEL[p.record.primaryRole]} · {p.record.age}y · <span className={`num ${value > c.coins ? 'faint' : ''}`}>{kfmt(value)}</span></span>
                     <span className="who-club">
                       <span className={st.owner === 'you' ? 't-col' : st.owner === 'ai' ? '' : 'faint'}>{st.owner === 'you' ? 'Your squad' : st.owner === 'ai' ? st.teamTag : 'Free agent'}</span>
-                      {interest && <span className={`int-txt ${interest}`}><i className={`int-dot ${interest}`} aria-hidden="true" />{interest === 'none' ? 'not interested' : interest === 'high' ? 'keen to talk' : `${interest} interest`}</span>}
+                      {interest && <span className={`int-txt ${interest}`}><i className={`int-dot ${interest}`} aria-hidden="true" />{interest === 'none' ? 'not interested' : interest === 'high' ? 'keen to talk' : interest === 'medium' ? 'some interest' : 'low interest'}</span>}
                     </span>
                   </span>
                   <span className="nums num">

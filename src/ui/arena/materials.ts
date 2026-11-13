@@ -456,19 +456,39 @@ export function floorStyle(map: string): keyof SurfaceSet {
  * A standard material whose map is sampled in world space: `top` on surfaces
  * facing up, `side` on walls. `scale` is texture repeats per metre.
  */
-export function worldMaterial(opts: { top: THREE.Texture; side?: THREE.Texture; topScale: number; sideScale?: number; normalScale?: number; roughness?: number; metalness?: number; color?: THREE.ColorRepresentation; baseShade?: number }): THREE.MeshStandardMaterial {
+export interface GroundOverlay {
+  /** The map-wide detail map from ground.ts and where it lies in the world. */
+  map: THREE.Texture;
+  rect: THREE.Vector4;
+  /** Colour of what gathers on the floor (sand, dust, grime, moss) and its grain texture. */
+  color: THREE.ColorRepresentation;
+  tex: THREE.Texture;
+  /** How much gathers along walls, and in patches across open ground (0..1). */
+  walls: number;
+  patches: number;
+}
+
+export function worldMaterial(opts: { top: THREE.Texture; side?: THREE.Texture; topScale: number; sideScale?: number; normalScale?: number; roughness?: number; metalness?: number; color?: THREE.ColorRepresentation; baseShade?: number; ground?: GroundOverlay }): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: opts.color ?? 0xffffff, roughness: opts.roughness ?? 0.9, metalness: opts.metalness ?? 0.02 });
+  const gr = opts.ground;
   const uniforms = {
     tpTop: { value: opts.top },
     tpSide: { value: opts.side ?? opts.top },
     tpTopScale: { value: opts.topScale },
     tpSideScale: { value: opts.sideScale ?? opts.topScale },
     tpBaseShade: { value: opts.baseShade ?? 0 },
+    tpGround: { value: gr?.map ?? null },
+    tpGroundRect: { value: gr?.rect ?? new THREE.Vector4() },
+    tpGrit: { value: new THREE.Color(gr?.color ?? 0xffffff) },
+    tpGritTex: { value: gr?.tex ?? null },
+    tpGritAmt: { value: new THREE.Vector2(gr?.walls ?? 0, gr?.patches ?? 0) },
     tpTopN: { value: normals.get(opts.top) ?? flat() },
     tpSideN: { value: normals.get(opts.side ?? opts.top) ?? flat() },
     tpNStrength: { value: opts.normalScale ?? 1 },
   };
   const relief = normals.has(opts.top) || normals.has(opts.side ?? opts.top);
+  if (gr) mat.defines = { ...(mat.defines ?? {}), TP_GROUND: '' };
+  mat.userData.tp = uniforms;
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
@@ -485,7 +505,20 @@ export function worldMaterial(opts: { top: THREE.Texture; side?: THREE.Texture; 
         vTpPos = tpW.xyz;
         vTpNrm = normalize(mat3(modelMatrix) * tpN);`);
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vTpPos;\nvarying vec3 vTpNrm;\nvarying float vTpLocalY;\nuniform float tpBaseShade;\nuniform sampler2D tpTop;\nuniform sampler2D tpSide;\nuniform sampler2D tpTopN;\nuniform sampler2D tpSideN;\nuniform float tpNStrength;\nuniform float tpTopScale;\nuniform float tpSideScale;')
+      .replace('#include <common>', '#include <common>\nvarying vec3 vTpPos;\nvarying vec3 vTpNrm;\nvarying float vTpLocalY;\nuniform float tpBaseShade;\nuniform sampler2D tpTop;\nuniform sampler2D tpSide;\nuniform sampler2D tpTopN;\nuniform sampler2D tpSideN;\nuniform float tpNStrength;\nuniform float tpTopScale;\nuniform float tpSideScale;\n#ifdef TP_GROUND\nuniform sampler2D tpGround;\nuniform vec4 tpGroundRect;\nuniform vec3 tpGrit;\nuniform sampler2D tpGritTex;\nuniform vec2 tpGritAmt;\n#endif')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        #ifdef TP_GROUND
+        {
+          // Sand, dust or grime gathered along walls and in patches, then the contact shadow;
+          // both only on floors (surfaces facing up).
+          vec3 gd = texture2D(tpGround, (vTpPos.xz - tpGroundRect.xy) * tpGroundRect.zw).rgb;
+          float up = smoothstep(0.5, 0.9, normalize(vTpNrm).y);
+          float grit = texture2D(tpGritTex, vTpPos.xz * 0.21).r;
+          float m = clamp(gd.g * tpGritAmt.x + gd.b * tpGritAmt.y * (0.55 + 0.45 * grit), 0.0, 1.0) * up;
+          diffuseColor.rgb = mix(diffuseColor.rgb, tpGrit * (0.8 + 0.4 * grit), m);
+          diffuseColor.rgb *= mix(1.0, gd.r, up);
+        }
+        #endif`)
       .replace('#include <map_fragment>', `
         vec3 tpB = pow(abs(normalize(vTpNrm)), vec3(6.0));
         tpB /= (tpB.x + tpB.y + tpB.z + 1e-5);
@@ -514,6 +547,6 @@ export function worldMaterial(opts: { top: THREE.Texture; side?: THREE.Texture; 
         }`);
     }
   };
-  mat.customProgramCacheKey = () => `tp-${relief ? 'n' : ''}-${opts.baseShade ?? 0}-${opts.top.uuid}-${(opts.side ?? opts.top).uuid}-${opts.topScale}-${opts.sideScale ?? opts.topScale}`;
+  mat.customProgramCacheKey = () => `tp-${relief ? 'n' : ''}-${opts.baseShade ?? 0}-${opts.top.uuid}-${(opts.side ?? opts.top).uuid}-${opts.topScale}-${opts.sideScale ?? opts.topScale}-${gr ? 'g' : ''}`;
   return mat;
 }

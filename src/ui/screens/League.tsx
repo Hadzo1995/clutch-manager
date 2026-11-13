@@ -12,6 +12,7 @@ import { Crest } from '../crest';
 import { TrophyCabinet } from '../BoardPanel';
 import '../styles/home.css';
 import { LEAGUE_KICKOFF, formatDate, matchDate, seasonSpan, seasonStart } from '../../engine/calendar';
+import '../styles/leagueFx.css';
 
 function weekName(w: number): string {
   if (w <= 7) return `Week ${w}`;

@@ -13,6 +13,14 @@ import type { Result } from './leagueUtil';
 import { Crest, orgTextStyle } from '../crest';
 import '../styles/home.css';
 import { formatDate, matchDate } from '../../engine/calendar';
+import { LineupStage } from '../home3d/LineupStage';
+import type { LineupMember } from '../home3d/LineupStage';
+import { MY_HUE } from '../crest';
+import { profileOf } from '../../engine/career';
+import { cardOvr } from '../../engine/ratings';
+import type { Role } from '../../engine/types';
+
+const LOBBY_ORDER: Role[] = ['entry', 'awp', 'igl', 'support', 'lurker'];
 import { buildAlerts } from '../alerts';
 import { BoardPanel } from '../BoardPanel';
 import { weeklyWages } from '../../engine/career';
@@ -45,6 +53,15 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
   const avgFatigue = lineupCards.length ? Math.round(lineupCards.reduce((sum, x) => sum + x.fatigue, 0) / lineupCards.length) : 0;
   const tr = c.lastTraining && c.lastTraining.week === c.season.week && c.lastTraining.season === c.season.number ? c.lastTraining : null;
   const myForm: Result[] = c.matches.slice(0, 5).reverse().map((m) => (m.won ? 'W' : 'L'));
+  // The lobby: the starting five in role order with the IGL in the middle, in the club colour.
+  const members: LineupMember[] = LOBBY_ORDER.flatMap((role) => {
+    const slot = c.lineup.find((x) => x.role === role);
+    const card = slot ? c.cards.find((x) => x.cardId === slot.cardId) : undefined;
+    if (!slot || !card) return [];
+    const p = profileOf(world, card);
+    return [{ cardId: card.cardId, handle: p.record.handle, role, ovr: cardOvr(p, card), rarity: p.rarity }];
+  });
+  const clubColor = `hsl(${c.crest?.hue ?? MY_HUE}, 62%, 52%)`;
 
   const cost = planCost(c.plan);
   const worn = starterFatigue(c) >= 60;
@@ -67,6 +84,36 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
   return (
     <>
       <Tutorial goTo={goTo} openClub={openClub} />
+      <LineupStage members={members} color={clubColor} tag={c.teamTag} onOpen={(id) => openPlayer(id)} fallback={null}
+        title={c.teamName} subtitle={`${div.name} · Season ${c.season.number} · Week ${Math.min(c.season.week, 12)}`} onEdit={() => goTo('squad')}
+        stats={[
+          { label: 'Strength', value: strength === null ? '—' : Math.round(strength) },
+          { label: 'Chemistry', value: Math.round(c.chemistry) },
+          { label: 'Fatigue', value: avgFatigue },
+          { label: 'Squad', value: `${c.cards.length}/${MAX_SQUAD}` },
+        ]}
+        side={<>
+          <BoardPanel className="span-4" />
+          <button className="panel hm-tile span-4" onClick={() => goTo('league')} aria-label={`League: ${ordinal(pos)} in the ${div.name}. Open the league`}>
+            <div className="hm-tile-head"><span className="label">{div.name}</span><span className="hm-go" aria-hidden="true">League ›</span></div>
+            <div className="hm-kpi"><span className="hm-big">{place(pos)}</span><span className="faint small">of {table.length}</span><span className="hm-kpi-r num">{me.points} <span className="faint">pts</span></span></div>
+            <div className="hm-mini" role="presentation">
+              {mini.map((r) => {
+                const i = table.indexOf(r);
+                const zone = i < 2 && c.season.division < DIVISIONS.length - 1 ? 'up' : i >= table.length - 2 && c.season.division > 0 ? 'down' : '';
+                return (
+                  <div key={r.teamId} className={`hm-mini-row ${r.teamId === HUMAN_ID ? 'me' : ''} ${zone}`}>
+                    <span className="num">{i + 1}</span>
+                    <span className="hm-mini-n">{r.teamId === HUMAN_ID ? c.teamName : teamName(c, r.teamId)}</span>
+                    <span className="num faint">{r.wins}-{r.losses}</span>
+                    <span className="num">{r.points}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <span className="hm-foot">Top 2 go up{c.season.division > 0 ? ' · bottom 2 go down' : ''}</span>
+          </button>
+        </>}>
       <section className="hm-hero span-8" aria-label="Next match">
         {fixture && opp ? (
           <>
@@ -130,28 +177,9 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
         )}
         {!valid.ok && <div className="hm-alert" role="alert"><span>{valid.errors[0]}</span><button className="btn small" onClick={() => goTo('squad')}>Fix squad</button></div>}
       </section>
+      </LineupStage>
 
       <NextActions goTo={goTo} openClub={openClub} openPlayer={openPlayer} />
-
-      <button className="panel hm-tile span-4" onClick={() => goTo('league')} aria-label={`League: ${ordinal(pos)} in the ${div.name}. Open the league`}>
-        <div className="hm-tile-head"><span className="label">{div.name}</span><span className="hm-go" aria-hidden="true">League ›</span></div>
-        <div className="hm-kpi"><span className="hm-big">{place(pos)}</span><span className="faint small">of {table.length}</span><span className="hm-kpi-r num">{me.points} <span className="faint">pts</span></span></div>
-        <div className="hm-mini" role="presentation">
-          {mini.map((r) => {
-            const i = table.indexOf(r);
-            const zone = i < 2 && c.season.division < DIVISIONS.length - 1 ? 'up' : i >= table.length - 2 && c.season.division > 0 ? 'down' : '';
-            return (
-              <div key={r.teamId} className={`hm-mini-row ${r.teamId === HUMAN_ID ? 'me' : ''} ${zone}`}>
-                <span className="num">{i + 1}</span>
-                <span className="hm-mini-n">{r.teamId === HUMAN_ID ? c.teamName : teamName(c, r.teamId)}</span>
-                <span className="num faint">{r.wins}-{r.losses}</span>
-                <span className="num">{r.points}</span>
-              </div>
-            );
-          })}
-        </div>
-        <span className="hm-foot">Top 2 go up{c.season.division > 0 ? ' · bottom 2 go down' : ''}</span>
-      </button>
 
       <button className="panel hm-tile span-4" onClick={openClub} aria-label={`Club money: ${c.coins} coins. Open finances`}>
         <div className="hm-tile-head"><span className="label">Club money</span><span className="hm-go" aria-hidden="true">Finances ›</span></div>
@@ -183,8 +211,6 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
           <span><span className="label">Rep</span><span className="num">{Math.round(c.reputation)}</span></span>
         </div>
       </button>
-
-      <BoardPanel className="span-4" />
 
       {tr && (
         <section className="panel span-8" aria-label="Training result">
