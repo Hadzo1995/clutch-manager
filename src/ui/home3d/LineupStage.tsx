@@ -5,8 +5,10 @@
  * animation) in three unit looks, shirts and patches in the club colour, each holding a carbine
  * low across the body; the AWPer holds a sniper rifle.
  *
- * The scene only renders while it is on screen and the tab is visible. Without WebGL, with
- * reduced motion or if the figure cannot load, the caller's fallback is shown instead.
+ * The scene only renders while it is on screen and the tab is visible, at about 30 frames a
+ * second (pacing.ts). On machines that can't keep up it draws fewer pixels, then stops redrawing
+ * shadows, then lets the five stand still. Without WebGL, with reduced motion or if the figure
+ * cannot load, the caller's fallback is shown instead.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -20,6 +22,7 @@ import { addRim } from '../arena/models';
 import { carryAcross, weaponMaterial, weaponModel } from '../arena/weapons';
 import { webglAvailable } from '../arena/Viewer3D';
 import { shaftMaterial } from '../case3d/fx';
+import { FrameWatch, frameDue } from './pacing';
 import { RoleIcon } from '../common';
 import { reducedMotion } from '../motion';
 import '../styles/lobby.css';
@@ -92,7 +95,14 @@ class Lobby {
   private gw = new THREE.Vector3();
   private lw = new THREE.Vector3();
   labels: (HTMLElement | null)[] = [];
-  hover = -1;
+  private hoverAt = -1;
+  /** The tag under the pointer; its player lights up. */
+  get hover() { return this.hoverAt; }
+  set hover(i: number) { if (i !== this.hoverAt) { this.hoverAt = i; this.redraw = Math.max(this.redraw, 15); } }
+  /** On machines that can't keep up the five stand still and the stage only redraws for a hover or a resize. */
+  private still = false;
+  /** Frames still to draw in that mode (enough for the light under a player to fade in or out). */
+  private redraw = 0;
 
   constructor(canvas: HTMLCanvasElement, roles: Role[], color: THREE.Color, tag: string, hq: boolean) {
     const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -185,6 +195,7 @@ class Lobby {
     const need = 0.4 * pxPerM + 2 * (this.tagH || 30) + 16;
     this.lookY = 1.02 + THREE.MathUtils.clamp((need - room) / pxPerM, 0, 0.5);
     this.tagW = 0; // measure the tags again at the new size
+    this.redraw = Math.max(this.redraw, 2); // a resize clears the picture
     this.camera.updateProjectionMatrix();
   }
   private dist = 7.6;
@@ -202,13 +213,31 @@ class Lobby {
       this.last = 0;
       const loop = (now: number) => {
         if (!this.running) return;
-        const dt = this.last ? Math.min(0.05, (now - this.last) / 1000) : 0.016;
-        this.last = now;
-        this.frame(dt);
         this.raf = requestAnimationFrame(loop);
+        if (!frameDue(now, this.last)) return;
+        if (this.still) { if (this.redraw <= 0) return; this.redraw--; }
+        const gap = this.last ? now - this.last : 0;
+        this.last = now;
+        this.adapt(gap);
+        this.frame(gap ? Math.min(0.05, gap / 1000) : 0.016);
       };
       this.raf = requestAnimationFrame(loop);
     } else cancelAnimationFrame(this.raf);
+  }
+
+  /**
+   * If frames keep coming slower than about 24 a second, first draw at one pixel per screen pixel,
+   * then keep the last shadow picture instead of redrawing it (the five barely move), and last let
+   * the five stand still. The same idea as the match viewer's quality steps; it never steps back up
+   * while the stage is open.
+   */
+  private watch = new FrameWatch();
+  private adapt(gap: number) {
+    if (!this.watch.stepDown(gap)) return;
+    const r = this.renderer;
+    if (r.getPixelRatio() > 1) r.setPixelRatio(1);
+    else if (r.shadowMap.enabled && r.shadowMap.autoUpdate) { r.shadowMap.autoUpdate = false; r.shadowMap.needsUpdate = true; }
+    else { this.still = true; this.watch.done = true; }
   }
 
   private frame(dt: number) {
