@@ -7,6 +7,7 @@ import { LeagueApp } from './ui/league/LeagueApp';
 import { BetaGate } from './ui/beta/BetaGate';
 import './ui/styles.css';
 import './ui/styles/premium.css';
+import './ui/styles/tactical.css';
 import { applyMotion } from './ui/motion';
 import { registerOffline, restoreFromNative, setupNative } from './platform';
 

@@ -27,21 +27,23 @@ main > .lb-lobby { grid-column: 1 / -1; }
 .lb-role { display: inline-flex; align-items: center; gap: 4px; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
 .lb-role svg { width: 11px; height: 11px; color: var(--club); }
 .lb-tag.r-bronze { --rc: var(--bronze); } .lb-tag.r-silver { --rc: var(--silver); } .lb-tag.r-gold { --rc: var(--gold); } .lb-tag.r-elite { --rc: var(--elite); } .lb-tag.r-legend { --rc: var(--legend); }
-/* The next-match panel docks on the right as a glass column. */
-.lb-lobby > .hm-hero { grid-column: 2; position: relative; z-index: 3; margin: 0; border-radius: 0; border: 0; border-left: 1px solid rgba(255, 255, 255, 0.07);
+/* The next match (and any panels passed as `side`) dock on the right as a glass column. */
+.lb-lobby > .lb-side { grid-column: 2; position: relative; z-index: 3; display: flex; flex-direction: column; min-width: 0; border-left: 1px solid rgba(255, 255, 255, 0.07);
   justify-content: center; background: linear-gradient(180deg, rgba(14, 19, 26, 0.82), rgba(9, 12, 17, 0.9)); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: -30px 0 60px -30px #000; }
-.lb-lobby > .hm-hero .hm-vs { gap: 8px; }
-.lb-lobby > .hm-hero .hm-tag { font-size: clamp(1.6rem, 2.6vw, 2.2rem); }
-.lb-lobby > .hm-hero .hm-actions { flex-direction: column; align-items: stretch; }
-.lb-lobby > .hm-hero .hm-actions .btn { width: 100%; }
+.lb-side > .hm-hero { margin: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.lb-side > .panel { margin: 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.07); border-radius: 0; background: none; box-shadow: none; }
+.lb-side > .hm-hero .hm-vs { gap: 8px; }
+.lb-side > .hm-hero .hm-tag { font-size: clamp(1.6rem, 2.6vw, 2.2rem); }
+.lb-side > .hm-hero .hm-actions { flex-direction: column; align-items: stretch; }
+.lb-side > .hm-hero .hm-actions .btn { width: 100%; }
 .lb-kicker { position: absolute; z-index: 2; left: 22px; top: 18px; display: grid; gap: 2px; pointer-events: none; }
 .lb-kicker b { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.04em; text-transform: uppercase; color: #f2f5f8; text-shadow: 0 2px 14px #000; }
 .lb-kicker span { font-size: 0.66rem; letter-spacing: 0.22em; text-transform: uppercase; color: color-mix(in srgb, var(--club) 70%, #cfd6dd); }
 @media (max-width: 1023px) {
   .lb-lobby { grid-template-columns: 1fr; min-height: 0; }
   .lb-stage { position: relative; inset: auto; height: 320px; grid-row: 1; }
-  .lb-lobby > .hm-hero { grid-column: 1; grid-row: 2; border-left: 0; border-top: 1px solid rgba(255, 255, 255, 0.07); box-shadow: none; }
-  .lb-lobby > .hm-hero .hm-actions { flex-direction: row; }
+  .lb-lobby > .lb-side { grid-column: 1; grid-row: 2; border-left: 0; border-top: 1px solid rgba(255, 255, 255, 0.07); box-shadow: none; }
+  .lb-side > .hm-hero .hm-actions { flex-direction: row; }
   .lb-lobby::after { display: none; }
   .lb-tag { padding: 4px 8px 5px 6px; gap: 0 6px; }
   .lb-ovr { font-size: 1.05rem; }
@@ -54,4 +56,32 @@ main > .lb-lobby { grid-column: 1 / -1; }
   /* The title moves down to the stage floor (the stage is 260px tall) so it never sits under a name tag. */
   .lb-kicker { top: 260px; left: 14px; transform: translateY(calc(-100% - 10px)); grid-auto-flow: column; align-items: baseline; gap: 8px; }
   .lb-kicker b { font-size: 0.95rem; }
+}
+
+/* Wide screens (Tactical look): the club name over the stage, an Edit lineup button and the team's numbers. */
+.lb-over { display: none; }
+@media (min-width: 1024px) {
+  .lb-lobby { min-height: 600px; border-radius: 0; border-color: rgba(255, 255, 255, 0.07); }
+  .lb-kicker, .lb-lobby::after { display: none; }
+  .lb-over { display: block; position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+  .lb-title { position: absolute; left: 32px; top: 28px; display: grid; gap: 4px; }
+  .lb-title span { font-family: var(--font-display); font-weight: 600; font-size: 0.74rem; letter-spacing: 0.22em; text-transform: uppercase; color: color-mix(in srgb, var(--club) 70%, #f0a33a); }
+  .lb-title h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(2rem, 3.2vw, 2.75rem); line-height: 1; letter-spacing: 0.01em; color: #f2f5f8; text-shadow: 0 2px 18px #000; }
+  .lb-title small { font-size: 0.86rem; color: #a9b4bf; }
+  .lb-stats { position: absolute; left: 32px; bottom: 22px; margin: 0; display: flex; gap: 28px; }
+  .lb-stats div { display: flex; align-items: baseline; gap: 10px; }
+  .lb-stats dt { font-family: var(--font-display); font-weight: 600; font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: #a9b4bf; }
+  .lb-stats dd { margin: 0; font-family: var(--font-data); font-weight: 700; font-size: 0.95rem; color: #f2f5f8; }
+  .lb-tag { border-radius: 0; background: rgba(5, 7, 10, 0.84); border-color: rgba(255, 255, 255, 0.1); box-shadow: 0 8px 20px -10px #000, inset 0 -2px 0 var(--rc); }
+  .lb-tag::after { border-top-color: rgba(255, 255, 255, 0.1); }
+  .lb-lobby > .lb-side { justify-content: flex-start; background: rgba(12, 16, 21, 0.92); border-left-color: rgba(255, 255, 255, 0.08); }
+  .lb-side > .hm-hero { background: linear-gradient(180deg, rgba(240, 163, 58, 0.08), transparent 70%); }
+  .lb-over .lb-edit { position: absolute; top: 28px; right: 28px; pointer-events: auto; background: rgba(5, 7, 10, 0.6); }
+  /* A compact right column, as in the mockup, so the whole stage and its numbers fit on a 900 px-high screen.
+     The board's long note moves into a tooltip on its confidence row. */
+  .lb-side > .hm-hero { padding: 18px 22px; gap: 14px; }
+  .lb-side > .panel { padding: 14px 22px; }
+  .lb-side > .bd { gap: 8px; }
+  .lb-side > .bd > .bd-note { display: none; }
+  .lb-side > .hm-tile .hm-foot { display: none; }
 }

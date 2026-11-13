@@ -1,0 +1,89 @@
+/*
+ * Look A, "Tactical" (picked from the two new-look mockups): on desktop the menu moves from the
+ * sidebar into a top bar; everywhere, panels and buttons go square with thin lines, and labels are
+ * spaced capitals. Loaded after premium.css so it only has to restate what changes.
+ */
+:root { --r-sm: 2px; --r: 2px; --r-lg: 2px; --tac-line: rgba(255, 255, 255, 0.07); --tac-line-2: rgba(255, 255, 255, 0.12); --tac-dim: #a9b4bf; }
+
+/* ---------- Backdrop: one warm light from below, no grid ---------- */
+body::before {
+  background:
+    radial-gradient(70% 50% at 35% 100%, rgba(240, 163, 58, 0.09), transparent 70%),
+    radial-gradient(50% 40% at 100% 0%, rgba(90, 169, 230, 0.05), transparent 70%),
+    linear-gradient(180deg, #0a0d12 0%, #07090c 100%);
+}
+
+/* ---------- Surfaces ---------- */
+.panel { border-radius: 0; border-color: var(--tac-line); background: linear-gradient(180deg, rgba(14, 18, 24, 0.94), rgba(9, 12, 16, 0.94)); box-shadow: none; }
+.panel.inset { background: rgba(255, 255, 255, 0.025); }
+.label { font-weight: 600; letter-spacing: 0.2em; }
+.page-head h1 { text-transform: uppercase; letter-spacing: 0.04em; }
+.page-head h1::before { border-radius: 0; }
+.chip { border-radius: 0; }
+.icon-btn { border-radius: 0; }
+
+/* ---------- Buttons: square, spaced capitals; the main action keeps its cut corner ---------- */
+.btn { border-radius: 0; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.84rem; background: rgba(255, 255, 255, 0.03); border-color: var(--tac-line-2); box-shadow: none; }
+.btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.07); border-color: rgba(255, 255, 255, 0.22); }
+.btn.small { border-radius: 0; font-size: 0.74rem; }
+.btn.primary { border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%); box-shadow: none; text-shadow: none;
+  background: linear-gradient(180deg, #f6b14f, var(--t)); }
+.btn.primary:hover:not(:disabled) { background: linear-gradient(180deg, #ffc066, #f6ad48); }
+
+/* ---------- Desktop: the menu becomes a top bar ---------- */
+@media (min-width: 1024px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .sidebar, .app.has-stadium .sidebar {
+    position: sticky; top: 0; z-index: 40; height: auto; flex-direction: row; align-items: center; gap: 10px 26px; padding: 10px 40px;
+    background: rgba(5, 7, 10, 0.86); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-right: 0; border-bottom: 1px solid var(--tac-line); box-shadow: none;
+  }
+  .sidebar .wordmark { order: 0; font-size: 1.08rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0; display: inline-flex; align-items: center; gap: 8px; }
+  .sidebar .wordmark svg { width: 24px; height: 24px; }
+
+  .side-nav { order: 1; display: flex; gap: 2px; flex-wrap: wrap; }
+  .side-nav button, .side-nav button:hover {
+    display: inline-flex; align-items: center; gap: 6px; padding: 12px 13px; border-radius: 0; background: none; box-shadow: none;
+    font-weight: 600; font-size: 0.84rem; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .side-nav button { color: var(--tac-dim); }
+  .side-nav button:hover { color: var(--ink); }
+  .side-nav button svg { display: none; }
+  .side-nav button[aria-current='page'] { color: #fff; background: none; box-shadow: inset 0 -2px 0 var(--t); }
+  .side-nav button > span:empty { display: none; }
+  .side-nav .dot { position: absolute; top: 8px; right: 4px; width: 6px; height: 6px; }
+
+  .side-foot { order: 2; margin: 0 0 0 auto; display: flex; align-items: center; gap: 8px; }
+  .side-foot .btn, .app.has-stadium .side-foot .btn {
+    min-height: 40px; padding: 8px 12px; gap: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.09); box-shadow: none; text-transform: none; letter-spacing: 0.02em;
+  }
+  .side-foot .btn:hover { background: rgba(255, 255, 255, 0.07); }
+  .side-foot .btn > .small.muted, .side-foot .sf-state, .side-foot .sf-tour > .small, .side-foot .sf-league > .small { display: none; }
+  .side-foot .sf-music, .side-foot .sf-settings, .side-foot .sf-tour, .side-foot .sf-league { width: 40px; padding: 0; justify-content: center; }
+  .side-foot .sf-music[aria-pressed='false'] { color: var(--ink-3); }
+  .side-foot .sf-tour svg, .side-foot .sf-league svg { width: 18px; height: 18px; }
+
+  .side-team, .app.has-stadium .side-team {
+    order: 3; display: flex; align-items: center; gap: 10px; padding: 4px 12px 4px 4px; border-radius: 0; overflow: visible;
+    background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.09); box-shadow: none;
+  }
+  .side-team::after { display: none; }
+  .side-team .crest-btn svg, .side-team .crest-btn .crest { width: 32px; height: 32px; }
+  .side-team .team-name { font-size: 0.84rem; line-height: 1.15; }
+  .side-team .small { font-size: 0.7rem; }
+  .side-team .small.faint { display: none; }
+
+  main { max-width: 1440px; margin: 0 auto; padding: 24px 40px 48px; gap: 20px; }
+}
+/* Narrower desktops: the menu wraps under the wordmark rather than squeezing. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .sidebar, .app.has-stadium .sidebar { flex-wrap: wrap; padding: 8px 24px; }
+  .side-nav { order: 4; width: 100%; }
+  main { padding: 20px 24px 40px; }
+}
+
+/* The season strip stays pinned under the top bar while the page scrolls. */
+@media (min-width: 1024px) { .cmd { top: 74px; } }
+@media (min-width: 1024px) and (max-width: 1279px) { .cmd { top: 122px; } }
+/* Phones: slightly tighter capitals so side-by-side labels (e.g. Coordination, Chemistry) keep their gap. */
+@media (max-width: 560px) { .label { letter-spacing: 0.13em; } }

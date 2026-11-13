@@ -4,6 +4,9 @@ import { DIVISIONS, HUMAN_ID, standings } from '../engine/season';
 import { useGame } from './common';
 import './styles/board.css';
 
+/** How confidence works; shown under the panel, and as a tooltip where the panel is compact. */
+const CONF_NOTE = "Set from your squad's strength at the start of the season. Wins and your league place move confidence; missing the target costs reputation, never your job.";
+
 /** The board's target for this season, where the table has you now, and how confident they are. */
 export function BoardPanel({ className = '' }: { className?: string }) {
   const { career: c } = useGame();
@@ -32,12 +35,12 @@ export function BoardPanel({ className = '' }: { className?: string }) {
         {started ? <span className={onTrack ? 'good' : 'bad'}>{onTrack ? 'On track' : 'Off target'} · {ordinal(pos)} now</span> : <span className="muted">No league games yet</span>}
         <span className="faint">Bonus <span className="num">{BOARD_BONUS[c.season.division] ?? 500}</span> if met</span>
       </div>
-      <div className="bd-conf">
+      <div className="bd-conf" title={CONF_NOTE}>
         <span className="label">Confidence</span>
         <div className={`bd-meter ${tone}`} aria-hidden="true"><i style={{ width: `${b.confidence}%` }} /></div>
         <span className="num">{Math.round(b.confidence)}</span>
       </div>
-      <p className="small faint">Set from your squad's strength at the start of the season. Wins and your league place move confidence; missing the target costs reputation, never your job.</p>
+      <p className="small faint bd-note">{CONF_NOTE}</p>
     </section>
   );
 }

@@ -239,7 +239,7 @@ export function lobbyPossible(): boolean {
   return webglAvailable() && !reducedMotion() && !humanFailed();
 }
 
-export function LineupStage({ members, color, tag, onOpen, fallback, children }: {
+export function LineupStage({ members, color, tag, onOpen, fallback, children, title, subtitle, onEdit, stats, side }: {
   members: LineupMember[];
   /** The club colour (CSS colour string). */
   color: string;
@@ -248,6 +248,15 @@ export function LineupStage({ members, color, tag, onOpen, fallback, children }:
   fallback: ReactNode;
   /** Shown over the stage (the next-match panel). */
   children?: ReactNode;
+  /** On wide screens: the club name written large over the stage, with a line under it. */
+  title?: string;
+  subtitle?: string;
+  /** On wide screens: an "Edit lineup" button over the stage. */
+  onEdit?: () => void;
+  /** On wide screens: a row of team numbers along the bottom of the stage. */
+  stats?: { label: string; value: ReactNode }[];
+  /** More panels for the column beside the stage, under the children. */
+  side?: ReactNode;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -301,12 +310,19 @@ export function LineupStage({ members, color, tag, onOpen, fallback, children }:
     // The scene is rebuilt when the five change or the club colour changes.
   }, [key, color, tag, state === 'failed']);
 
-  if (state === 'failed') return <>{fallback}{children}</>;
+  if (state === 'failed') return <>{fallback}{children}{side}</>;
   return (
     <div className={`lb-lobby ${state}`} style={{ ['--club' as string]: color }}>
       <div className="lb-kicker"><span>Starting five</span><b>{tag}</b></div>
       <div className="lb-stage" ref={hostRef}>
         <canvas ref={canvasRef} aria-hidden="true" />
+        {(title || onEdit || stats) && (
+          <div className="lb-over">
+            {title && <div className="lb-title"><span>Starting five</span><h2>{title}</h2>{subtitle && <small>{subtitle}</small>}</div>}
+            {onEdit && <button type="button" className="btn lb-edit" onClick={onEdit}>Edit lineup</button>}
+            {stats && <dl className="lb-stats">{stats.map((x) => <div key={x.label}><dt>{x.label}</dt><dd className="num">{x.value}</dd></div>)}</dl>}
+          </div>
+        )}
         <div className="lb-tags">
           {members.map((m, i) => (
             <button key={m.cardId} ref={(el) => { labelRefs.current[i] = el; }} className={`lb-tag r-${m.rarity}`}
@@ -321,7 +337,7 @@ export function LineupStage({ members, color, tag, onOpen, fallback, children }:
           ))}
         </div>
       </div>
-      {children}
+      {(children || side) && <div className="lb-side">{children}{side}</div>}
     </div>
   );
 }
