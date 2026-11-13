@@ -11,31 +11,31 @@
  *   sandstone old_sandstone_02         stucco   rough_plaster_brick_04
  *   roofTiles clay_roof_tiles_02 (UV mapped, not triplanar: its normal replaces roofTilesN)
  *
- * Files are 512 px JPEGs in ./assets/surfaces (prepared from the 1K downloads).
+ * Files are 512 px WebP images in ./assets/surfaces (prepared from the 1K downloads).
  */
 import * as THREE from 'three';
-import stones from './assets/surfaces/stones.jpg?url';
-import stonesN from './assets/surfaces/stones_n.jpg?url';
-import tiles from './assets/surfaces/tiles.jpg?url';
-import tilesN from './assets/surfaces/tiles_n.jpg?url';
-import concrete from './assets/surfaces/concrete.jpg?url';
-import concreteN from './assets/surfaces/concrete_n.jpg?url';
-import blocks from './assets/surfaces/blocks.jpg?url';
-import blocksN from './assets/surfaces/blocks_n.jpg?url';
-import plaster from './assets/surfaces/plaster.jpg?url';
-import plasterN from './assets/surfaces/plaster_n.jpg?url';
-import sand from './assets/surfaces/sand.jpg?url';
-import sandN from './assets/surfaces/sand_n.jpg?url';
-import grass from './assets/surfaces/grass.jpg?url';
-import grassN from './assets/surfaces/grass_n.jpg?url';
-import asphalt from './assets/surfaces/asphalt.jpg?url';
-import asphaltN from './assets/surfaces/asphalt_n.jpg?url';
-import sandstone from './assets/surfaces/sandstone.jpg?url';
-import sandstoneN from './assets/surfaces/sandstone_n.jpg?url';
-import stucco from './assets/surfaces/stucco.jpg?url';
-import stuccoN from './assets/surfaces/stucco_n.jpg?url';
-import roofTiles from './assets/surfaces/roofTiles.jpg?url';
-import roofTilesN from './assets/surfaces/roofTiles_n.jpg?url';
+import stones from './assets/surfaces/stones.webp?url';
+import stonesN from './assets/surfaces/stones_n.webp?url';
+import tiles from './assets/surfaces/tiles.webp?url';
+import tilesN from './assets/surfaces/tiles_n.webp?url';
+import concrete from './assets/surfaces/concrete.webp?url';
+import concreteN from './assets/surfaces/concrete_n.webp?url';
+import blocks from './assets/surfaces/blocks.webp?url';
+import blocksN from './assets/surfaces/blocks_n.webp?url';
+import plaster from './assets/surfaces/plaster.webp?url';
+import plasterN from './assets/surfaces/plaster_n.webp?url';
+import sand from './assets/surfaces/sand.webp?url';
+import sandN from './assets/surfaces/sand_n.webp?url';
+import grass from './assets/surfaces/grass.webp?url';
+import grassN from './assets/surfaces/grass_n.webp?url';
+import asphalt from './assets/surfaces/asphalt.webp?url';
+import asphaltN from './assets/surfaces/asphalt_n.webp?url';
+import sandstone from './assets/surfaces/sandstone.webp?url';
+import sandstoneN from './assets/surfaces/sandstone_n.webp?url';
+import stucco from './assets/surfaces/stucco.webp?url';
+import stuccoN from './assets/surfaces/stucco_n.webp?url';
+import roofTiles from './assets/surfaces/roofTiles.webp?url';
+import roofTilesN from './assets/surfaces/roofTiles_n.webp?url';
 
 export type PhotoKey = 'stones' | 'tiles' | 'concrete' | 'blocks' | 'plaster' | 'sand' | 'grass' | 'asphalt' | 'sandstone' | 'stucco' | 'roofTiles';
 
