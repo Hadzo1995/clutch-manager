@@ -403,6 +403,11 @@ function flat(): THREE.DataTexture {
 }
 let users = 0;
 
+/** The photo normal map that goes with a surface texture, for materials that are not triplanar (crates, containers). */
+export function surfaceNormal(t: THREE.Texture): THREE.Texture | undefined {
+  return normals.get(t);
+}
+
 /** Shared textures (drawn once, reused across maps and viewers). */
 export function surfaces(): SurfaceSet {
   users++;
@@ -426,6 +431,7 @@ export function surfaces(): SurfaceSet {
       cached[k] = photo;
       normals.set(photo, normal);
       if (k === 'roofTiles') { cached.roofTilesN.dispose(); cached.roofTilesN = normal; }
+      if (k === 'metalRoof') { cached.metalRoofN.dispose(); cached.metalRoofN = normal; }
     }
   }
   return cached;
