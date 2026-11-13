@@ -10,9 +10,9 @@ import type { MapName } from '../../engine/types';
 import { useGame } from '../common';
 import { MAP_HUE, mapArt } from '../mapart';
 
-export function MapPrefs({ club, onChange, entryNote, goSquad }: { club: Career; onChange: (prefs: MapName[]) => void; entryNote: string; goSquad: () => void }) {
+export function MapPrefs({ club, prefs: prefsProp, onChange, entryNote, goSquad }: { club: Career; prefs?: MapName[]; onChange: (prefs: MapName[]) => void; entryNote: string; goSquad: () => void }) {
   const { world } = useGame();
-  const prefs = cleanPrefs(club.tournament?.mapPrefs ?? []);
+  const prefs = cleanPrefs(prefsProp ?? club.tournament?.mapPrefs ?? []);
   const valid = lineupValidation(club);
   const snap = useMemo(() => (valid.ok ? humanSnapshot(world, club) : null), [world, club, valid.ok]);
   const fam = (m: MapName) => (snap ? Math.round(mapFamiliarity(snap, m)) : null);

@@ -139,7 +139,7 @@ h1, h2, h3 { letter-spacing: 0.005em; }
 .tabbar button { transition: color var(--fast), transform 200ms var(--ease-out); }
 .tabbar button[aria-current='page'] { color: #ffc56a; }
 .tabbar button[aria-current='page'] svg { filter: drop-shadow(0 0 8px rgba(240, 163, 58, 0.7)); transform: translateY(-1px); }
-.tabbar button[aria-current='page']::before { left: 26%; right: 26%; height: 3px; background: linear-gradient(90deg, transparent, var(--t), transparent); box-shadow: 0 0 12px var(--t); }
+.tabbar .tab-pill { left: 26%; right: 26%; height: 3px; background: linear-gradient(90deg, transparent, var(--t), transparent); box-shadow: 0 0 12px var(--t); }
 .tabbar button[aria-current='page']::after { content: ''; position: absolute; inset: 0 18% 30%; background: radial-gradient(closest-side, rgba(240, 163, 58, 0.16), transparent); pointer-events: none; }
 
 @media (min-width: 1024px) {
@@ -161,8 +161,8 @@ h1, h2, h3 { letter-spacing: 0.005em; }
   .side-nav { gap: 3px; }
   .side-nav button { transition: background var(--fast), color var(--fast), padding-left 200ms var(--ease-out); }
   .side-nav button:hover { padding-left: 15px; }
-  .side-nav button[aria-current='page'] {
-    color: #ffd08a;
+  .side-nav button[aria-current='page'] { color: #ffd08a; }
+  .side-nav .nav-pill {
     background: linear-gradient(90deg, rgba(240, 163, 58, 0.22), rgba(240, 163, 58, 0.04) 70%, transparent);
     box-shadow: inset 3px 0 0 var(--t), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
