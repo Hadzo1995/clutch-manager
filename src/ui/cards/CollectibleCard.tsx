@@ -36,7 +36,7 @@ export function CollectibleCard({ profile, card, size = 'lg', intro = 'none', de
   profile: PlayerProfile;
   /** The owned card, for its developed attributes, OVR and stars. */
   card?: OwnedCard;
-  size?: 'lg' | 'md';
+  size?: 'lg' | 'md' | 'sm';
   /** 'flip' turns the card over from its back, 'rise' lifts it in. */
   intro?: 'none' | 'flip' | 'rise';
   /** Milliseconds before the intro starts. */
@@ -86,7 +86,7 @@ export function CollectibleCard({ profile, card, size = 'lg', intro = 'none', de
         <div className="col-face col-front">
           <WeaponArt kind={weaponFor(p.record.primaryRole)} className="col-wpn" />
           <i className="col-dots" aria-hidden="true" />
-          <div className="col-photo"><Avatar seed={p.record.id} size={size === 'lg' ? 320 : 240} accent={RARITY_HEX[p.rarity]} jersey={playerJersey(p.record.team)} eager /></div>
+          <div className="col-photo"><Avatar seed={p.record.id} size={size === 'lg' ? 320 : size === 'md' ? 240 : 190} accent={RARITY_HEX[p.rarity]} jersey={playerJersey(p.record.team)} eager /></div>
           <i className="col-shade" aria-hidden="true" />
           <div className="col-top">
             <span className="col-ovr num">{ovr}<small>OVR</small></span>
@@ -97,6 +97,11 @@ export function CollectibleCard({ profile, card, size = 'lg', intro = 'none', de
             <span className="col-rarity">{RARITY_LABEL[p.rarity]}</span>
             <b className="col-name">{p.record.handle}</b>
             <span className="col-meta"><CountryTag cc={p.record.country} /><OrgTag team={p.record.team} /><span className="col-rolename">{ROLE_LABEL[role]}</span></span>
+          </div>
+          <div className="col-cap" title={`Can be developed up to ${p.potential} OVR`}>
+            <span>Max cap</span>
+            <i><b style={{ width: `${Math.max(4, Math.min(100, ((ovr - 50) / Math.max(1, p.potential - 50)) * 100))}%` }} /></i>
+            <span className="num">{p.potential}</span>
           </div>
           <dl className="col-attrs">
             {keyAttributes(role).map((a) => (

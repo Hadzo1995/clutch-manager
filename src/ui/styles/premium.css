@@ -910,12 +910,12 @@ main > .overlay { animation: fade-in var(--med) var(--ease); }
 .app.has-stadium .sidebar { background: linear-gradient(180deg, rgba(18, 25, 34, 0.88), rgba(8, 11, 16, 0.92)); }
 
 /* ---------- Player profile: portrait in the hero, wider two-column sheet on desktop ---------- */
-.ps-portrait { display: none; }
+.ps-portrait { display: grid; justify-items: center; }
 @media (min-width: 720px) {
-  .ps-hero { grid-template-columns: 150px minmax(0, 1fr); grid-template-areas: 'portrait main' 'portrait kpis'; column-gap: 18px; }
+  .ps-hero { grid-template-columns: 200px minmax(0, 1fr); grid-template-areas: 'portrait main' 'portrait kpis'; column-gap: 20px; }
   .ps-hero > .ps-hero-main { grid-area: main; }
   .ps-hero > .ps-kpis { grid-area: kpis; }
-  .ps-portrait { grid-area: portrait; position: relative; display: grid; place-items: end center; align-self: stretch; min-height: 170px; isolation: isolate; }
+  .ps-portrait { grid-area: portrait; position: relative; display: grid; place-items: center; align-self: stretch; min-height: 170px; isolation: isolate; }
   .ps-portrait img { position: relative; border-radius: 14px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--rc) 65%, transparent), 0 22px 30px -14px #000; }
   .ps-portrait::after { content: ''; position: absolute; left: 10%; right: 10%; bottom: -10px; height: 18px; z-index: -1; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--rc) 55%, transparent), transparent); }
   .ps-wpn { position: absolute; z-index: -1; left: -30%; top: 20%; width: 160%; height: auto; transform: rotate(-14deg); opacity: 0.18; fill: var(--rc); }

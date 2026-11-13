@@ -8,13 +8,13 @@ import { roleFit } from '../../engine/team';
 import type { LineupSlot } from '../../engine/team';
 import { ATTRIBUTES, ATTRIBUTE_LABEL, ATTRIBUTE_ORIGIN, MAPS, ROLES, ROLE_LABEL } from '../../engine/types';
 import type { Attribute, CardStats, OwnedCard, PlayerRecord } from '../../engine/types';
+import { CollectibleCard } from '../cards/CollectibleCard';
 import { OvrBadge, RarityChip, TierChip, RoleIcon, Stars, fmt, useGame, CountryTag, OrgTag } from '../common';
 import { AttributeRadar, FormPills, KPI, Meter, RatingBar, TrendChart } from '../charts';
 import { ContractPanel, TransferPanel } from './Transfer';
 import { playerStatus } from '../../engine/career';
 import { marketValue } from '../../engine/economy';
 import { DossierTab, MapResults } from './Dossier';
-import { WeaponArt, weaponFor } from './caseArt';
 
 const ORIGIN_LABEL = { observed: 'From stats', inferred: 'Estimated', fictional: 'Game value' } as const;
 type Tab = 'overview' | 'dossier' | 'attributes' | 'career' | 'data';
@@ -78,7 +78,7 @@ export function PlayerSheet({ cardId, playerId, onClose }: { cardId: string | nu
         </div>
 
         <section className={`ps-hero ${p.rarity}`} aria-label="Ratings summary">
-          <div className="ps-portrait" aria-hidden="true"><WeaponArt kind={weaponFor(p.record.primaryRole)} className="ps-wpn" /><Avatar seed={p.record.id} size={136} accent="#f0a33a" /></div>
+          <div className="ps-portrait"><CollectibleCard profile={p} card={card} size="sm" intro="rise" /></div>
           <div className="ps-hero-main">
             <OvrBadge value={ovr} rarity={p.rarity} size="lg" />
             <div className="ps-hero-txt">
