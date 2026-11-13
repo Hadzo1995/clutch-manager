@@ -40,7 +40,14 @@ export function shaftMaterial(color: THREE.ColorRepresentation, fade: 'base' | '
       }`,
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
+    // Additive on colour only: the canvas's alpha is left alone, so over a transparent canvas the
+    // light adds to the page behind instead of turning that patch of canvas opaque.
+    blending: THREE.CustomBlending,
+    blendEquation: THREE.AddEquation,
+    blendSrc: THREE.OneFactor,
+    blendDst: THREE.OneFactor,
+    blendSrcAlpha: THREE.ZeroFactor,
+    blendDstAlpha: THREE.OneFactor,
     side: THREE.DoubleSide,
     toneMapped: false,
   });
