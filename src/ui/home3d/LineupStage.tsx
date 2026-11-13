@@ -1,7 +1,9 @@
 /**
  * The home screen's lobby: your starting five standing on a lit stage in your club's colours,
  * like a game's main menu. Each player has a name tag (handle, role, OVR) that opens their
- * profile. Uses the rigged figure from the match viewer with its idle animation.
+ * profile. The five are counter-terrorist operators (the match viewer's figures with their idle
+ * animation) in three unit looks, shirts and patches in the club colour, each holding a carbine
+ * low across the body; the AWPer holds a sniper rifle.
  *
  * The scene only renders while it is on screen and the tab is visible. Without WebGL, with
  * reduced motion or if the figure cannot load, the caller's fallback is shown instead.
@@ -12,9 +14,10 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { Rarity, Role } from '../../engine/types';
 import { ROLE_LABEL } from '../../engine/types';
-import { humanFailed, loadHuman, makeHuman } from '../arena/human';
+import { carryMatrix, driveHuman, humanFailed, loadHuman, makeHuman } from '../arena/human';
 import type { Human } from '../arena/human';
 import { addRim } from '../arena/models';
+import { carryAcross, weaponMaterial, weaponModel } from '../arena/weapons';
 import { webglAvailable } from '../arena/Viewer3D';
 import { shaftMaterial } from '../case3d/fx';
 import { RoleIcon } from '../common';
@@ -27,6 +30,20 @@ export interface LineupMember { cardId: string; handle: string; role: Role; ovr:
 const SPOTS: [number, number, number][] = [
   [-2.6, -1.1, 0.34], [-1.32, -0.48, 0.18], [0, 0, 0], [1.32, -0.48, -0.18], [2.6, -1.1, -0.34],
 ];
+/** Which operator look each spot wears: urban unit in the middle, gas masks beside it, rangers outside. */
+const LOOK_AT = [1, 2, 0, 2, 1];
+
+interface Figure {
+  h: Human;
+  head: THREE.Object3D;
+  gun: THREE.Mesh;
+  /** The weapon's place on the chest (bind space) and the wrist targets on it (gun space). */
+  carry: THREE.Matrix4;
+  grip: THREE.Vector3;
+  guard: THREE.Vector3;
+  /** The figure's right, for the elbows. */
+  right: THREE.Vector3;
+}
 
 function floorTexture(tag: string, color: THREE.Color): THREE.CanvasTexture {
   const S = 1024;
@@ -63,7 +80,7 @@ class Lobby {
   readonly renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera(30, 1, 0.1, 80);
-  private figures: { h: Human; head: THREE.Object3D }[] = [];
+  private figures: Figure[] = [];
   private disposables: { dispose(): void }[] = [];
   private shafts: THREE.Mesh<THREE.ConeGeometry, THREE.ShaderMaterial>[] = [];
   private raf = 0;
@@ -72,10 +89,12 @@ class Lobby {
   private running = false;
   private size = { w: 1, h: 1 };
   private v = new THREE.Vector3();
+  private gw = new THREE.Vector3();
+  private lw = new THREE.Vector3();
   labels: (HTMLElement | null)[] = [];
   hover = -1;
 
-  constructor(canvas: HTMLCanvasElement, count: number, color: THREE.Color, tag: string, hq: boolean) {
+  constructor(canvas: HTMLCanvasElement, roles: Role[], color: THREE.Color, tag: string, hq: boolean) {
     const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
     r.setClearColor(0x000000, 0);
     r.outputColorSpace = THREE.SRGBColorSpace;
@@ -102,7 +121,7 @@ class Lobby {
     this.scene.add(deco);
 
     // Light: a key from the front, the club colour behind, and a shaft of light over each player.
-    const key = new THREE.SpotLight('#fff3e2', 190, 0, 0.55, 0.75, 2);
+    const key = new THREE.SpotLight('#fff3e2', 150, 0, 0.55, 0.75, 2);
     key.position.set(1.5, 7.5, 6);
     key.target.position.set(0, 0.8, -0.4);
     key.castShadow = hq;
@@ -115,27 +134,37 @@ class Lobby {
     const fill = new THREE.DirectionalLight('#9fb8d8', 0.28); fill.position.set(0, 2, 8);
     this.scene.add(rimL, rimR, fill, new THREE.HemisphereLight('#b9c8e8', '#05070a', 0.2));
 
-    // Dark kit in the club colour; the coloured rim light does the rest.
-    const tint = color.clone().lerp(new THREE.Color('#3c4148'), 0.76);
-    for (let i = 0; i < count; i++) {
-      const h = makeHuman('CT', (m) => addRim(m, color));
-      if (!h) break;
-      for (const mesh of h.meshes) {
-        const mat = mesh.material as THREE.MeshStandardMaterial;
-        if (!/visor/i.test(mat.name)) mat.color.copy(tint);
-      }
+    // Shirts in a dark, muted shade of the club colour and patches in the club colour; the coloured
+    // rim light does the rest.
+    const hsl = color.getHSL({ h: 0, s: 0, l: 0 }, THREE.SRGBColorSpace);
+    const shirt = new THREE.Color().setHSL(hsl.h, Math.min(hsl.s, 0.35) * 0.7, 0.15, THREE.SRGBColorSpace);
+    const gunMat = keep(weaponMaterial());
+    roles.forEach((role, i) => {
+      const h = makeHuman('CT', (m) => addRim(m, color), LOOK_AT[i] ?? i);
+      if (!h) return;
+      for (const m of h.kit) m.color.copy(shirt);
+      h.accent.color.copy(color);
+      // Less fill from the room, so the key and rim lights shape the figures as in a game menu.
+      for (const m of h.meshes) (m.material as THREE.MeshStandardMaterial).envMapIntensity = 0.55;
       const [x, z, yaw] = SPOTS[i] ?? [0, 0, 0];
       h.root.position.set(x, 0, z);
       h.root.rotation.y = Math.PI + yaw; // the figure faces -z; turn it to the camera
       this.scene.add(h.root);
       const head = h.root.getObjectByName('mixamorigHead') ?? h.root;
-      this.figures.push({ h, head });
+      const w = weaponModel(role === 'awp' ? 'sniper' : 'carbine');
+      const gun = new THREE.Mesh(w.geo, gunMat);
+      gun.castShadow = true;
+      gun.matrixAutoUpdate = false;
+      this.scene.add(gun);
+      const c = carryAcross(w);
+      const right = new THREE.Vector3(1, 0, 0).applyQuaternion(h.root.quaternion);
+      this.figures.push({ h, head, gun, carry: c.m, grip: c.grip, guard: c.guard, right });
       const shaft = new THREE.Mesh(keep(new THREE.ConeGeometry(0.85, 5.2, 32, 1, true)), keep(shaftMaterial(new THREE.Color('#ffffff').lerp(color, 0.35), 'tip', 1.4)));
       shaft.material.uniforms.uOpacity!.value = i === 2 ? 0.2 : 0.13;
       shaft.position.set(x, 2.6, z);
       this.scene.add(shaft);
       this.shafts.push(shaft);
-    }
+    });
     this.camera.position.set(0, 1.6, 7.6);
   }
 
@@ -190,7 +219,12 @@ class Lobby {
     this.camera.position.set(Math.sin(sway) * this.dist, 1.5 + Math.sin(t * 0.2) * 0.05, Math.cos(sway) * this.dist - 0.4);
     this.camera.lookAt(0, this.lookY, -0.45);
     this.figures.forEach((f, i) => {
-      f.h.mixer.update(dt);
+      // Idle animation, then the weapon on the chest and the hands on the weapon.
+      driveHuman(f.h, { gait: 0, dt, dead: false, hold: () => {
+        carryMatrix(f.h, 'Spine2', f.carry, f.gun.matrix);
+        f.gun.matrixWorld.copy(f.gun.matrix);
+        return { grip: this.gw.copy(f.grip).applyMatrix4(f.gun.matrix), guard: this.lw.copy(f.guard).applyMatrix4(f.gun.matrix), right: f.right };
+      } });
       const lit = this.hover === i;
       f.h.body.emissive?.setScalar(lit ? 0.06 : 0);
       const s = this.shafts[i];
@@ -281,7 +315,7 @@ export function LineupStage({ members, color, tag, onOpen, fallback, children, t
       if (humanFailed()) { setState('failed'); return; }
       try {
         const hq = !window.matchMedia?.('(pointer: coarse)').matches && window.innerWidth >= 900;
-        lobby = new Lobby(canvas, members.length, new THREE.Color(color), tag, hq);
+        lobby = new Lobby(canvas, members.map((m) => m.role), new THREE.Color(color), tag, hq);
       } catch {
         setState('failed');
         return;

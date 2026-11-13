@@ -16,6 +16,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { weaponModel, type WeaponKind } from './weapons';
 
 type Joint = 'root' | 'hipL' | 'kneeL' | 'hipR' | 'kneeR' | 'waist' | 'helmet' | 'armL' | 'armR' | 'nade';
 export type GunClass = 'rifle' | 'awp' | 'smg' | 'pistol' | 'shotgun';
@@ -215,7 +216,10 @@ function outfitParts(side: 'T' | 'CT', variant: number, accent: string): Part[] 
   return P;
 }
 
-function gunParts(kind: GunClass): Part[] {
+/** Guns still drawn from simple shapes; rifles and sniper rifles come from weapons.ts. */
+type SimpleGun = Exclude<GunClass, 'rifle' | 'awp'>;
+
+function gunParts(kind: SimpleGun): Part[] {
   const P: Part[] = [];
   const black = '#1a1c1f', wood = '#6b4a2e', metal = '#3a3e43';
   const add = (geo: THREE.BufferGeometry, color: string, at: [number, number, number], rot?: [number, number, number]) => P.push({ joint: 'waist', geo, color, at, rot });
@@ -227,26 +231,12 @@ function gunParts(kind: GunClass): Part[] {
     add(G.box(0.01, 0.015, 0.012), '#c9ced4', [0.05, y + 0.042, 0.59]);
     return P;
   }
-  const len = kind === 'awp' ? 0.62 : kind === 'smg' ? 0.32 : kind === 'shotgun' ? 0.5 : 0.46;
-  add(G.box(0.06, 0.09, len), kind === 'rifle' ? metal : black, [x, y, 0.15 + len / 2]);
-  const barrel = kind === 'awp' ? 0.42 : kind === 'smg' ? 0.12 : 0.26;
+  const len = kind === 'smg' ? 0.32 : 0.5;
+  add(G.box(0.06, 0.09, len), black, [x, y, 0.15 + len / 2]);
+  const barrel = kind === 'smg' ? 0.12 : 0.26;
   add(G.cyl(0.016, 0.016, barrel, 6), black, [x, y + 0.01, 0.15 + len + barrel / 2], [Math.PI / 2, 0, 0]);
-  add(G.box(0.05, 0.11, 0.2), kind === 'awp' || kind === 'shotgun' ? wood : black, [x + 0.01, y - 0.01, 0.07]);
-  if (kind !== 'shotgun') add(G.box(0.04, 0.15, 0.06), black, [x, y - 0.1, 0.15 + len * 0.45], [kind === 'rifle' ? 0.3 : 0.1, 0, 0]);
-  if (kind === 'awp') {
-    add(G.cyl(0.03, 0.03, 0.3, 12), '#25292d', [x, y + 0.09, 0.42], [Math.PI / 2, 0, 0]);
-    add(G.cyl(0.038, 0.03, 0.06, 12), '#25292d', [x, y + 0.09, 0.6], [Math.PI / 2, 0, 0]);
-    add(G.cyl(0.031, 0.031, 0.005, 12), '#4a7fb0', [x, y + 0.09, 0.632], [Math.PI / 2, 0, 0]);
-    add(G.cyl(0.012, 0.012, 0.07, 6), metal, [x + 0.05, y + 0.02, 0.2], [0, 0, Math.PI / 2]);
-    add(G.box(0.07, 0.1, 0.06), '#2b4a2e', [x, y - 0.03, 0.06]);
-  }
-  if (kind === 'rifle') {
-    add(G.box(0.05, 0.03, 0.18), '#2b2f33', [x, y + 0.055, 0.32]);
-    // Curved magazine, front sight post and a muzzle brake.
-    add(G.box(0.04, 0.16, 0.07), '#5a4a32', [x, y - 0.11, 0.42], [0.35, 0, 0]);
-    add(G.box(0.012, 0.05, 0.012), black, [x, y + 0.06, 0.58]);
-    add(G.cyl(0.022, 0.022, 0.05, 8), metal, [x, y + 0.01, 0.9], [Math.PI / 2, 0, 0]);
-  }
+  add(G.box(0.05, 0.11, 0.2), kind === 'shotgun' ? wood : black, [x + 0.01, y - 0.01, 0.07]);
+  if (kind !== 'shotgun') add(G.box(0.04, 0.15, 0.06), black, [x, y - 0.1, 0.15 + len * 0.45], [0.1, 0, 0]);
   if (kind === 'smg') add(G.box(0.035, 0.18, 0.04), black, [x, y - 0.12, 0.3], [0.05, 0, 0]);
   if (kind === 'shotgun') add(G.cyl(0.024, 0.024, 0.3, 8), wood, [x, y - 0.045, 0.45], [Math.PI / 2, 0, 0]);
   return P;
@@ -280,6 +270,34 @@ function cached(kit: SoldierKit, key: string, make: () => THREE.BufferGeometry):
   return g;
 }
 
+/**
+ * Rifles and sniper rifles use the detailed models from weapons.ts (a carbine for CTs, an assault
+ * rifle for Ts); the other classes keep the simple shapes above. GUN_AT is where the model's own
+ * space sits in the waist joint's space: bore 1.31 m up, receiver starting 0.17 m forward.
+ */
+const GUN_AT = new THREE.Vector3(0.07, 1.31 - PIVOT.waist[1], 0.17);
+const simple = (cls: GunClass): cls is SimpleGun => cls !== 'rifle' && cls !== 'awp';
+const modelOf = (cls: 'rifle' | 'awp', side: 'T' | 'CT'): WeaponKind => (cls === 'awp' ? 'sniper' : side === 'CT' ? 'carbine' : 'rifle');
+
+function gunGeo(kit: SoldierKit, cls: GunClass, side: 'T' | 'CT'): THREE.BufferGeometry {
+  if (simple(cls)) return cached(kit, `gun|${cls}`, () => mergeJoint(gunParts(cls), 'waist'));
+  const kind = modelOf(cls, side);
+  return cached(kit, `gun|${kind}`, () => weaponModel(kind).geo.clone().translate(GUN_AT.x, GUN_AT.y, GUN_AT.z));
+}
+
+/** Where the hands go on the soldier's current gun, in the gun mesh's space: the right wrist on the grip, the left under the fore-end. */
+export function gunHold(s: Soldier, grip: THREE.Vector3, guard: THREE.Vector3) {
+  if (!simple(s.gunClass)) {
+    const w = weaponModel(modelOf(s.gunClass, s.side));
+    grip.copy(w.grip).add(GUN_AT);
+    guard.copy(w.guard).add(GUN_AT);
+    return;
+  }
+  const pistol = s.gunClass === 'pistol';
+  grip.set(pistol ? 0.05 : 0.075, (pistol ? 1.25 : 1.24) - PIVOT.waist[1], pistol ? 0.44 : 0.1);
+  guard.set(pistol ? 0.04 : 0.065, (pistol ? 1.27 : 1.29) - PIVOT.waist[1], pistol ? 0.46 : s.gunClass === 'smg' ? 0.36 : 0.46);
+}
+
 export function gunClassOf(weapon: string): GunClass {
   const w = weapon.toLowerCase();
   if (w.includes('awp') || w.includes('ssg') || w.includes('scout')) return 'awp';
@@ -309,7 +327,7 @@ export function buildSoldier(kit: SoldierKit, side: 'T' | 'CT', team: THREE.Colo
     mesh.castShadow = true;
     grp.add(mesh); meshes.push(mesh);
   }
-  const gun = new THREE.Mesh(cached(kit, 'gun|rifle', () => mergeJoint(gunParts('rifle'), 'waist')), accent);
+  const gun = new THREE.Mesh(gunGeo(kit, 'rifle', side), accent);
   gun.castShadow = true;
   // The carry pivot sits on the shoulder line; arms, grenade hand and gun move with it.
   const shoulderY = PIVOT.armL[1] - PIVOT.waist[1];
@@ -365,7 +383,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.08, 1.04, 0.9
 export function setGun(kit: SoldierKit, s: Soldier, cls: GunClass) {
   if (s.gunClass === cls) return;
   s.gunClass = cls;
-  s.gun.geometry = cached(kit, `gun|${cls}`, () => mergeJoint(gunParts(cls), 'waist'));
+  s.gun.geometry = gunGeo(kit, cls, s.side);
 }
 
 /** 0 standing, 1 walking (silent), 2 running, 3 a faster run (unused by the match view). */

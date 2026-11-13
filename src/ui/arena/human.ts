@@ -1,20 +1,21 @@
 /**
- * Realistic, skinned soldier figures for the 3D match viewer.
+ * Skinned soldier figures for the 3D views (home lobby and live match).
  *
- * The figure is the rigged "Soldier" from the three.js examples (a Mixamo character with
- * Idle, Walk and Run clips). It is loaded once, cloned per player and dressed per side: CTs in
- * a cool blue-grey, Ts in warm tan, both with the team rim light. The procedural soldier from
- * models.ts stays as the skeleton the viewer poses (and as the fallback until this loads);
- * its gun is moved into the figure's right hand and the arms are held in a rifle stance on top
- * of the walk and run clips.
+ * The rig is the rigged "Soldier" from the three.js examples (a Mixamo skeleton with Idle,
+ * Walk and Run clips). Its own armoured mesh is not shown: each figure is dressed as an operator
+ * (operator.ts), kit built in code and skinned to the same skeleton, CTs and Ts in their own
+ * looks with the team rim light. The procedural soldier from models.ts stays as the skeleton the
+ * match viewer poses (and as the fallback until this loads); its gun is moved into the figure's
+ * hands with IK on top of the walk and run clips.
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import soldierUrl from './assets/soldier.glb?url';
+import { bindOf, dress, type Bind } from './operator';
 
-interface Template { scene: THREE.Object3D; clips: THREE.AnimationClip[]; scale: number }
+interface Template { scene: THREE.Object3D; clips: THREE.AnimationClip[]; scale: number; bind: Bind }
 
 let template: Template | null = null;
 let loading: Promise<void> | null = null;
@@ -30,7 +31,10 @@ export function loadHuman(): Promise<void> {
     g.scene.updateMatrixWorld(true);
     const y = (n: string) => g.scene.getObjectByName(`mixamorig${n}`)?.getWorldPosition(new THREE.Vector3()).y ?? 0;
     const h = y('Head') - Math.min(y('LeftToeBase'), y('RightToeBase')) + 0.05 * (y('Head') - y('Hips'));
-    template = { scene: g.scene, clips: g.animations, scale: h > 0 ? 1.6 / h : 1 };
+    let skinned: THREE.SkinnedMesh | null = null;
+    g.scene.traverse((o) => { if (!skinned && (o as THREE.SkinnedMesh).isSkinnedMesh && !/visor/i.test(o.name)) skinned = o as THREE.SkinnedMesh; });
+    if (!skinned) throw new Error('no skinned mesh');
+    template = { scene: g.scene, clips: g.animations, scale: h > 0 ? 1.6 / h : 1, bind: bindOf(skinned, g.scene) };
   }).catch(() => { failed = true; });
   return loading;
 }
@@ -44,36 +48,35 @@ export interface Human {
   idle: THREE.AnimationAction; walk: THREE.AnimationAction; run: THREE.AnimationAction;
   bones: Record<'spine' | 'neck' | 'armR' | 'foreR' | 'handR' | 'armL' | 'foreL' | 'handL', THREE.Bone>;
   meshes: THREE.SkinnedMesh[];
-  /** The body material owned by this figure (hit flashes tint its emissive). */
+  /** The shirt material owned by this figure (hit flashes and hover tint its emissive). */
   body: THREE.MeshStandardMaterial;
+  /** Materials that take the team kit colour (the shirt or jacket). */
+  kit: THREE.MeshStandardMaterial[];
+  /** Patches and name tape, in the team colour. */
+  accent: THREE.MeshStandardMaterial;
   weights: [number, number, number];
 }
 
-const SIDE_TINT = { CT: new THREE.Color(0.66, 0.78, 0.98), T: new THREE.Color(1.0, 0.84, 0.62) };
-
-/** A new figure for one player, or null while the model is still loading. */
-export function makeHuman(side: 'T' | 'CT', rim: (m: THREE.MeshStandardMaterial) => void): Human | null {
+/**
+ * A new figure for one player, or null while the model is still loading. `look` picks one of
+ * the side's operator looks (any integer; it wraps).
+ */
+export function makeHuman(side: 'T' | 'CT', rim: (m: THREE.MeshStandardMaterial) => void, look = 0): Human | null {
   if (!template) return null;
   const root = cloneSkinned(template.scene);
   root.scale.setScalar(template.scale);
-  const meshes: THREE.SkinnedMesh[] = [];
-  let body: THREE.MeshStandardMaterial | null = null;
+  // The stock armoured mesh only lends its skeleton: take it out and dress the operator instead.
+  let skeleton: THREE.Skeleton | null = null;
+  const stock: THREE.Object3D[] = [];
   root.traverse((o) => {
     const m = o as THREE.SkinnedMesh;
     if (!m.isSkinnedMesh) return;
-    m.castShadow = true;
-    m.frustumCulled = false;
-    const src = m.material as THREE.MeshStandardMaterial;
-    const mat = src.clone();
-    if (!/visor/i.test(src.name)) {
-      mat.color.copy(SIDE_TINT[side]);
-      mat.roughness = 0.82;
-      rim(mat);
-      body ??= mat;
-    }
-    m.material = mat;
-    meshes.push(m);
+    skeleton ??= m.skeleton;
+    stock.push(m);
   });
+  for (const m of stock) m.parent?.remove(m);
+  if (!skeleton) return null;
+  const d = dress(root, skeleton, template.bind, side, look, rim);
   const bone = (n: string) => root.getObjectByName(`mixamorig${n}`) as THREE.Bone;
   const bones = {
     spine: bone('Spine1'), neck: bone('Neck'),
@@ -83,7 +86,7 @@ export function makeHuman(side: 'T' | 'CT', rim: (m: THREE.MeshStandardMaterial)
   const mixer = new THREE.AnimationMixer(root);
   const clip = (n: string) => template!.clips.find((c) => c.name === n)!;
   const act = (n: string) => { const a = mixer.clipAction(clip(n)); a.play(); a.setEffectiveWeight(0); return a; };
-  const h: Human = { root, mixer, idle: act('Idle'), walk: act('Walk'), run: act('Run'), bones, meshes, body: body ?? (meshes[0]!.material as THREE.MeshStandardMaterial), weights: [1, 0, 0] };
+  const h: Human = { root, mixer, idle: act('Idle'), walk: act('Walk'), run: act('Run'), bones, meshes: d.meshes, body: d.kit, kit: [d.kit], accent: d.accent, weights: [1, 0, 0] };
   h.idle.setEffectiveWeight(1);
   // Different players are out of step with each other.
   for (const a of [h.idle, h.walk, h.run]) a.time = Math.random() * a.getClip().duration;
@@ -135,7 +138,7 @@ export interface Hold {
  * Advance one figure: blend idle, walk and run by gait (0 still, 1 walk, 2 run), then put the
  * hands on the weapon with IK. Elbows hang down and out, as when holding a rifle.
  */
-export function driveHuman(h: Human, o: { gait: number; dt: number; dead: boolean; hold?: Hold; throwArm?: number }) {
+export function driveHuman(h: Human, o: { gait: number; dt: number; dead: boolean; hold?: Hold | (() => Hold); throwArm?: number }) {
   const want: [number, number, number] = o.dead ? [1, 0, 0] : o.gait === 0 ? [1, 0, 0] : o.gait === 1 ? [0, 1, 0] : [0, 0, 1];
   const k = Math.min(1, o.dt * 8);
   for (let i = 0; i < 3; i++) h.weights[i] = h.weights[i]! + (want[i]! - h.weights[i]!) * k;
@@ -148,11 +151,22 @@ export function driveHuman(h: Human, o: { gait: number; dt: number; dead: boolea
   h.root.updateMatrixWorld(true);
   const b = h.bones;
   const down = new THREE.Vector3(0, -1, 0);
-  const { grip, guard, right } = o.hold;
+  const { grip, guard, right } = typeof o.hold === 'function' ? o.hold() : o.hold;
   if (grip) twoBoneIK(b.armR, b.foreR, b.handR, grip, down.clone().addScaledVector(right, 0.8));
   if (guard) twoBoneIK(b.armL, b.foreL, b.handL, guard, down.clone().addScaledVector(right, -0.5));
   if (!grip && o.throwArm) {
     // Grenade: the right arm swings with the procedural throw.
     b.armR.rotateX(-o.throwArm * 0.8);
   }
+}
+
+/**
+ * World matrix of something carried rigidly by one of the figure's bones (a rifle on the chest),
+ * placed by `local` in the operator's bind space (metres, feet at y = 0, facing -z, right hand at
+ * +x). Call it after the figure has been posed for the frame.
+ */
+export function carryMatrix(h: Human, bone: string, local: THREE.Matrix4, out = new THREE.Matrix4()): THREE.Matrix4 {
+  const mesh = h.meshes[0]!, sk = mesh.skeleton;
+  const i = Math.max(0, sk.bones.findIndex((b) => b.name === `mixamorig${bone}`));
+  return out.multiplyMatrices(sk.bones[i]!.matrixWorld, sk.boneInverses[i]!).multiply(mesh.bindMatrix).multiply(local);
 }
