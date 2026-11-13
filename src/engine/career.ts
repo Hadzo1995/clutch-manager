@@ -71,6 +71,33 @@ export interface SeasonSummary {
   board?: { goal: BoardGoal; met: boolean };
 }
 
+/** The wrap-up of a finished season, shown once on the season review screen. */
+export interface SeasonReview {
+  season: number;
+  division: number;
+  nextDivision: number;
+  placement: number;
+  movement: SeasonSummary['movement'];
+  wins: number;
+  losses: number;
+  prize: number;
+  cup: 1 | 2 | 3 | 4 | null;
+  cupPrize: number;
+  sponsorBonus: number;
+  /** Champion of the playoffs. */
+  champion: { name: string; tag: string; mine: boolean };
+  /** Final league table (before playoffs), names stored so it reads well later. */
+  table: { name: string; tag: string; mine: boolean; wins: number; losses: number; roundDiff: number; points: number }[];
+  /** Your player with the most series MVPs this season (ties go to the better average rating). */
+  mvp?: { cardId: string; mvps: number; rating: number | null };
+  reputationBefore: number;
+  reputationAfter: number;
+  coinsAfter: number;
+  /** Contracts that run out during the next season's first four weeks. */
+  expiring: string[];
+  seen: boolean;
+}
+
 /** The board's target for a season: a finishing place, set from how strong the squad is when the season starts. */
 export type BoardGoal = 'top2' | 'top4' | 'top6';
 export const BOARD_GOAL_LABEL: Record<BoardGoal, string> = { top2: 'Finish in the top 2', top4: 'Reach the playoffs (top 4)', top6: 'Finish 6th or better' };
@@ -130,6 +157,10 @@ export interface Career {
   pendingPull?: { playerId: string; caseName: string };
   lastDailyClaim: string | null;
   history: SeasonSummary[];
+  /** The last finished season's wrap-up (added in v0.21; absent on older saves). */
+  seasonReview?: SeasonReview;
+  /** Every case opening, newest first, capped (added in v0.21; absent on older saves). */
+  drops?: DropRecord[];
   matches: MatchRecord[];
   totals: { matches: number; wins: number; losses: number; casesOpened: number; titles: number; legendsPulled: number };
   achievements: string[];
@@ -158,6 +189,24 @@ export interface Career {
   /** Set for a tournament club (engine/tclub.ts): which tournament and seat, and what has been applied. */
   tournament?: { id: string; seat: number; applied: string[]; lastTrainDate?: string; restedDay?: number; mapPrefs?: MapName[] };
 }
+
+/** One case opening and what happened to the player it gave. */
+export interface DropRecord {
+  season: number;
+  week: number;
+  caseId: CaseId;
+  caseName: string;
+  playerId: string;
+  rarity: import('./types').Rarity;
+  ovr: number;
+  /** new: joined the squad; star: duplicate added a star; refund: duplicate at max stars paid coins; pending: squad full, waiting for a choice; sold: the pull was sold; swapped: a bench player was sold to keep it. */
+  result: 'new' | 'star' | 'refund' | 'pending' | 'sold' | 'swapped';
+  coins?: number;
+}
+
+export const DROP_LIMIT = 40;
+
+export interface Bid { id: string; cardId: string; playerId: string; teamId: string; fee: number; season: number; expiresWeek: number }
 
 export interface Bid {
   id: string; cardId: string; playerId: string; teamId: string; fee: number; season: number; expiresWeek: number;
@@ -288,7 +337,7 @@ export function createCareer(world: World, opts: NewCareerOptions): Career {
     mapPractice: emptyMapPractice(35),
     tactics: { playstyle: 'balanced', tApproach: 'default', ctSetup: 'standard', stackSite: 'A', economy: 'standard' },
     plan: defaultPlan(),
-    season: newSeason(rng, 1, 0, world.profileList, world.coaches),
+    season: newSeason(rng, 1, 0, world.profileList, world.coaches, [(opts.teamTag.trim() || 'YOU').toUpperCase().slice(0, 4)]),
     phase: 'training',
     prepBonus: 0,
     lastDailyClaim: null,
@@ -419,6 +468,7 @@ export function openCase(world: World, c: Career, caseId: CaseId, opts: { role?:
     if (profile.rarity === 'legend') { n.totals.legendsPulled++; unlock(n, 'first-legend'); }
     if (n.totals.casesOpened >= 10) unlock(n, 'ten-cases');
     addNews(n, `New ${profile.rarity} pull with a full squad: ${profile.record.handle} (${profile.ovr}).`);
+    recordDrop(n, def, profile, 'pending');
     return { career: n, outcome: { profile, duplicate: false, starsNow: 0, refund: 0, pendingFull: true } };
   }
   const outcome = addToCollection(n.cards, profile, n.season.week, newCardId(n));
@@ -437,7 +487,23 @@ export function openCase(world: World, c: Career, caseId: CaseId, opts: { role?:
   addNews(n, outcome.duplicate
     ? `Duplicate ${profile.record.handle}: ${outcome.refund ? `+${outcome.refund} coins` : `now ${outcome.starsNow} stars`}.`
     : `New ${profile.rarity} card: ${profile.record.handle} (${profile.ovr}).`);
+  recordDrop(n, def, profile, outcome.duplicate ? (outcome.refund ? 'refund' : 'star') : 'new', outcome.refund || undefined);
   return { career: n, outcome };
+}
+
+/** Adds a case opening to the inventory's drop history. */
+function recordDrop(n: Career, def: (typeof CASES)[CaseId], profile: PlayerProfile, result: DropRecord['result'], coins?: number): void {
+  const d: DropRecord = { season: n.season.number, week: n.season.week, caseId: def.id, caseName: def.name, playerId: profile.record.id, rarity: profile.rarity, ovr: profile.ovr, result };
+  if (coins) d.coins = coins;
+  n.drops = [d, ...(n.drops ?? [])].slice(0, DROP_LIMIT);
+}
+
+/** Settles the newest pending drop for a player once the manager has chosen. */
+function settleDrop(n: Career, playerId: string, result: 'sold' | 'swapped', coins?: number): void {
+  const d = n.drops?.find((x) => x.playerId === playerId && x.result === 'pending');
+  if (!d) return;
+  d.result = result;
+  if (coins) d.coins = coins;
 }
 
 // ---------- Training week ----------
@@ -787,7 +853,7 @@ function startCup(world: World, n: Career): void {
   const above = DIVISIONS[Math.min(season.division + 1, DIVISIONS.length - 1)]!;
   const taken = new Set([...season.aiTeams.flatMap((t) => t.playerIds), ...n.cards.map((x) => x.playerId)]);
   const rng = rngFor(n);
-  const guests = generateAiTeams(rng, above, world.profileList.filter((p) => !taken.has(p.record.id)), world.coaches, 4, season.aiTeams.map((t) => t.tag));
+  const guests = generateAiTeams(rng, above, world.profileList.filter((p) => !taken.has(p.record.id)), world.coaches, 4, [...season.aiTeams.map((t) => t.tag), n.teamTag.toUpperCase()]);
   saveRng(n, rng);
   // Guests from the top division are a little sharper than its league teams, so the Elite cup is still a step up.
   for (const g of guests) { g.sharpness = above.aiSharpness + (season.division === DIVISIONS.length - 1 ? 3 : 0); g.guestFrom = above.name; }
@@ -805,9 +871,13 @@ function finishSeason(world: World, n: Career): void {
   const placement = order.indexOf(HUMAN_ID) + 1;
   const div = DIVISIONS[season.division]!;
   const prize = div.prizes[placement - 1] ?? 0;
+  const reputationBefore = n.reputation;
+  let sponsorBonus = 0;
+  let cupPrize = 0;
   money(n, prize, 'prize', `Season ${season.number}: ${ordinal(placement)} place`);
   if (n.sponsor) {
     if (sponsorGoalMet(n.sponsor.goal, placement)) {
+      sponsorBonus = n.sponsor.goalBonus;
       money(n, n.sponsor.goalBonus, 'sponsor', `${n.sponsor.name} season bonus`);
       addNews(n, `${n.sponsor.name} pay the ${n.sponsor.goalBonus}-coin season bonus.`);
     } else addNews(n, `${n.sponsor.name}'s season goal was missed. No bonus.`);
@@ -819,7 +889,7 @@ function finishSeason(world: World, n: Career): void {
   if (placement === 1) { n.totals.titles++; unlock(n, 'champion'); }
   const cup = cupResult(season, HUMAN_ID);
   if (cup) {
-    const cupPrize = Math.round(div.winReward * CUP_PRIZE[cup - 1]!);
+    cupPrize = Math.round(div.winReward * CUP_PRIZE[cup - 1]!);
     money(n, cupPrize, 'prize', `${cupName(season.division)}: ${cup === 1 ? 'winner' : cup === 2 ? 'finalist' : cup === 3 ? 'semifinal' : 'quarterfinal'}`);
     if (cup === 1) { n.totals.titles++; unlock(n, 'cup-winner'); n.reputation = clamp(n.reputation + 5, 0, 100); }
     addNews(n, `${cupName(season.division)}: ${cup === 1 ? 'you won it!' : cup === 2 ? 'beaten in the final.' : cup === 3 ? 'out in the semifinals.' : 'out in the quarterfinals.'} Prize ${cupPrize} coins.`);
@@ -845,9 +915,39 @@ function finishSeason(world: World, n: Career): void {
   }
   n.history.push({ season: season.number, division: season.division, placement, wins, losses: record.length - wins, movement, prize, ...(cup ? { cup } : {}), ...(board ? { board: { goal: board.goal, met } } : {}) });
   addNews(n, `Season ${season.number} over: ${ordinal(placement)} in the ${div.name}. Prize ${prize} coins.${movement === 'promoted' ? ' Promoted!' : movement === 'relegated' ? ' Relegated.' : ''}`);
+  const champ = order[0]!;
+  const mvpCounts = new Map<string, number>();
+  for (const m of n.matches) if (m.season === season.number && m.mvpCardId) mvpCounts.set(m.mvpCardId, (mvpCounts.get(m.mvpCardId) ?? 0) + 1);
+  const seasonRating = (cardId: string): number | null => {
+    const log = (cardById(n, cardId)?.log ?? []).filter((l) => l.season === season.number);
+    return log.length ? Math.round((log.reduce((t, l) => t + l.rating, 0) / log.length) * 100) / 100 : null;
+  };
+  const mvpId = [...mvpCounts.entries()].filter(([id]) => cardById(n, id)).sort((a, b) => b[1] - a[1] || (seasonRating(b[0]) ?? 0) - (seasonRating(a[0]) ?? 0))[0];
+  const review: SeasonReview = {
+    season: season.number,
+    division: season.division,
+    nextDivision: nextDiv,
+    placement,
+    movement,
+    wins,
+    losses: record.length - wins,
+    prize,
+    cup,
+    cupPrize,
+    sponsorBonus,
+    champion: { name: teamName(n, champ), tag: teamTag(n, champ), mine: champ === HUMAN_ID },
+    table: standings(season).map((r) => ({ name: teamName(n, r.teamId), tag: teamTag(n, r.teamId), mine: r.teamId === HUMAN_ID, wins: r.wins, losses: r.losses, roundDiff: r.roundDiff, points: r.points })),
+    reputationBefore: Math.round(reputationBefore),
+    reputationAfter: Math.round(n.reputation),
+    coinsAfter: n.coins,
+    expiring: n.cards.filter((x) => (x.contract?.weeksLeft ?? 99) <= 4).map((x) => x.cardId),
+    seen: false,
+  };
+  if (mvpId) review.mvp = { cardId: mvpId[0], mvps: mvpId[1], rating: seasonRating(mvpId[0]) };
+  n.seasonReview = review;
   const rng = rngFor(n);
   const owned = new Set(n.cards.map((x) => x.playerId));
-  n.season = newSeason(rng, season.number + 1, nextDiv, world.profileList.filter((p) => !owned.has(p.record.id)), world.coaches);
+  n.season = newSeason(rng, season.number + 1, nextDiv, world.profileList.filter((p) => !owned.has(p.record.id)), world.coaches, [n.teamTag.toUpperCase()]);
   n.season.sponsorRep = n.reputation;
   addNews(n, fieldNews(n.season));
   n.sponsor = null;
@@ -1169,6 +1269,7 @@ export function resolvePull(world: World, c: Career, choice: { sellCardId: strin
   if (choice === 'sell-pull') {
     const price = pullSalePrice(world, pend.playerId);
     money(n, price, 'sale', `Sold case pull ${profile.record.handle}`);
+    settleDrop(n, pend.playerId, 'sold', price);
     addNews(n, `${profile.record.handle} sold straight from the case for ${price} coins.`);
     return n;
   }
@@ -1184,6 +1285,7 @@ export function resolvePull(world: World, c: Career, choice: { sellCardId: strin
     outcome.newCard.contract = defaultContract(profile);
     claimPlayer(world, n, profile.record.id);
   }
+  settleDrop(n, pend.playerId, 'swapped');
   addNews(n, `${outHandle} sold for ${price} coins to make room for ${profile.record.handle}.`);
   return n;
 }
@@ -1243,6 +1345,14 @@ export function signSponsor(c: Career, sponsorId: string): Career {
   const n = structuredClone(c);
   n.sponsor = offer;
   addNews(n, `${offer.name} sponsor the team this season: ${offer.weekly} a week.`);
+  return n;
+}
+
+/** Marks the season review as read. */
+export function dismissSeasonReview(c: Career): Career {
+  if (!c.seasonReview || c.seasonReview.seen) return c;
+  const n = structuredClone(c);
+  n.seasonReview!.seen = true;
   return n;
 }
 
