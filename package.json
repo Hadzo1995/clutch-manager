@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",
+    "motion": "12.43.0",
     "n8ao": "1.10.3",
     "postprocessing": "6.36.7",
     "react": "18.3.1",

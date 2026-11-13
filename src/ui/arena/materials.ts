@@ -389,6 +389,14 @@ let cached: SurfaceSet | null = null;
 /** Normal maps for the surfaces that have one (looked up by worldMaterial). */
 const normals = new WeakMap<THREE.Texture, THREE.Texture>();
 let flatNormal: THREE.DataTexture | null = null;
+/** A 4 x 4 "straight up" normal map: what normal textures show until their photo arrives. */
+function flatCanvas(): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = c.height = 4;
+  const g = c.getContext('2d')!;
+  g.fillStyle = 'rgb(128,128,255)'; g.fillRect(0, 0, 4, 4);
+  return c;
+}
 function flat(): THREE.DataTexture {
   if (!flatNormal) { flatNormal = new THREE.DataTexture(new Uint8Array([128, 128, 255, 255]), 1, 1); flatNormal.needsUpdate = true; }
   return flatNormal;
@@ -413,10 +421,11 @@ export function surfaces(): SurfaceSet {
       const [url, nUrl] = PHOTO_URLS[k];
       const proc = cached[k];
       const photo = photoTexture(url, proc.image as HTMLCanvasElement);
-      const normal = photoTexture(nUrl, null);
+      const normal = photoTexture(nUrl, flatCanvas());
       proc.dispose();
       cached[k] = photo;
       normals.set(photo, normal);
+      if (k === 'roofTiles') { cached.roofTilesN.dispose(); cached.roofTilesN = normal; }
     }
   }
   return cached;

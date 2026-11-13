@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion, MotionConfig } from 'motion/react';
 import type { Career, Difficulty, World } from '../engine/career';
 import { DIFFICULTY_LABEL, DIFFICULTY_TIP } from '../engine/career';
 import { aiSnapshot, aiTeamById, canClaimDaily, createCareer, createWorld, ensureBoard, ensureContracts, humanFixture, humanSnapshot, starterCoaches } from '../engine/career';
@@ -56,6 +57,9 @@ function initialWorld(): World {
   if (loadCareer()?.datasetId === demo.id) return createWorld(demo);
   return createWorld(realDataset() ?? demo);
 }
+
+/** The active-tab marker glides to the new tab instead of jumping. */
+const NAV_SPRING = { type: 'spring', stiffness: 520, damping: 40, mass: 0.8 } as const;
 
 export function App() {
   const [world, setWorld] = useState<World>(initialWorld);
@@ -166,6 +170,7 @@ export function App() {
   const dailyReady = canClaimDaily(career, today());
 
   return (
+    <MotionConfig reducedMotion={reducedMotion() ? 'always' : 'never'}>
     <GameCtx.Provider value={game}>
       <div className={`app${stadium ? ' has-stadium' : ''}`}>
         {stadium && <><StadiumScene teamName={career.teamName} teamTag={career.teamTag} active={!matchOpen} five={stageFive} opponent={stageOpp} /><i className="stadium-shade" aria-hidden="true" /></>}
@@ -182,6 +187,7 @@ export function App() {
           <nav className="side-nav" aria-label="Main">
             {TABS.map((t) => (
               <button key={t.id} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
+                {tab === t.id && <motion.span layoutId="side-pill" className="nav-pill" transition={NAV_SPRING} aria-hidden="true" />}
                 <TabIcon name={t.id} />
                 <span>{t.label}</span>
                 {t.id === 'cases' && dailyReady ? <span className="dot" aria-label="Free daily case available" /> : <span />}
@@ -224,6 +230,7 @@ export function App() {
           <nav aria-label="Main">
             {TABS.map((t) => (
               <button key={t.id} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
+                {tab === t.id && <motion.span layoutId="tab-pill" className="tab-pill" transition={NAV_SPRING} aria-hidden="true" />}
                 <TabIcon name={t.id} />
                 {t.label}
                 {t.id === 'cases' && dailyReady && <span className="dot" aria-label="Free daily case available" />}
@@ -239,6 +246,7 @@ export function App() {
         {toastMsg && <div className="toast" role="status">{toastMsg}</div>}
       </div>
     </GameCtx.Provider>
+    </MotionConfig>
   );
 }
 

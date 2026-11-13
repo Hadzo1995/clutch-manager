@@ -1,12 +1,15 @@
 /**
- * Photo-scanned surface detail for the five most common map surfaces (floors, walls, wall caps),
+ * Photo-scanned surface detail for the common map surfaces (floors, walls, facades, ground, roads, roof tiles),
  * from Poly Haven (CC0, https://polyhaven.com). Each is a greyscale detail map, prepared like the
  * procedural ones in materials.ts (mean ~0.82, multiplied by the map palette colour), plus a
  * normal map that gives joints, chips and grain real relief under the sun.
  *
  *   stones   red_sandstone_pavement    tiles    terracotta_floor_tiles
  *   concrete concrete_floor_02         blocks   sandstone_blocks_08
- *   plaster  beige_wall_001
+ *   plaster  beige_wall_001            sand     sand_01
+ *   grass    grass_path_2              asphalt  asphalt_02
+ *   sandstone old_sandstone_02         stucco   rough_plaster_brick_04
+ *   roofTiles clay_roof_tiles_02 (UV mapped, not triplanar: its normal replaces roofTilesN)
  *
  * Files are 512 px JPEGs in ./assets/surfaces (prepared from the 1K downloads).
  */
@@ -21,11 +24,24 @@ import blocks from './assets/surfaces/blocks.jpg?url';
 import blocksN from './assets/surfaces/blocks_n.jpg?url';
 import plaster from './assets/surfaces/plaster.jpg?url';
 import plasterN from './assets/surfaces/plaster_n.jpg?url';
+import sand from './assets/surfaces/sand.jpg?url';
+import sandN from './assets/surfaces/sand_n.jpg?url';
+import grass from './assets/surfaces/grass.jpg?url';
+import grassN from './assets/surfaces/grass_n.jpg?url';
+import asphalt from './assets/surfaces/asphalt.jpg?url';
+import asphaltN from './assets/surfaces/asphalt_n.jpg?url';
+import sandstone from './assets/surfaces/sandstone.jpg?url';
+import sandstoneN from './assets/surfaces/sandstone_n.jpg?url';
+import stucco from './assets/surfaces/stucco.jpg?url';
+import stuccoN from './assets/surfaces/stucco_n.jpg?url';
+import roofTiles from './assets/surfaces/roofTiles.jpg?url';
+import roofTilesN from './assets/surfaces/roofTiles_n.jpg?url';
 
-export type PhotoKey = 'stones' | 'tiles' | 'concrete' | 'blocks' | 'plaster';
+export type PhotoKey = 'stones' | 'tiles' | 'concrete' | 'blocks' | 'plaster' | 'sand' | 'grass' | 'asphalt' | 'sandstone' | 'stucco' | 'roofTiles';
 
 export const PHOTO_URLS: Record<PhotoKey, [string, string]> = {
   stones: [stones, stonesN], tiles: [tiles, tilesN], concrete: [concrete, concreteN], blocks: [blocks, blocksN], plaster: [plaster, plasterN],
+  sand: [sand, sandN], grass: [grass, grassN], asphalt: [asphalt, asphaltN], sandstone: [sandstone, sandstoneN], stucco: [stucco, stuccoN], roofTiles: [roofTiles, roofTilesN],
 };
 
 /**

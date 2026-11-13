@@ -122,7 +122,7 @@ main { flex: 1; padding: 16px 16px 100px; display: flex; flex-direction: column;
 }
 .tabbar button svg { width: 22px; height: 22px; }
 .tabbar button[aria-current='page'] { color: var(--t); }
-.tabbar button[aria-current='page']::before { content: ''; position: absolute; top: 0; left: 30%; right: 30%; height: 2px; border-radius: 0 0 2px 2px; background: var(--t); }
+.tabbar .tab-pill { position: absolute; top: 0; left: 30%; right: 30%; height: 2px; border-radius: 0 0 2px 2px; background: var(--t); pointer-events: none; }
 .tabbar .dot, .side-nav .dot { position: absolute; margin-left: 18px; width: 7px; height: 7px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px var(--panel); }
 
 /* Sidebar: desktop only */
@@ -145,7 +145,10 @@ main { flex: 1; padding: 16px 16px 100px; display: flex; flex-direction: column;
   }
   .side-nav button svg { width: 20px; height: 20px; }
   .side-nav button:hover { background: var(--hover); color: var(--ink); }
-  .side-nav button[aria-current='page'] { background: var(--t-soft); color: var(--t); box-shadow: inset 3px 0 0 var(--t); }
+  .side-nav button[aria-current='page'] { color: var(--t); }
+  /* The active marker is its own element so it can glide between tabs (Motion layout animation). */
+  .side-nav button { isolation: isolate; }
+  .side-nav .nav-pill { position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--t-soft); box-shadow: inset 3px 0 0 var(--t); pointer-events: none; }
   .side-nav .dot { position: static; margin: 0; }
   .side-foot { margin-top: auto; display: grid; gap: 8px; }
   .side-foot .btn { justify-content: space-between; }
