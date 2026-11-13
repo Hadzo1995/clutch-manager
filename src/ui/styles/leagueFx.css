@@ -1,0 +1,26 @@
+/*
+ * League, CS2 touches over home.css: the top three positions in medal colours, fixtures as match
+ * cards with chamfered corners and a versus chip in the middle, and your own fixture lit like a
+ * selected lobby slot. Layout is unchanged.
+ */
+.lg-tbl tbody tr:nth-child(-n+3):not(.me) td.c-pos { font-family: var(--font-display); font-weight: 700; }
+.lg-tbl tbody tr:nth-child(1):not(.me) td.c-pos { color: var(--gold); text-shadow: 0 0 12px color-mix(in srgb, var(--gold) 45%, transparent); }
+.lg-tbl tbody tr:nth-child(2):not(.me) td.c-pos { color: var(--silver); }
+.lg-tbl tbody tr:nth-child(3):not(.me) td.c-pos { color: var(--bronze); }
+.lg-tbl tr.me td:first-child { box-shadow: inset 3px 0 0 var(--t); }
+.lg-tbl tr.me { background: linear-gradient(90deg, color-mix(in srgb, var(--t) 18%, transparent), color-mix(in srgb, var(--t) 4%, transparent) 75%); }
+
+.lg-fx { --cut: 9px; position: relative; padding: 11px 14px; border-radius: 0; border: 0;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.015)), var(--panel-2);
+  box-shadow: inset 0 0 0 1px var(--line-soft); }
+.lg-fx .lg-crest.crest { width: 28px; height: 28px; }
+.lg-fx-s { align-self: stretch; align-content: center; min-height: 34px; margin: -3px 0; border-radius: 3px;
+  background: rgba(5, 7, 10, 0.5); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.lg-fx-s .faint { font-family: var(--font-display); font-size: 0.68rem; letter-spacing: 0.12em; }
+.lg-fx.played .lg-fx-s b { font-family: var(--font-display); font-size: 1.05rem; letter-spacing: 0.04em; }
+.lg-fx-t.win .lg-fx-name { color: var(--ink); }
+.lg-fx-t.win .lg-tag { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--good) 55%, transparent); color: var(--good); background: color-mix(in srgb, var(--good) 10%, transparent); }
+.lg-fx.me { background: linear-gradient(90deg, color-mix(in srgb, var(--t) 16%, transparent), transparent 45%, transparent 55%, color-mix(in srgb, var(--t) 8%, transparent)), var(--panel-2);
+  box-shadow: inset 0 0 0 1px var(--t-dim), inset 0 -2px 0 var(--t); }
+.lg-fx.me .lg-fx-s { box-shadow: inset 0 0 0 1px var(--t-dim); }
