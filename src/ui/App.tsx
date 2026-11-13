@@ -17,6 +17,7 @@ import { Crest, setMyCrest } from './crest';
 import { CrestEditor } from './CrestEditor';
 import { TitleScene } from './TitleScene';
 import { music } from './music';
+import { installUiSounds, sfx } from './sfx';
 import { StadiumScene, stadiumOn } from './StadiumScene';
 import { orgGlow, realTeamByName } from '../engine/data/realTeams';
 import { mapArt } from './mapart';
@@ -93,6 +94,19 @@ export function App() {
   }, [toast]);
 
   useEffect(() => { window.scrollTo(0, 0); }, [tab]);
+
+  // Menu sounds: a click on every button, a switch on tab changes, chips when coins come in or go out.
+  useEffect(() => installUiSounds(), []);
+  const firstTab = useRef(true);
+  useEffect(() => { if (firstTab.current) { firstTab.current = false; return; } sfx('tab'); }, [tab]);
+  const lastCoins = useRef<number | null>(null);
+  const coins = career?.coins ?? null;
+  useEffect(() => {
+    const prev = lastCoins.current;
+    lastCoins.current = coins;
+    if (prev === null || coins === null || coins === prev) return;
+    sfx(coins > prev ? 'coins' : 'spend');
+  }, [coins]);
 
   // Menu music: unlocked by the first gesture, silent while a match is on screen.
   const [musicEnabled, setMusicEnabled] = useState(music.on);
