@@ -5,7 +5,10 @@ import { CASES, caseTable } from '../../engine/cases';
 import type { CaseId, CaseOutcome } from '../../engine/cases';
 import { RARITIES, ROLES, ROLE_LABEL } from '../../engine/types';
 import type { Role } from '../../engine/types';
-import { Coin, RARITY_LABEL, RoleIcon, today, useGame } from '../common';
+import { Coin, RARITY_LABEL, RarityChip, RoleIcon, Stars, today, useGame } from '../common';
+import { MAX_SQUAD } from '../../engine/economy';
+import { cardOvr } from '../../engine/ratings';
+import type { DropRecord } from '../../engine/career';
 import { CaseOpening, pct } from './CaseOpening';
 import '../styles/cases.css';
 
@@ -88,12 +91,60 @@ export function Cases({ goSquad }: { goSquad: () => void }) {
           </section>
         );
       })}
+      <Inventory goSquad={goSquad} />
       {c.pendingPull && !opening && <PullChoice />}
       {opening && <CaseOpening caseId={opening} caseColor={CASE_COLOR[opening]} pool={world.profileList} role={CASES[opening].needsRole ? role : undefined} crate={<Crate variant={opening} role={CASES[opening].needsRole ? role : undefined} />} onUnlock={() => unlock(opening)} onClose={() => setOpening(null)} onView={view} balance={c.coins} onCollection={() => { setOpening(null); goSquad(); }} />}
     </>
   );
 }
 
+
+const DROP_RESULT: Record<DropRecord['result'], string> = {
+  new: 'Joined the squad', star: 'Duplicate · +1 star', refund: 'Duplicate at max stars', pending: 'Waiting: squad full', sold: 'Sold from the case', swapped: 'Signed (bench player sold)',
+};
+
+/** Your cards by rarity and every case you have opened: where each pull went. */
+function Inventory({ goSquad }: { goSquad: () => void }) {
+  const { world, career: c, openPlayer } = useGame();
+  const drops = c.drops ?? [];
+  const owned = c.cards.map((card) => ({ card, p: world.profiles.get(card.playerId)! })).filter((x) => x.p).map((x) => ({ ...x, ovr: cardOvr(x.p, x.card) }));
+  const byRarity = [...RARITIES].reverse().map((r) => ({ r, n: owned.filter((x) => x.p.rarity === r).length }));
+  return (
+    <section className="panel cs-inv" aria-label="Inventory">
+      <div className="panel-head"><h2>Inventory</h2><span className="small muted">{c.cards.length}/{MAX_SQUAD} cards · {c.totals.casesOpened} cases opened</span></div>
+      <div className="cs-inv-rar">
+        {byRarity.map(({ r, n }) => <span key={r} className={n ? '' : 'zero'}><i style={{ background: `var(--${r})` }} />{RARITY_LABEL[r]} <b className="num">{n}</b></span>)}
+      </div>
+      <div className="cs-inv-cards">
+        {owned.sort((a, b) => b.ovr - a.ovr).map(({ card, p, ovr }) => (
+          <button key={card.cardId} className={`cs-inv-card ${p.rarity}`} onClick={() => openPlayer(card.cardId)}>
+            <span className="num cs-inv-ovr">{ovr}</span>
+            <span className="cs-inv-h">{p.record.handle}</span>
+            <span className="cs-inv-m"><RoleIcon role={card.roleOverride ?? p.record.primaryRole} />{card.stars > 0 && <Stars n={card.stars} />}</span>
+          </button>
+        ))}
+        <button className="cs-inv-card more" onClick={goSquad}><span className="small">Manage squad ›</span></button>
+      </div>
+      <h3 className="cs-inv-sub">Recent drops</h3>
+      {drops.length === 0 ? <p className="small faint">Cases you open are listed here with what happened to each pull.</p> : (
+        <ul className="cs-drops">
+          {drops.slice(0, 12).map((d, i) => {
+            const p = world.profiles.get(d.playerId);
+            const cardId = c.cards.find((x) => x.playerId === d.playerId)?.cardId;
+            return (
+              <li key={i} className={d.rarity}>
+                <i aria-hidden="true" />
+                <span className="cs-drop-p">{cardId ? <button className="linkish" onClick={() => openPlayer(cardId)}>{p?.record.handle ?? d.playerId}</button> : <span>{p?.record.handle ?? d.playerId}</span>} <RarityChip rarity={d.rarity} /> <span className="num faint small">{d.ovr}</span></span>
+                <span className="small muted cs-drop-r">{DROP_RESULT[d.result]}{d.coins ? <> · <Coin amount={d.coins} /></> : null}</span>
+                <span className="small faint cs-drop-w">{d.caseName} · S{d.season} W{Math.min(d.week, 12)}</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 /** A case pull that arrived with a full squad: sell a benched player for it, or sell the pull. */
 function PullChoice() {

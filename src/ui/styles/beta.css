@@ -1,0 +1,24 @@
+/* Closed beta door and the in-game beta pill. Uses the game's tokens. */
+.beta-door { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.beta-card { width: 100%; max-width: 440px; gap: 14px; }
+.beta-card h1 { font-size: 1.6rem; margin: 0; }
+.beta-brand { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.beta-brand .wordmark { font-size: 1.4rem; }
+.beta-meta { margin: -6px 0 0; }
+.beta-badge { font-family: var(--font-display); font-size: var(--fs-xs, 0.7rem); letter-spacing: 0.08em; text-transform: uppercase; color: var(--t); background: var(--t-soft); border: 1px solid color-mix(in srgb, var(--t) 40%, transparent); border-radius: 999px; padding: 2px 8px; }
+.beta-code { font-family: var(--font-data); letter-spacing: 0.12em; text-transform: uppercase; }
+
+.beta-pill {
+  position: fixed; z-index: 30; left: 12px; bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-3) 92%, transparent); border: 1px solid var(--line); color: var(--ink-2);
+  font-family: var(--font-display); font-size: 0.78rem; box-shadow: var(--shadow-2); backdrop-filter: blur(8px);
+}
+.beta-pill:hover { color: var(--ink); border-color: var(--line-strong); }
+.beta-pill.due { border-color: color-mix(in srgb, var(--t) 60%, transparent); color: var(--ink); }
+@media (min-width: 1024px) { .beta-pill { left: auto; right: 16px; bottom: 16px; } }
+
+.beta-survey fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
+.beta-scale { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; }
+.beta-scale button { min-height: 36px; padding: 0; border-radius: 6px; border: 1px solid var(--line-soft); background: var(--panel-2); color: var(--ink-2); font-family: var(--font-data); }
+.beta-scale button[aria-pressed='true'] { background: var(--t-soft); border-color: var(--t); color: var(--ink); }

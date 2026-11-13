@@ -3,6 +3,7 @@
  * fresh tournament club through the week. Lives beside the career game and
  * shares its screens (Squad, Train, Cases) through a nested game context.
  */
+import { LEAGUE_KICKOFF } from '../../engine/calendar';
 import { useEffect, useMemo, useState } from 'react';
 import type { Career, World } from '../../engine/career';
 import { createWorld, starterCoaches } from '../../engine/career';
@@ -181,7 +182,8 @@ function TournamentHome({ me, joinCode, onOpen }: { me: Me; joinCode: string | n
   const [club, setClub] = useState<ClubChoice>({ manager: '', team: '', tag: '', coachId: starterCoaches(world)[0]!.id });
   const tomorrow = addDays(dateIn('Europe/Berlin', nowMs()), 1);
   const [name, setName] = useState('Beta Cup');
-  const [startDate, setStartDate] = useState(tomorrow);
+  // The first league opens on 1 December 2026; new tournaments default to that day until it has passed.
+  const [startDate, setStartDate] = useState(tomorrow < LEAGUE_KICKOFF ? LEAGUE_KICKOFF : tomorrow);
   const [code, setCode] = useState(joinCode ?? '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
