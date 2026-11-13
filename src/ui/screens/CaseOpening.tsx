@@ -9,12 +9,17 @@ import { MAX_STARS } from '../../engine/ratings';
 import { ROLE_LABEL } from '../../engine/types';
 import type { PlayerProfile, Rarity, Role } from '../../engine/types';
 import { Avatar, playerPhotoUrl } from '../avatar/Avatar';
-import { Coin, CountryTag, OrgTag, RARITY_LABEL, RoleIcon, Stars, TierChip, fmt } from '../common';
+import { Coin, OrgTag, RARITY_LABEL, RoleIcon, Stars, fmt } from '../common';
 import { RARITY_HEX, Sparks, TIER, caseAudio, prefersReducedMotion, useCountUp } from './caseFx';
 import type { CaseAudio } from './caseFx';
 import { WeaponArt, weaponFor } from './caseArt';
 import { ITEM_W, SPIN_MS, STRIDE, WIN_INDEX, buildReel, reelEase, reelPath, reelSpeed, tileAt } from './caseReel';
+import { CaseStage3D, OPEN_TIMELINE } from '../case3d/CaseStage';
+import type { CaseBeat } from '../case3d/CaseStage';
+import { webglAvailable } from '../arena/Viewer3D';
+import { CollectibleCard } from '../cards/CollectibleCard';
 import '../styles/caseOpen.css';
+import '../styles/case3d.css';
 
 /*
  * Opening a case the way CS2 does it, as a full-screen sequence:
@@ -37,7 +42,7 @@ const ReelItem = memo(function ReelItem({ profile }: { profile: PlayerProfile })
   return (
     <div className={`co-item r-${profile.rarity}`} style={{ width: ITEM_W }}>
       <WeaponArt kind={weaponFor(profile.record.primaryRole)} className="co-item-wpn" />
-      <div className="co-item-face"><Avatar seed={profile.record.id} size={88} accent={RARITY_HEX[profile.rarity]} jersey={playerJersey(profile.record.team)} eager /></div>
+      <div className="co-item-face"><Avatar seed={profile.record.id} size={104} accent={RARITY_HEX[profile.rarity]} jersey={playerJersey(profile.record.team)} eager /></div>
       <div className="co-item-txt">
         <b className="co-item-name">{profile.record.handle}</b>
         <span className="co-item-sub">{ROLE_LABEL[profile.record.primaryRole]} · <span className="num">{profile.ovr}</span></span>
@@ -117,6 +122,11 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, balance, onU
   soundRef.current = sound;
   const busy = useRef(false);
   const skip = useRef<() => void>(() => {});
+  // The real 3D case where WebGL works; the drawn case otherwise (or if the GPU gives up).
+  const [use3d, setUse3d] = useState(() => !prefersReducedMotion() && webglAvailable());
+  const [flash, setFlash] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const anchor = () => overlayRef.current?.querySelector<HTMLElement>('[data-case-anchor]') ?? null;
   const play = (f: (a: CaseAudio) => void) => { if (soundRef.current && audio.current) f(audio.current); };
 
   useEffect(() => () => audio.current?.close(), []);
@@ -155,10 +165,29 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, balance, onU
 
   useEffect(() => {
     if (stage !== 'open') return;
+    if (use3d) {
+      // The 3D opening drives the sounds and the cut to the strip (see onBeat). It runs on frame
+      // time, so a slow device plays it slower rather than skipping beats; this is only a safety net.
+      const guard = window.setTimeout(() => setStage((s) => (s === 'open' ? 'spin' : s)), OPEN_TIMELINE.done + 10000);
+      return () => window.clearTimeout(guard);
+    }
     play((a) => { a.latch(0); window.setTimeout(() => a.latch(1), 110); window.setTimeout(() => a.burst(), 360); });
     const t = window.setTimeout(() => setStage('spin'), OPEN_MS);
     return () => window.clearTimeout(t);
-  }, [stage]);
+  }, [stage, use3d]);
+
+  const onBeat = (b: CaseBeat) => {
+    if (b === 'latch0') play((a) => a.latch(0));
+    else if (b === 'latch1') play((a) => a.latch(1));
+    else if (b === 'burst') play((a) => a.burst());
+    else if (b === 'flash') setFlash(true);
+    else if (b === 'done') setStage((s) => (s === 'open' ? 'spin' : s));
+  };
+  useEffect(() => {
+    if (!flash) return;
+    const t = window.setTimeout(() => setFlash(false), 900);
+    return () => window.clearTimeout(t);
+  }, [flash]);
 
   // The roll, driven frame by frame: position from the speed profile, a tick per tile crossing.
   useEffect(() => {
@@ -218,13 +247,18 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, balance, onU
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (stage === 'spin') skip.current();
+      if (stage === 'open' || stage === 'spin') skipAll();
       else if (stage === 'inspect' || stage === 'reveal') onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [stage, onClose]);
 
+  // Skip works through the whole sequence: during the unlock it cuts straight to the drop.
+  const skipAll = () => {
+    if (stage === 'spin') { skip.current(); return; }
+    if (stage === 'open') { busy.current = false; setFlash(false); setStage('reveal'); }
+  };
   const toggleSound = () => { const v = !sound; setSound(v); try { localStorage.setItem(SOUND_KEY, v ? 'on' : 'off'); } catch { /* per-viewer convenience only */ } };
   const rarity = outcome?.profile.rarity;
   const style = { ['--cc' as string]: caseColor, ...(rarity ? { ['--rc' as string]: `var(--${rarity})` } : {}) } as CSSProperties;
@@ -232,7 +266,11 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, balance, onU
   const openCrate = isValidElement(crate) ? cloneElement(crate as ReactElement<{ open?: boolean }>, { open: true }) : crate;
 
   return (
-    <div className={`overlay co-overlay at-${stage}`} style={style}>
+    <div ref={overlayRef} className={`overlay co-overlay at-${stage}${use3d ? ' has3d' : ''}${flash ? ' flash' : ''}`} style={style}>
+      {use3d && (stage === 'inspect' || stage === 'open') && (
+        <CaseStage3D caseId={caseId} role={role} opening={stage === 'open'} anchor={anchor} onBeat={onBeat} onFail={() => { setUse3d(false); if (stage === 'open') setStage('spin'); }} />
+      )}
+      <i className="co-flash" aria-hidden="true" />
       <div className="co-stage" role="dialog" aria-modal="true" aria-label={`${def.name}: ${stage === 'inspect' ? 'unlock' : stage === 'reveal' ? 'item received' : 'opening'}`}>
         <div className="co-light" aria-hidden="true" />
         <header className="co-head">
@@ -246,7 +284,7 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, balance, onU
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z" />{sound ? <path d="M16 9a4 4 0 010 6M18.5 6.5a7.5 7.5 0 010 11" /> : <path d="M17 9l5 6M22 9l-5 6" />}</svg>
               <span>{sound ? 'Sound' : 'Muted'}</span>
             </button>
-            {stage === 'spin' && <button className="btn small ghost" onClick={() => skip.current()}>Skip</button>}
+            {(stage === 'open' || stage === 'spin') && <button className="btn small ghost co-skip" onClick={skipAll} title="Skip to the drop (Esc)">Skip</button>}
             {(stage === 'inspect' || stage === 'reveal') && <button className="btn small ghost co-x" onClick={onClose} aria-label="Close">✕</button>}
           </div>
         </header>
@@ -254,7 +292,9 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, balance, onU
         {stage === 'inspect' && (
           <div className="co-inspect">
             <div className="co-showcase">
-              <div className="co-pedestal" aria-hidden="true"><i className="co-cone" /><div className="co-float">{crate}</div><i className="co-disc" /></div>
+              <div className="co-pedestal" data-case-anchor="" aria-hidden="true" title={use3d ? 'Drag to turn the case' : undefined}>
+                {!use3d && <><i className="co-cone" /><div className="co-float">{crate}</div><i className="co-disc" /></>}
+              </div>
               <div className="co-pitch">
                 <p className="small muted">{def.description}</p>
                 <div className="co-odds-bar" aria-hidden="true">
@@ -276,12 +316,14 @@ export function CaseOpening({ caseId, pool, role, crate, caseColor, balance, onU
           </div>
         )}
 
-        {stage === 'open' && (
+        {stage === 'open' && (use3d ? (
+          <div className="co-unlocking co-unlocking-3d" aria-hidden="true"><div className="co-open-anchor" data-case-anchor="" /></div>
+        ) : (
           <div className="co-unlocking" aria-hidden="true">
             <div className="co-unlock-beam" />
             <div className="co-unlock-crate">{openCrate}</div>
           </div>
-        )}
+        ))}
 
         {stage === 'spin' && (
           <div className="co-spin">
@@ -323,20 +365,14 @@ function Reveal({ outcome, table, onView, onDone, onCollection, repeat }: {
   return (
     <div className={`co-result r-${p.rarity} t${tier}`} role="status">
       <Sparks burst={1} tier={tier} colors={[RARITY_HEX[p.rarity], '#ffffff', '#ffd27a']} origin={[0.3, 0.45]} embers={tier >= 3} className="co-sparks" />
+      <i className="co-revealflash" aria-hidden="true" />
+      <span className="co-bigword" aria-hidden="true">{RARITY_LABEL[p.rarity]}</span>
       <div className="co-drop">
         <div className="co-rays" aria-hidden="true" />
-        <div className="co-card">
-          <WeaponArt kind={weaponFor(p.record.primaryRole)} className="co-card-wpn" />
-          <div className="co-card-top">
-            <span className="co-card-ovr num">{ovr}<small>OVR</small></span>
-            <TierChip tier={p.tier} cap={p.potential} />
-            <span className="co-card-role" title={ROLE_LABEL[p.record.primaryRole]}><RoleIcon role={p.record.primaryRole} /></span>
-          </div>
-          <div className="co-card-face"><Avatar seed={p.record.id} size={176} accent={RARITY_HEX[p.rarity]} jersey={playerJersey(p.record.team)} /></div>
-          <div className="co-card-name">{p.record.handle}</div>
-          <div className="co-card-meta"><CountryTag cc={p.record.country} /><OrgTag team={p.record.team} /></div>
-          <i className="co-card-bar" aria-hidden="true" />
-        </div>
+        <i className="co-burst" aria-hidden="true" />
+        <i className="co-halo" aria-hidden="true" />
+        <CollectibleCard profile={p} size="lg" intro="flip" delay={80} ovr={ovr} className="co-col" />
+        <i className="co-floor" aria-hidden="true" />
       </div>
       <div className="co-info">
         <span className="co-rarity">{RARITY_LABEL[p.rarity]} drop</span>

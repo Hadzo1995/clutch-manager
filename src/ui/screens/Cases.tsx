@@ -10,6 +10,7 @@ import { MAX_SQUAD } from '../../engine/economy';
 import { cardOvr } from '../../engine/ratings';
 import type { DropRecord } from '../../engine/career';
 import { CaseOpening, pct } from './CaseOpening';
+import { CaseThumb } from '../case3d/CaseThumb';
 import '../styles/cases.css';
 
 const CASE_COLOR: Record<CaseId, string> = { daily: 'var(--good)', standard: 'var(--ct)', role: 'var(--t)', premium: 'var(--legend)' };
@@ -54,7 +55,7 @@ export function Cases({ goSquad }: { goSquad: () => void }) {
         return (
           <section className={`panel cs-case span-6 ${id}`} key={id} style={caseStyle(id)} aria-label={def.name}>
             <div className="cs-top">
-              <div className="cs-art3d" aria-hidden="true"><i className="cs-pedestal" /><Crate variant={id} role={def.needsRole ? role : undefined} /></div>
+              <div className="cs-art3d" aria-hidden="true"><i className="cs-pedestal" /><CaseThumb id={id} role={def.needsRole ? role : undefined} fallback={<Crate variant={id} role={def.needsRole ? role : undefined} />} /></div>
               <div className="cs-info">
                 <h2>{def.name}</h2>
                 <p className="small muted">{def.description}</p>
