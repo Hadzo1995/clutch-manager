@@ -23,6 +23,7 @@ import { Avatar } from '../avatar/Avatar';
 import { webglAvailable } from '../arena/Viewer3D';
 import { MAP_HUE, mapArt } from '../mapart';
 import { Crest, orgTextStyle } from '../crest';
+import { celebrate } from '../celebrate';
 import '../styles/match.css';
 
 type Stage = 'prep' | 'live' | 'report';
@@ -690,6 +691,8 @@ export function Report({ series, teams, humanIdx, onContinue, pvp }: { series: S
   const reasons = explainMap(m, humanIdx, names);
   const totalRounds = series.maps.reduce((s, x) => s + x.rounds.length, 0);
   const oppName = pvp ? teams[oppIdx].name : teamName(c, teams[oppIdx].id);
+  // A win gets a confetti burst in the club colours; a Bo3/Bo5 series win gets the full show.
+  useEffect(() => { if (won) celebrate(series.format === 'bo1' ? 1 : 2); }, [won, series.format]);
 
   return (
     <>
