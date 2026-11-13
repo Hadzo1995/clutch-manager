@@ -21,12 +21,17 @@
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@supabase/supabase-js": "2.117.2",
+    "canvas-confetti": "1.9.4",
+    "motion": "12.43.0",
+    "n8ao": "1.10.3",
+    "postprocessing": "6.36.7",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "three": "^0.160.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.6.0",
+    "@types/canvas-confetti": "1.9.0",
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "@types/three": "^0.160.0",

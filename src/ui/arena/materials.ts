@@ -6,6 +6,7 @@
  * the box they sit on.
  */
 import * as THREE from 'three';
+import { PHOTO_URLS, photoTexture, type PhotoKey } from './photoSurfaces';
 
 type Draw = (g: CanvasRenderingContext2D, n: number, rnd: () => number) => void;
 
@@ -365,26 +366,41 @@ function windowAtlas(): THREE.CanvasTexture {
 }
 
 export interface SurfaceSet {
-  stones: THREE.CanvasTexture; tiles: THREE.CanvasTexture; concrete: THREE.CanvasTexture; blocks: THREE.CanvasTexture;
-  plaster: THREE.CanvasTexture; crate: THREE.CanvasTexture; ribbed: THREE.CanvasTexture; water: THREE.CanvasTexture; grass: THREE.CanvasTexture;
+  stones: THREE.Texture; tiles: THREE.Texture; concrete: THREE.Texture; blocks: THREE.Texture;
+  plaster: THREE.Texture; crate: THREE.Texture; ribbed: THREE.Texture; water: THREE.Texture; grass: THREE.Texture;
   /** Plaster with patches where it has fallen off and the brick shows (Inferno). */
-  stucco: THREE.CanvasTexture;
+  stucco: THREE.Texture;
   /** Large dressed sandstone blocks (Dust2, Anubis). */
-  sandstone: THREE.CanvasTexture;
+  sandstone: THREE.Texture;
   /** Old jungle stone with moss in the joints (Ancient). */
-  mossy: THREE.CanvasTexture;
+  mossy: THREE.Texture;
   /** Clay roof tiles in courses (UV mapped: u along the eave, v up the slope). */
-  roofTiles: THREE.CanvasTexture; roofTilesN: THREE.CanvasTexture;
+  roofTiles: THREE.Texture; roofTilesN: THREE.Texture;
   /** Standing-seam / corrugated metal roofing (UV mapped like roofTiles). */
-  metalRoof: THREE.CanvasTexture; metalRoofN: THREE.CanvasTexture;
+  metalRoof: THREE.Texture; metalRoofN: THREE.Texture;
   /** Flat roof membrane: seams, patches and stains. */
-  roofFlat: THREE.CanvasTexture;
-  sand: THREE.CanvasTexture; jungle: THREE.CanvasTexture; asphalt: THREE.CanvasTexture;
+  roofFlat: THREE.Texture;
+  sand: THREE.Texture; jungle: THREE.Texture; asphalt: THREE.Texture;
   /** Colour atlas of windows and doors, 4 x 2 cells (see WINDOW). */
-  windows: THREE.CanvasTexture;
+  windows: THREE.Texture;
 }
 
 let cached: SurfaceSet | null = null;
+/** Normal maps for the surfaces that have one (looked up by worldMaterial). */
+const normals = new WeakMap<THREE.Texture, THREE.Texture>();
+let flatNormal: THREE.DataTexture | null = null;
+/** A 4 x 4 "straight up" normal map: what normal textures show until their photo arrives. */
+function flatCanvas(): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = c.height = 4;
+  const g = c.getContext('2d')!;
+  g.fillStyle = 'rgb(128,128,255)'; g.fillRect(0, 0, 4, 4);
+  return c;
+}
+function flat(): THREE.DataTexture {
+  if (!flatNormal) { flatNormal = new THREE.DataTexture(new Uint8Array([128, 128, 255, 255]), 1, 1); flatNormal.needsUpdate = true; }
+  return flatNormal;
+}
 let users = 0;
 
 /** Shared textures (drawn once, reused across maps and viewers). */
@@ -400,13 +416,27 @@ export function surfaces(): SurfaceSet {
       roofFlat: tex(256, 26, roofFlat), sand: tex(256, 27, sand), jungle: tex(256, 28, jungle), asphalt: tex(256, 29, asphalt),
       windows: windowAtlas(),
     };
+    // Photo-scanned detail and relief for the most common surfaces (procedural until loaded).
+    for (const k of Object.keys(PHOTO_URLS) as PhotoKey[]) {
+      const [url, nUrl] = PHOTO_URLS[k];
+      const proc = cached[k];
+      const photo = photoTexture(url, proc.image as HTMLCanvasElement);
+      const normal = photoTexture(nUrl, flatCanvas());
+      proc.dispose();
+      cached[k] = photo;
+      normals.set(photo, normal);
+      if (k === 'roofTiles') { cached.roofTilesN.dispose(); cached.roofTilesN = normal; }
+    }
   }
   return cached;
 }
 
 export function releaseSurfaces() {
   users = Math.max(0, users - 1);
-  if (users === 0 && cached) { for (const t of Object.values(cached)) t.dispose(); cached = null; }
+  if (users === 0 && cached) {
+    for (const t of Object.values(cached)) { normals.get(t)?.dispose(); t.dispose(); }
+    cached = null;
+  }
 }
 
 /** Which floor look a map uses. */
@@ -420,7 +450,7 @@ export function floorStyle(map: string): keyof SurfaceSet {
  * A standard material whose map is sampled in world space: `top` on surfaces
  * facing up, `side` on walls. `scale` is texture repeats per metre.
  */
-export function worldMaterial(opts: { top: THREE.Texture; side?: THREE.Texture; topScale: number; sideScale?: number; roughness?: number; metalness?: number; color?: THREE.ColorRepresentation; baseShade?: number }): THREE.MeshStandardMaterial {
+export function worldMaterial(opts: { top: THREE.Texture; side?: THREE.Texture; topScale: number; sideScale?: number; normalScale?: number; roughness?: number; metalness?: number; color?: THREE.ColorRepresentation; baseShade?: number }): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: opts.color ?? 0xffffff, roughness: opts.roughness ?? 0.9, metalness: opts.metalness ?? 0.02 });
   const uniforms = {
     tpTop: { value: opts.top },
@@ -428,7 +458,11 @@ export function worldMaterial(opts: { top: THREE.Texture; side?: THREE.Texture; 
     tpTopScale: { value: opts.topScale },
     tpSideScale: { value: opts.sideScale ?? opts.topScale },
     tpBaseShade: { value: opts.baseShade ?? 0 },
+    tpTopN: { value: normals.get(opts.top) ?? flat() },
+    tpSideN: { value: normals.get(opts.side ?? opts.top) ?? flat() },
+    tpNStrength: { value: opts.normalScale ?? 1 },
   };
+  const relief = normals.has(opts.top) || normals.has(opts.side ?? opts.top);
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
@@ -445,7 +479,7 @@ export function worldMaterial(opts: { top: THREE.Texture; side?: THREE.Texture; 
         vTpPos = tpW.xyz;
         vTpNrm = normalize(mat3(modelMatrix) * tpN);`);
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vTpPos;\nvarying vec3 vTpNrm;\nvarying float vTpLocalY;\nuniform float tpBaseShade;\nuniform sampler2D tpTop;\nuniform sampler2D tpSide;\nuniform float tpTopScale;\nuniform float tpSideScale;')
+      .replace('#include <common>', '#include <common>\nvarying vec3 vTpPos;\nvarying vec3 vTpNrm;\nvarying float vTpLocalY;\nuniform float tpBaseShade;\nuniform sampler2D tpTop;\nuniform sampler2D tpSide;\nuniform sampler2D tpTopN;\nuniform sampler2D tpSideN;\nuniform float tpNStrength;\nuniform float tpTopScale;\nuniform float tpSideScale;')
       .replace('#include <map_fragment>', `
         vec3 tpB = pow(abs(normalize(vTpNrm)), vec3(6.0));
         tpB /= (tpB.x + tpB.y + tpB.z + 1e-5);
@@ -455,7 +489,25 @@ export function worldMaterial(opts: { top: THREE.Texture; side?: THREE.Texture; 
         diffuseColor.rgb *= tpX * tpB.x + tpY * tpB.y + tpZ * tpB.z;
         // Contact shading: side faces darken toward the bottom of each block.
         diffuseColor.rgb *= mix(1.0, mix(1.0 - tpBaseShade, 1.0, smoothstep(-0.5, 0.15, vTpLocalY)), 1.0 - tpB.y);`);
+    if (relief) {
+      // Triplanar normal mapping ("whiteout" blend): each projection's tangent-space normal is
+      // swizzled into world space around the surface normal, blended by the same weights.
+      shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        {
+          vec3 wN = normalize(vTpNrm);
+          vec3 bw = pow(abs(wN), vec3(6.0)); bw /= (bw.x + bw.y + bw.z + 1e-5);
+          vec3 nX = texture2D(tpSideN, vTpPos.zy * tpSideScale).xyz * 2.0 - 1.0;
+          vec3 nY = texture2D(tpTopN, vTpPos.xz * tpTopScale).xyz * 2.0 - 1.0;
+          vec3 nZ = texture2D(tpSideN, vTpPos.xy * tpSideScale).xyz * 2.0 - 1.0;
+          nX.xy *= tpNStrength; nY.xy *= tpNStrength; nZ.xy *= tpNStrength;
+          nX = vec3(nX.xy + wN.zy, abs(nX.z) * wN.x);
+          nY = vec3(nY.xy + wN.xz, abs(nY.z) * wN.y);
+          nZ = vec3(nZ.xy + wN.xy, abs(nZ.z) * wN.z);
+          vec3 wP = normalize(nX.zyx * bw.x + nY.xzy * bw.y + nZ.xyz * bw.z);
+          normal = normalize((viewMatrix * vec4(wP, 0.0)).xyz);
+        }`);
+    }
   };
-  mat.customProgramCacheKey = () => `tp-${opts.baseShade ?? 0}-${opts.top.uuid}-${(opts.side ?? opts.top).uuid}-${opts.topScale}-${opts.sideScale ?? opts.topScale}`;
+  mat.customProgramCacheKey = () => `tp-${relief ? 'n' : ''}-${opts.baseShade ?? 0}-${opts.top.uuid}-${(opts.side ?? opts.top).uuid}-${opts.topScale}-${opts.sideScale ?? opts.topScale}`;
   return mat;
 }
