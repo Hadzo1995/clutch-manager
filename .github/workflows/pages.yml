@@ -28,7 +28,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npx vitest run tests/tournament.test.ts tests/squadfull.test.ts
+      - run: npx vitest run tests/tournament.test.ts tests/squadfull.test.ts tests/beta.test.ts tests/ladder.test.ts
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

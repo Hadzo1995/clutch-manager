@@ -2,6 +2,7 @@ import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './ui/App';
 import { TournamentApp } from './ui/tournament/TournamentApp';
+import { BetaGate } from './ui/beta/BetaGate';
 import './ui/styles.css';
 import './ui/styles/premium.css';
 import { applyMotion } from './ui/motion';
@@ -22,6 +23,6 @@ function Root() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Root />
+    <BetaGate><Root /></BetaGate>
   </StrictMode>,
 );
