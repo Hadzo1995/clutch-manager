@@ -2,6 +2,7 @@
 import type { Career } from '../engine/career';
 import { deserializeCareer, serializeCareer } from '../engine/save';
 import type { Dataset } from '../engine/types';
+import { mirrorToNative } from '../platform';
 
 const SAVE_KEY = 'clutch-manager.save.v1';
 const DATASET_KEY = 'clutch-manager.dataset.v1';
@@ -15,14 +16,35 @@ export function loadCareer(): Career | null {
   }
 }
 
+type SaveListener = (raw: string | null) => void;
+const listeners = new Set<SaveListener>();
+
+/** Called with each saved career (null when it was deleted); the beta's cloud save listens. */
+export function onCareerStored(fn: SaveListener): () => void {
+  listeners.add(fn);
+  return () => { listeners.delete(fn); };
+}
+
 export function storeCareer(c: Career | null): boolean {
+  const raw = c ? serializeCareer(c) : null;
+  for (const fn of listeners) fn(raw);
   try {
-    if (c) localStorage.setItem(SAVE_KEY, serializeCareer(c));
+    mirrorToNative(SAVE_KEY, raw);
+    if (raw) localStorage.setItem(SAVE_KEY, raw);
     else localStorage.removeItem(SAVE_KEY);
     return true;
   } catch {
     return false;
   }
+}
+
+/** The saved career as stored, for the cloud copy. */
+export function rawSave(): string | null {
+  try { return localStorage.getItem(SAVE_KEY); } catch { return null; }
+}
+
+export function storeRawSave(raw: string): boolean {
+  try { localStorage.setItem(SAVE_KEY, raw); return true; } catch { return false; }
 }
 
 export function loadDataset(): Dataset | null {
@@ -36,7 +58,9 @@ export function loadDataset(): Dataset | null {
 
 export function storeDataset(d: Dataset | null): boolean {
   try {
-    if (d) localStorage.setItem(DATASET_KEY, JSON.stringify(d));
+    const raw = d ? JSON.stringify(d) : null;
+    mirrorToNative(DATASET_KEY, raw);
+    if (raw) localStorage.setItem(DATASET_KEY, raw);
     else localStorage.removeItem(DATASET_KEY);
     return true;
   } catch {
