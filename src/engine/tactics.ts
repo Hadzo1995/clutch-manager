@@ -14,7 +14,7 @@
  *  - the intended counters, a few points either way.
  * Fictional tuning, not measured from real matches.
  */
-import type { CTSetup, MapName, TApproach } from './types';
+import type { CTSetup, MapName, TApproach, Tactics } from './types';
 
 export const COUNTER_TABLE: Record<TApproach, Record<CTSetup, number>> = {
   default: { standard: 0, stack: 0.06, retake: 0.06, aggro: -0.28 },
@@ -73,3 +73,31 @@ export const TACTIC_TIPS: Record<TApproach | CTSetup, string> = {
   retake: 'Light on the sites, ready to come back together with utility. Best against rushes and executes, weaker against slow defaults.',
   aggro: 'Two players push for early picks and information, then fall back. Catches slow defaults; rushes and executes run through it.',
 };
+
+/**
+ * Ready-made game plans: one tap sets playstyle, economy, footsteps and both sides' plans.
+ * Each is a sensible combination of the options above, not a new mechanic; the round
+ * simulation treats a preset exactly like the same options picked by hand.
+ */
+export type PresetId = 'slow' | 'fast' | 'blitz' | 'lockdown' | 'antirush' | 'stack';
+export interface TacticPreset { id: PresetId; name: string; blurb: string; plan: Omit<Tactics, 'stackSite'> }
+export const TACTIC_PRESETS: TacticPreset[] = [
+  { id: 'slow', name: 'Slow default', blurb: 'Patient map control, quiet steps, solid two-two-one defence. The safe all-rounder.', plan: { playstyle: 'balanced', tApproach: 'default', ctSetup: 'standard', economy: 'standard', footsteps: 'quiet' } },
+  { id: 'fast', name: 'Fast executes', blurb: 'Quick, utility-heavy site hits and early CT picks. Pressures slower, passive teams.', plan: { playstyle: 'aggressive', tApproach: 'execute', ctSetup: 'aggro', economy: 'standard', footsteps: 'normal' } },
+  { id: 'blitz', name: 'Blitz', blurb: 'Rush and force-buy: chaos that steals rounds from teams that sit back. High variance.', plan: { playstyle: 'aggressive', tApproach: 'rush', ctSetup: 'aggro', economy: 'force', footsteps: 'aggressive' } },
+  { id: 'lockdown', name: 'Lockdown', blurb: 'Disciplined buys, retake defence, slow T rounds. Grinds out maps against stronger aim.', plan: { playstyle: 'passive', tApproach: 'default', ctSetup: 'retake', economy: 'disciplined', footsteps: 'quiet' } },
+  { id: 'antirush', name: 'Anti-rush', blurb: 'Retake defence that punishes rushes and executes, with set-piece T hits.', plan: { playstyle: 'passive', tApproach: 'execute', ctSetup: 'retake', economy: 'standard', footsteps: 'normal' } },
+  { id: 'stack', name: 'Stack read', blurb: 'Overload the site they favour (from the scouting report) and play default on T.', plan: { playstyle: 'balanced', tApproach: 'default', ctSetup: 'stack', economy: 'standard', footsteps: 'normal' } },
+];
+
+export function applyPreset(base: Tactics, id: PresetId, stackSite?: 'A' | 'B'): Tactics {
+  const p = TACTIC_PRESETS.find((x) => x.id === id)!;
+  return { ...base, ...p.plan, stackSite: stackSite ?? base.stackSite };
+}
+
+/** The preset a plan matches exactly, or null for a hand-made plan. */
+export function matchingPreset(t: Tactics): PresetId | null {
+  const p = TACTIC_PRESETS.find((x) => x.plan.playstyle === t.playstyle && x.plan.tApproach === t.tApproach && x.plan.ctSetup === t.ctSetup
+    && x.plan.economy === (t.economy ?? 'standard') && x.plan.footsteps === (t.footsteps ?? 'normal'));
+  return p ? p.id : null;
+}

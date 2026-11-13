@@ -251,7 +251,7 @@ export function Settings({ onClose, replaceWorld, onReset }: { onClose: () => vo
             )}
           </div>
         </section>
-        <p className="st-foot">Clutch Manager beta · v0.9.0 · fictional demo data · not affiliated with Valve or HLTV.</p>
+        <p className="st-foot">Clutch Manager beta · v0.16.0 · {ds.isSynthetic ? 'fictional demo data' : isReal ? 'real pros from a dated snapshot' : 'imported data'} · not affiliated with Valve or HLTV.</p>
       </div>
     </div>
   );

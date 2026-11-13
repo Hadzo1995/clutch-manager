@@ -9,6 +9,7 @@ import { cardOvr } from '../../engine/ratings';
 import { RoleIcon, useGame } from '../common';
 import { FormPills, signed, teamForm } from './leagueUtil';
 import { Crest } from '../crest';
+import { TrophyCabinet } from '../BoardPanel';
 import '../styles/home.css';
 import { LEAGUE_KICKOFF, formatDate, matchDate, seasonSpan, seasonStart } from '../../engine/calendar';
 
@@ -193,6 +194,8 @@ export function League() {
         </section>
 
         <WorldRanking />
+
+        <TrophyCabinet className="lg-o6" />
 
         <section className="panel lg-o6" aria-label="Achievements">
           <div className="panel-head"><h2>Achievements</h2><span className="num small muted">{unlocked}/{Object.keys(ACHIEVEMENTS).length}</span></div>

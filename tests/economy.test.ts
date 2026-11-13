@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   acceptBid, declineBid, compactLedger, runRecoveryWeek, starterFatigue, upgradeFacility,
   completeMatchday, currentSponsorOffers, demandOf, fixtureSnapshots, humanFixture, makeOffer, offersLeft, playerStatus, releaseCard,
-  runTrainingWeek, salePrice, seedForFixture, sellCard, signSponsor, weeklyWages,
+  runTrainingWeek, salePrice, seedForFixture, sellCard, signSponsor, weeklyWages, bidCeiling, counterBid, standingCounter,
 } from '../src/engine/career';
 import type { Career, World } from '../src/engine/career';
 import { MAX_SQUAD, judgeOffer, marketValue } from '../src/engine/economy';
@@ -180,5 +180,51 @@ describe('economy report', () => {
       }
       console.log(`seed ${seed}: div ${c.season.division} rep ${Math.round(c.reputation)} coins ${line.join(' ')}`);
     }
+  });
+});
+
+describe('negotiation', () => {
+  it('keeps a counter-offer open for the week, even after the offers run out', () => {
+    const w = world();
+    const c = { ...newCareer(3), coins: 100000 };
+    const target = c.season.aiTeams.flatMap((t) => t.playerIds).find((id) => demandOf(w, c, id).interest !== 'none')!;
+    const d = demandOf(w, c, target);
+    let n = c;
+    for (let i = 0; i < 3; i++) n = makeOffer(w, n, target, { fee: 0, wage: 15, weeks: 18 }).career;
+    expect(offersLeft(n, target)).toBe(0);
+    const counter = standingCounter(n, target)!;
+    expect(counter.fee).toBeGreaterThanOrEqual(d.askingFee);
+    expect(makeOffer(w, n, target, { fee: 0, wage: 15, weeks: 18 }).result.ok).toBe(false);
+    const signed = makeOffer(w, n, target, counter);
+    expect(signed.result.ok).toBe(true);
+    expect(playerStatus(signed.career, target).owner).toBe('you');
+  });
+
+  it('a bidding club pays up to its ceiling, gives one final offer, or walks away', () => {
+    const w = world();
+    const c = newCareer(5);
+    const card = c.cards.find((x) => !c.lineup.some((s) => s.cardId === x.cardId))!;
+    const bid = { id: 'neg', cardId: card.cardId, playerId: card.playerId, teamId: c.season.aiTeams[0]!.id, fee: 1000, season: c.season.number, expiresWeek: c.season.week + 1 };
+    const base = { ...c, bids: [bid] };
+    const top = bidCeiling(bid);
+    expect(top).toBeGreaterThanOrEqual(1000);
+    expect(top).toBeLessThanOrEqual(1250);
+
+    const yes = counterBid(w, base, 'neg', top);
+    expect(yes.result).toEqual({ outcome: 'accepted', fee: top });
+    expect(yes.career.coins).toBe(c.coins + top);
+    expect(yes.career.cards.some((x) => x.cardId === card.cardId)).toBe(false);
+
+    const fin = counterBid(w, base, 'neg', Math.floor(top * 1.15) + 1);
+    if (top * 1.15 + 1 > top) {
+      expect(fin.result.outcome).toBe('final');
+      expect(fin.career.bids[0]!.fee).toBe(top);
+      expect(() => counterBid(w, fin.career, 'neg', top + 500)).toThrow(/final/);
+    }
+
+    const gone = counterBid(w, base, 'neg', top * 2);
+    expect(gone.result.outcome).toBe('walked');
+    expect(gone.career.bids).toHaveLength(0);
+    expect(gone.career.cards.some((x) => x.cardId === card.cardId)).toBe(true);
   });
 });

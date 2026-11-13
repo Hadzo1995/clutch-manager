@@ -14,6 +14,7 @@ import { Crest, orgTextStyle } from '../crest';
 import '../styles/home.css';
 import { formatDate, matchDate } from '../../engine/calendar';
 import { buildAlerts } from '../alerts';
+import { BoardPanel } from '../BoardPanel';
 import { weeklyWages } from '../../engine/career';
 import { MAX_SQUAD, NO_FACILITIES, facilityUpkeep } from '../../engine/economy';
 
@@ -183,15 +184,17 @@ export function Home({ goTo, onPlay }: { goTo: (t: 'squad' | 'train' | 'scout' |
         </div>
       </button>
 
+      <BoardPanel className="span-4" />
+
       {tr && (
-        <section className="panel span-6" aria-label="Training result">
+        <section className="panel span-8" aria-label="Training result">
           <div className="panel-head"><h2>This week's training</h2></div>
           <span className="small faint">{tr.plan.sessions.map((s) => ACTIVITIES[s].name).join(' · ')}</span>
           <TrainingSummary />
         </section>
       )}
 
-      <section className={`panel ${tr ? 'span-6' : ''}`} aria-label="News">
+      <section className={`panel ${tr ? '' : 'span-8'}`} aria-label="News">
         <div className="panel-head"><h2>Newsroom</h2><span className="label">Season {c.season.number} · {formatDate(matchDate(c.season.number, c.season.week), { year: false })}</span></div>
         <ul className="hm-news">{c.news.slice(0, 8).map((n, i) => <li key={i}>{n}</li>)}</ul>
       </section>

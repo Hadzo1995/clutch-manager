@@ -9,7 +9,8 @@ import { buyRecord, explainMap, keyMoments, seriesLines, trainingAdvice } from '
 import type { SeriesLine } from '../../engine/report';
 import { Rng, hashString } from '../../engine/rng';
 import { DIVISIONS, HUMAN_ID } from '../../engine/season';
-import { MATCHUP_T_WIN, TACTIC_TIPS } from '../../engine/tactics';
+import { MATCHUP_T_WIN, TACTIC_PRESETS, TACTIC_TIPS, applyPreset, matchingPreset } from '../../engine/tactics';
+import type { PresetId } from '../../engine/tactics';
 import { mapFamiliarity, teamStrength } from '../../engine/team';
 import type { TeamSnapshot } from '../../engine/team';
 import { aiVetoChoice, applyVeto, currentStep, newVeto, vetoMaps } from '../../engine/veto';
@@ -35,6 +36,7 @@ export function MatchFlow({ onClose }: { onClose: () => void }) {
   const fixture = useMemo(() => humanFixture(c), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [stage, setStage] = useState<Stage>('prep');
   const [tactics, setTac] = useState<Tactics>({ ...c.tactics });
+  const [mapPlans, setMapPlans] = useState<Partial<Record<MapName, PresetId>>>({ ...(c.mapPlans ?? {}) });
   const [veto, setVeto] = useState<VetoState | null>(null);
   const [series, setSeries] = useState<SeriesResult | null>(null);
   const [instant, setInstant] = useState(false);
@@ -72,7 +74,7 @@ export function MatchFlow({ onClose }: { onClose: () => void }) {
   const stageLabel = `${fixture.stage === 'league' ? `League week ${fixture.week}` : STAGE_LABEL[fixture.stage]} · ${fixture.format.toUpperCase()}`;
 
   const start = (asInstant: boolean) => {
-    update(setTactics(c, tactics));
+    update(setTactics(c, tactics, mapPlans));
     setInstant(asInstant);
     setStage('live');
   };
@@ -87,10 +89,10 @@ export function MatchFlow({ onClose }: { onClose: () => void }) {
           </div>
         )}
         {stage === 'prep' && veto && (
-          <Prep teams={teams} humanIdx={humanIdx} opp={opp} veto={veto} setVeto={setVeto} tactics={tactics} setTactics={setTac} seedKey={fixture.id} vetoDone={vetoDone} maps={maps} onStart={start} />
+          <Prep teams={teams} humanIdx={humanIdx} opp={opp} veto={veto} setVeto={setVeto} tactics={tactics} setTactics={setTac} mapPlans={mapPlans} setMapPlans={setMapPlans} seedKey={fixture.id} vetoDone={vetoDone} maps={maps} onStart={start} />
         )}
         {stage === 'live' && (
-          <Live teams={teams} humanIdx={humanIdx} maps={maps} format={fixture.format} seed={seedForFixture(c, fixture)} instant={instant} stageLabel={stageLabel} onFinished={(s) => { setSeries(s); setStage('report'); }} />
+          <Live teams={teams} humanIdx={humanIdx} maps={maps} mapPlans={mapPlans} format={fixture.format} seed={seedForFixture(c, fixture)} instant={instant} stageLabel={stageLabel} onFinished={(s) => { setSeries(s); setStage('report'); }} />
         )}
         {stage === 'report' && series && (
           <Report series={series} teams={teams} humanIdx={humanIdx} onContinue={() => {
@@ -139,9 +141,9 @@ function noisy(value: number, key: string, exact: boolean): number {
   return Math.max(0, Math.min(1, value + n));
 }
 
-function Prep({ teams, humanIdx, opp, veto, setVeto, tactics, setTactics, seedKey, vetoDone, maps, onStart }: {
+function Prep({ teams, humanIdx, opp, veto, setVeto, tactics, setTactics, mapPlans, setMapPlans, seedKey, vetoDone, maps, onStart }: {
   teams: [TeamSnapshot, TeamSnapshot]; humanIdx: TeamIdx; opp: TeamSnapshot; veto: VetoState; setVeto: (v: VetoState) => void;
-  tactics: Tactics; setTactics: (t: Tactics) => void; seedKey: string; vetoDone: boolean; maps: MapName[]; onStart: (instant: boolean) => void;
+  tactics: Tactics; setTactics: (t: Tactics) => void; mapPlans: Partial<Record<MapName, PresetId>>; setMapPlans: (p: Partial<Record<MapName, PresetId>>) => void; seedKey: string; vetoDone: boolean; maps: MapName[]; onStart: (instant: boolean) => void;
 }) {
   const me = teams[humanIdx];
   const exact = me.prepBonus > 0;
@@ -272,7 +274,21 @@ function Prep({ teams, humanIdx, opp, veto, setVeto, tactics, setTactics, seedKe
 
         <section className="panel mx-plan" aria-label="Game plan">
           <div className="panel-head"><h2>Game plan</h2><span className="small faint">You can change it at halftime and in timeouts</span></div>
-          <TacticsEditor tactics={tactics} onChange={setTactics} />
+          <TacticsEditor tactics={tactics} onChange={setTactics} stackHint={aBias >= 0.5 ? 'A' : 'B'} />
+          <div className="mx-mapplans">
+            <div className="row spread"><span className="label">Plan per map</span><span className="small faint">{vetoDone ? 'For the maps you play' : 'Saved for every match'}</span></div>
+            <div className="mx-mapplan-list">
+              {(vetoDone ? maps : [...MAPS]).map((m) => (
+                <label key={m} className="mx-mapplan" style={art(m)}>
+                  <span className="mx-mapplan-name">{m}</span>
+                  <select className="inline" value={mapPlans[m] ?? ''} onChange={(e) => { const v = e.target.value as PresetId | ''; const n = { ...mapPlans }; if (v) n[m] = v; else delete n[m]; setMapPlans(n); }} aria-label={`Game plan on ${m}`}>
+                    <option value="">Main plan</option>
+                    {TACTIC_PRESETS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </label>
+              ))}
+            </div>
+          </div>
         </section>
       </div>
 
@@ -289,9 +305,18 @@ function Prep({ teams, humanIdx, opp, veto, setVeto, tactics, setTactics, seedKe
   );
 }
 
-export function TacticsEditor({ tactics, onChange }: { tactics: Tactics; onChange: (t: Tactics) => void }) {
+export function TacticsEditor({ tactics, onChange, stackHint }: { tactics: Tactics; onChange: (t: Tactics) => void; stackHint?: 'A' | 'B' }) {
+  const current = matchingPreset(tactics);
   return (
     <div className="mx-tac">
+      <div className="mx-presets" role="group" aria-label="Preset game plans">
+        {TACTIC_PRESETS.map((p) => (
+          <button key={p.id} type="button" className="mx-preset" aria-pressed={current === p.id} title={p.blurb} onClick={() => onChange(applyPreset(tactics, p.id, p.id === 'stack' ? stackHint : undefined))}>
+            <b>{p.name}</b><span>{p.blurb}</span>
+          </button>
+        ))}
+      </div>
+      <span className="label mx-fine">{current ? 'Fine-tune' : 'Custom plan'}</span>
       <div className="mx-tac-grid">
         <div className="mx-tac-group">
           <span className="label">Playstyle</span>
@@ -341,8 +366,8 @@ export function TacticsEditor({ tactics, onChange }: { tactics: Tactics; onChang
 // ---------------- Live ----------------
 
 /** Plays a series round by round. `locked` (PvP): no timeouts or plan changes, so both players' browsers play the identical series. */
-export function Live({ teams: teamsProp, humanIdx, maps, format, seed, instant, stageLabel, onFinished, locked = false }: {
-  teams: [TeamSnapshot, TeamSnapshot]; humanIdx: TeamIdx; maps: MapName[]; format: 'bo1' | 'bo3'; seed: number; instant: boolean; stageLabel: string; onFinished: (s: SeriesResult) => void; locked?: boolean;
+export function Live({ teams: teamsProp, humanIdx, maps, mapPlans, format, seed, instant, stageLabel, onFinished, locked = false }: {
+  teams: [TeamSnapshot, TeamSnapshot]; humanIdx: TeamIdx; maps: MapName[]; mapPlans?: Partial<Record<MapName, PresetId>>; format: 'bo1' | 'bo3'; seed: number; instant: boolean; stageLabel: string; onFinished: (s: SeriesResult) => void; locked?: boolean;
 }) {
   const teams = useRef(teamsProp).current; // frozen for the whole series
   // Same seed sequence as simulateSeries, so "Instant" and "Watch live" (without timeouts) agree.
@@ -370,6 +395,9 @@ export function Live({ teams: teamsProp, humanIdx, maps, format, seed, instant, 
     if (!sims.current[i]) {
       const p = plan[i]!;
       sims.current[i] = new MapSim({ seed: p.seed, teams, map: p.map, ctFirst: p.ctFirst, record: !instant });
+      // A preset saved for this map replaces the main plan before the first round.
+      const preset = locked ? undefined : mapPlans?.[p.map];
+      if (preset) sims.current[i]!.setTactics(humanIdx, applyPreset(teams[humanIdx].tactics, preset));
     }
     return sims.current[i]!;
   }, [plan, teams]);
@@ -392,7 +420,7 @@ export function Live({ teams: teamsProp, humanIdx, maps, format, seed, instant, 
     const ms = mapScore();
     force((x) => x + 1);
     if (Math.max(...ms) >= mapsNeeded(format)) finishSeries();
-    else { setSheet('between'); setPaused(true); }
+    else { setDraft({ ...simFor(i + 1).tactics[humanIdx] }); setSheet('between'); setPaused(true); }
   }, [simFor, format, finishSeries]);
 
   // Instant: play everything now.
