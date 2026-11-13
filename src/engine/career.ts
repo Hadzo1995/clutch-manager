@@ -12,7 +12,7 @@ import { matchRating, simulateSeries } from './match';
 import { defaultPairFamiliarity, pairKey } from './sim/synergy';
 import { bigGameShift, formVolatility, personalityOf } from './profile';
 import {
-  MAX_SQUAD, MIN_SQUAD, SALE_SHARE, baseWage, coachWage, defaultContract, demandFor, judgeOffer, marketValue, severance, sponsorGoalMet, sponsorOffers,
+  MAX_SQUAD, MIN_SQUAD, SALE_SHARE, baseWage, coachWage, defaultContract, demandFor, judgeOffer, marketValue, severance, RELEGATION_WAGE, sponsorGoalMet, sponsorOffers,
 } from './economy';
 import { FACILITIES, FACILITY_MAX, NO_FACILITIES, facilityUpkeep } from './economy';
 import type { FacilityId, Facilities } from './economy';
@@ -886,6 +886,11 @@ function finishSeason(world: World, n: Career): void {
   let nextDiv = season.division;
   if (placement <= 2 && season.division < DIVISIONS.length - 1) { movement = 'promoted'; nextDiv++; unlock(n, 'promoted'); }
   else if (placement >= 7 && season.division > 0) { movement = 'relegated'; nextDiv--; }
+  if (movement === 'relegated') {
+    // Relegation clause: every player's wage drops so the club can live on the lower division's income.
+    for (const card of n.cards) if (card.contract) card.contract.wage = Math.round(card.contract.wage * RELEGATION_WAGE);
+    addNews(n, `Relegation clause: player wages drop ${Math.round((1 - RELEGATION_WAGE) * 100)}%.`);
+  }
   if (placement === 1) { n.totals.titles++; unlock(n, 'champion'); }
   const cup = cupResult(season, HUMAN_ID);
   if (cup) {
@@ -976,11 +981,19 @@ export function collectionValue(world: World, c: Career): number {
 
 /** Gives a contract to any card that has none (saves from before contracts existed). */
 export function ensureContracts(world: World, c: Career): Career {
-  if (c.cards.every((x) => x.contract)) return c;
+  if (c.cards.every((x) => x.contract) && c.coins >= 0) return c;
   const n = structuredClone(c);
   for (const card of n.cards) if (!card.contract && world.profiles.has(card.playerId)) card.contract = defaultContract(profileOf(world, card));
+  // Saves from before the balance floor could be in debt: the board clears it once.
+  if (n.coins < 0) {
+    addNews(n, `The board cleared the club's debt of ${-n.coins} coins.`);
+    money(n, -n.coins, 'board', 'Board cleared old debt');
+  }
   return n;
 }
+
+/** Confidence the board loses each week it has to pay bills the club can't cover. */
+export const BOARD_RESCUE_CONFIDENCE = 5;
 
 export function weeklyWages(world: World, c: Career): { players: number; coach: number } {
   const players = c.cards.reduce((sum, card) => sum + (card.contract?.wage ?? 0), 0);
@@ -995,6 +1008,14 @@ function weeklyBusiness(world: World, n: Career): void {
   money(n, -w.coach, 'wages', 'Coach wage');
   if (n.sponsor) money(n, n.sponsor.weekly, 'sponsor', `${n.sponsor.name} weekly`);
   money(n, -facilityUpkeep(n.facilities ?? NO_FACILITIES), 'facilities', 'Facility upkeep');
+  // The balance never drops below zero: when the week's bills are more than the club has,
+  // the board pays the difference, and its confidence drops.
+  if (n.coins < 0) {
+    const shortfall = -n.coins;
+    money(n, shortfall, 'board', 'Board covered unpaid bills');
+    if (n.board) n.board.confidence = clamp(n.board.confidence - BOARD_RESCUE_CONFIDENCE, 0, 100);
+    addNews(n, `The club couldn't pay this week's bills. The board covered ${shortfall} coins and its confidence drops. Sell a player or cut wages to stop it happening again.`);
+  }
   const leaving: OwnedCard[] = [];
   for (const card of n.cards) {
     if (!card.contract) continue;
@@ -1014,7 +1035,6 @@ function weeklyBusiness(world: World, n: Career): void {
     addNews(n, `${profileOf(world, card).record.handle}'s contract expired and they left the club.`);
   }
   aiMarket(world, n);
-  if (n.coins < 0) addNews(n, `The club is ${-n.coins} coins in debt. Cases, transfers and paid training are blocked until you are back above zero.`);
 }
 
 /** The window is open during the league and playoffs. */
@@ -1303,8 +1323,9 @@ export function sellCard(world: World, c: Career, cardId: string): Career {
 
 export function releaseCard(world: World, c: Career, cardId: string): Career {
   const card = checkCanLeave(c, cardId);
-  const n = structuredClone(c);
   const cost = severance(card);
+  if (cost > c.coins) throw new Error(`Releasing costs ${cost} coins in severance and you have ${c.coins}.`);
+  const n = structuredClone(c);
   const handle = profileOf(world, card).record.handle;
   removeCard(world, n, cardId);
   money(n, -cost, 'release', `Released ${handle}`);
