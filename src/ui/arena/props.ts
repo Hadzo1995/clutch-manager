@@ -8,6 +8,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { CELL, WALL_HEIGHT } from '../../maps/types';
 import type { MapGeometry, PropSource } from '../../maps/types';
 import type { SurfaceSet } from './materials';
+import { surfaceNormal } from './materials';
 
 export interface PropContext {
   geo: MapGeometry;
@@ -28,7 +29,12 @@ class Mats {
   std(color: THREE.ColorRepresentation, rough = 0.8, metal = 0.05, extra: Partial<THREE.MeshStandardMaterialParameters> = {}): THREE.MeshStandardMaterial {
     const key = `s:${new THREE.Color(color).getHexString()}:${rough}:${metal}:${extra.map ? extra.map.uuid : ''}:${extra.emissive ?? ''}:${extra.transparent ?? ''}`;
     let m = this.cache.get(key) as THREE.MeshStandardMaterial | undefined;
-    if (!m) { m = new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal, ...extra }); this.cache.set(key, m); this.ctx.disposables.push(m); }
+    if (!m) {
+      // Photo surfaces (container ribs) bring their own normal map.
+      const normalMap = extra.normalMap ?? (extra.map ? surfaceNormal(extra.map) : undefined);
+      m = new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal, ...extra, ...(normalMap ? { normalMap } : {}) });
+      this.cache.set(key, m); this.ctx.disposables.push(m);
+    }
     return m;
   }
 }

@@ -10,6 +10,9 @@
  *   grass    grass_path_2              asphalt  asphalt_02
  *   sandstone old_sandstone_02         stucco   rough_plaster_brick_04
  *   roofTiles clay_roof_tiles_02 (UV mapped, not triplanar: its normal replaces roofTilesN)
+ *   metalRoof box_profile_metal_sheet  (UV mapped like roofTiles: its normal replaces metalRoofN)
+ *   ribbed   container_side (box-UV map on shipping containers and sheds)
+ *   jungle   forest_leaves_02          mossy    mossy_stone_wall
  *
  * Files are 512 px WebP images in ./assets/surfaces (prepared from the 1K downloads).
  */
@@ -36,12 +39,21 @@ import stucco from './assets/surfaces/stucco.webp?url';
 import stuccoN from './assets/surfaces/stucco_n.webp?url';
 import roofTiles from './assets/surfaces/roofTiles.webp?url';
 import roofTilesN from './assets/surfaces/roofTiles_n.webp?url';
+import metalRoof from './assets/surfaces/metalRoof.webp?url';
+import metalRoofN from './assets/surfaces/metalRoof_n.webp?url';
+import ribbed from './assets/surfaces/ribbed.webp?url';
+import ribbedN from './assets/surfaces/ribbed_n.webp?url';
+import jungle from './assets/surfaces/jungle.webp?url';
+import jungleN from './assets/surfaces/jungle_n.webp?url';
+import mossy from './assets/surfaces/mossy.webp?url';
+import mossyN from './assets/surfaces/mossy_n.webp?url';
 
-export type PhotoKey = 'stones' | 'tiles' | 'concrete' | 'blocks' | 'plaster' | 'sand' | 'grass' | 'asphalt' | 'sandstone' | 'stucco' | 'roofTiles';
+export type PhotoKey = 'stones' | 'tiles' | 'concrete' | 'blocks' | 'plaster' | 'sand' | 'grass' | 'asphalt' | 'sandstone' | 'stucco' | 'roofTiles' | 'metalRoof' | 'ribbed' | 'jungle' | 'mossy';
 
 export const PHOTO_URLS: Record<PhotoKey, [string, string]> = {
   stones: [stones, stonesN], tiles: [tiles, tilesN], concrete: [concrete, concreteN], blocks: [blocks, blocksN], plaster: [plaster, plasterN],
   sand: [sand, sandN], grass: [grass, grassN], asphalt: [asphalt, asphaltN], sandstone: [sandstone, sandstoneN], stucco: [stucco, stuccoN], roofTiles: [roofTiles, roofTilesN],
+  metalRoof: [metalRoof, metalRoofN], ribbed: [ribbed, ribbedN], jungle: [jungle, jungleN], mossy: [mossy, mossyN],
 };
 
 /**

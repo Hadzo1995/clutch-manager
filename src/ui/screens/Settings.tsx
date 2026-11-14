@@ -12,6 +12,7 @@ import { useGame } from '../common';
 import { Crest } from '../crest';
 import { CrestEditor } from '../CrestEditor';
 import { music } from '../music';
+import { setUiSound, uiSoundOn } from '../sfx';
 import { setStadiumOn, stadiumOn } from '../StadiumScene';
 import { MOTION_LABEL, motionPref, setMotionPref, systemReducesMotion } from '../motion';
 import '../styles/home.css';
@@ -25,6 +26,7 @@ export function Settings({ onClose, replaceWorld, onReset }: { onClose: () => vo
   const [confirmReset, setConfirmReset] = useState(false);
   const [crestOpen, setCrestOpen] = useState(false);
   const [musicEnabled, setMusicEnabled] = useState(music.on);
+  const [uiSound, setUiSoundState] = useState(uiSoundOn);
   const [stadium, setStadium] = useState(stadiumOn);
   const [motion, setMotion] = useState(motionPref);
   const [csv, setCsv] = useState<{ name: string; text: string } | null>(null);
@@ -115,6 +117,12 @@ export function Settings({ onClose, replaceWorld, onReset }: { onClose: () => vo
             <div className="st-row">
               <div className="st-row-t"><strong>Menu music</strong><span className="small faint">A quiet loop on the menus. It stops during matches.</span></div>
               <button className="btn small" aria-pressed={musicEnabled} onClick={() => { const v = !musicEnabled; setMusicEnabled(v); music.setEnabled(v); music.unlock(); }}>{musicEnabled ? 'On' : 'Off'}</button>
+            </div>
+          </div>
+          <div className="st-card">
+            <div className="st-row">
+              <div className="st-row-t"><strong>Menu sounds</strong><span className="small faint">Clicks, tab switches and coin sounds. Match and case sounds have their own switches.</span></div>
+              <button className="btn small" aria-pressed={uiSound} onClick={() => { const v = !uiSound; setUiSoundState(v); setUiSound(v); }}>{uiSound ? 'On' : 'Off'}</button>
             </div>
           </div>
           <div className="st-card">
