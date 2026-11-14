@@ -1,0 +1,34 @@
+Clutch Manager
+Copyright (c) 2026 Amar Hadzihasanovic. All rights reserved.
+
+This repository is public so the game can be built and hosted, not so it can be reused.
+No licence is granted to copy, modify, publish, distribute, sublicense, sell, host or
+otherwise use this software or any part of it (source code, game design, balancing,
+user interface, artwork, sounds, text and the compiled game), except:
+
+  1. You may play the official build at https://hadzo1995.github.io/clutch-manager/
+     and the official app releases.
+  2. You may view this repository on GitHub, as GitHub's Terms of Service allow.
+     Viewing or forking on GitHub does not grant any other right.
+
+Any other use needs the copyright holder's prior written permission. Contact the
+developer through the contact form in the game (Settings -> Contact the developer).
+
+Parts of this repository are not owned by the copyright holder and are excluded from
+the reservation above. They stay under their own terms:
+
+  - The player list derived from Liquipedia (src/engine/data/realPlayers.generated.ts)
+    is shared under the Creative Commons Attribution-ShareAlike 3.0 licence:
+    https://creativecommons.org/licenses/by-sa/3.0/
+  - Team rosters and strength come from the Valve Counter-Strike Regional Standings.
+  - Team logos and player photos belong to their organisations and photographers.
+  - The 3D soldier model is from the three.js examples (originally Adobe Mixamo).
+  - Open-source packages listed in package.json keep their own licences.
+
+Counter-Strike and CS2 are trademarks of Valve Corporation. Clutch Manager is an
+unofficial fan game and is not affiliated with or endorsed by Valve, HLTV, or any
+team, player or tournament organiser.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY ARISING FROM THE SOFTWARE OR ITS USE.

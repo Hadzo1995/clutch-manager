@@ -213,6 +213,7 @@ export function Settings({ onClose, replaceWorld, onReset }: { onClose: () => vo
           <h3 id="st-credits" className="st-h">About &amp; credits</h3>
           <div className="st-card">
             <div className="st-row st-row-col">
+              <p className="small muted">© 2026 Amar Hadzihasanovic. All rights reserved. The game's code, design, artwork and text may not be copied, rehosted or republished without permission; data and assets from the sources below stay under their own terms.</p>
               <p className="small muted">Clutch Manager is a free, unofficial fan game. It is not affiliated with or endorsed by Valve, any team, player or tournament organiser. Counter-Strike and CS2 are trademarks of Valve Corporation.</p>
               <p className="small muted">Teams, rosters and team strength: <a href="https://github.com/ValveSoftware/counter-strike_regional_standings" target="_blank" rel="noreferrer">Valve Counter-Strike Regional Standings</a>. Player countries, ages and roles: <a href="https://liquipedia.net/counterstrike/" target="_blank" rel="noreferrer">Liquipedia</a>, under <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noreferrer">CC BY-SA 3.0</a>; our derived player list is shared under the same licence.</p>
               <p className="small muted">Team logos and player photos come from <a href="https://liquipedia.net/counterstrike/" target="_blank" rel="noreferrer">Liquipedia</a> and belong to their organisations and photographers; they are used only in this free, non-commercial university project. The 3D soldier is the rigged character from the <a href="https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf" target="_blank" rel="noreferrer">three.js examples</a> (originally from Adobe Mixamo).</p>
@@ -259,7 +260,7 @@ export function Settings({ onClose, replaceWorld, onReset }: { onClose: () => vo
             )}
           </div>
         </section>
-        <p className="st-foot">Clutch Manager beta · v0.16.0 · {ds.isSynthetic ? 'fictional demo data' : isReal ? 'real pros from a dated snapshot' : 'imported data'} · not affiliated with Valve or HLTV.</p>
+        <p className="st-foot">© 2026 Amar Hadzihasanovic · Clutch Manager beta · v0.21.0 · {ds.isSynthetic ? 'fictional demo data' : isReal ? 'real pros from a dated snapshot' : 'imported data'} · not affiliated with Valve or HLTV.</p>
       </div>
     </div>
   );

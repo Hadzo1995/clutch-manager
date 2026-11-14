@@ -47,3 +47,11 @@ for anyone without a beta place. In the SQL editor:
 
 The career itself runs in the browser, so the gate keeps out people without a code but can't stop
 someone determined to edit the page; everything online is enforced by the database.
+
+## Licence
+
+Copyright (c) 2026 Amar Hadzihasanovic. All rights reserved. The source is public so the game can
+be built and hosted, but it is **not** open source: you may play the official build and read the
+code on GitHub, and nothing else without written permission. Liquipedia-derived player data stays
+under CC BY-SA 3.0, and logos, photos and other third-party assets belong to their owners. See
+[LICENSE](LICENSE).
