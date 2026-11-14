@@ -62,6 +62,9 @@ export function defaultContract(p: PlayerProfile): Contract {
   return { wage: baseWage(p), weeksLeft: 18 };
 }
 
+/** Share of every player's wage kept after relegation (relegation clause in each contract). */
+export const RELEGATION_WAGE = 0.8;
+
 export function severance(card: OwnedCard): number {
   const c = card.contract;
   return c ? c.wage * Math.min(c.weeksLeft, SEVERANCE_WEEKS) : 0;
@@ -176,12 +179,12 @@ export function sponsorGoalMet(goal: SponsorGoal, placement: number): boolean {
 
 // ---------- Ledger ----------
 
-export type LedgerKind = 'facilities' | 'match' | 'prize' | 'sponsor' | 'wages' | 'transfer' | 'sale' | 'release' | 'case' | 'training' | 'coach' | 'refund';
+export type LedgerKind = 'facilities' | 'match' | 'prize' | 'sponsor' | 'wages' | 'transfer' | 'sale' | 'release' | 'case' | 'training' | 'coach' | 'refund' | 'board';
 
 export const LEDGER_LABEL: Record<LedgerKind, string> = {
   facilities: 'Facilities',
   match: 'Match income', prize: 'Prize money', sponsor: 'Sponsorship', wages: 'Wages', transfer: 'Transfer fees',
-  sale: 'Player sales', release: 'Severance', case: 'Cases', training: 'Training & bootcamps', coach: 'Coach hiring', refund: 'Duplicate refunds',
+  sale: 'Player sales', release: 'Severance', case: 'Cases', training: 'Training & bootcamps', coach: 'Coach hiring', refund: 'Duplicate refunds', board: 'Board support',
 };
 
 export interface LedgerEntry {

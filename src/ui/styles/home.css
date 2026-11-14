@@ -277,7 +277,6 @@
   .cl-kpi.main { grid-column: auto; }
   .cl-kpi.main .cl-kpi-v { font-size: var(--fs-2xl); }
 }
-.cl-debt { font-size: var(--fs-sm); color: var(--bad); background: var(--bad-soft); border: 1px solid color-mix(in srgb, var(--bad) 35%, transparent); border-radius: var(--r); padding: 10px 12px; }
 .cl-budget { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) 3.8rem; gap: 8px 10px; align-items: center; }
 .cl-budget .num { text-align: right; font-size: var(--fs-sm); }
 .cl-stack { display: flex; height: 12px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); overflow: hidden; gap: 1px; }

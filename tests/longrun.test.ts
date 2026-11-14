@@ -60,6 +60,7 @@ describe('long career', () => {
       for (let week = 0; week < 96; week++) {
         expect(lineupValidation(c).ok).toBe(true);
         c = manageWeek(w, c);
+        expect(c.coins).toBeGreaterThanOrEqual(0);
         expect(c.cards.length).toBeGreaterThanOrEqual(5);
         expect(c.cards.length).toBeLessThanOrEqual(MAX_SQUAD);
         const ids = [...c.season.aiTeams, ...(c.season.cupTeams ?? [])].flatMap((t) => t.playerIds).concat(c.cards.map((x) => x.playerId));

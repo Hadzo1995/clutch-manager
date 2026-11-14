@@ -11,7 +11,8 @@ export function buildAlerts(world: World, c: Career, day: string): Alert[] {
   const items: Alert[] = [];
   const valid = lineupValidation(c);
   if (!valid.ok) items.push({ key: 'lineup', tone: 'urgent', text: valid.errors[0]!, cta: 'Squad', target: 'squad' });
-  if (c.coins < 0) items.push({ key: 'debt', tone: 'urgent', text: `In debt by ${-c.coins}. Spending is blocked.`, cta: 'Finances', target: 'club' });
+  const rescue = c.ledger.find((e) => e.kind === 'board' && e.season === c.season.number && e.week >= c.season.week - 1);
+  if (rescue) items.push({ key: 'board-rescue', tone: 'urgent', text: `The board covered ${rescue.amount} coins of unpaid bills. Cut wages before it happens again.`, cta: 'Finances', target: 'club' });
   const ww = weeklyWages(world, c);
   const burn = ww.players + ww.coach + facilityUpkeep(c.facilities ?? NO_FACILITIES) - (c.sponsor?.weekly ?? 0);
   if (c.coins >= 0 && burn > 0 && c.coins < burn * 4) items.push({ key: 'runway', tone: 'urgent', text: `Wages and upkeep outrun the sponsor by ${burn} a week. Without match income the money lasts about ${Math.max(0, Math.floor(c.coins / burn))} weeks.`, cta: 'Finances', target: 'club' });
