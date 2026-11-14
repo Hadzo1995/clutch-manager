@@ -20,6 +20,9 @@ concurrency:
 
 jobs:
   build:
+    # GitHub Pages on a free plan only serves public repositories. Once the repository is
+    # private the game is served from Cloudflare Pages instead (cloudflare.yml), so skip this.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
