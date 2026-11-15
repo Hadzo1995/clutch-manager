@@ -1,6 +1,8 @@
 {
   "name": "cs2-manager",
   "private": true,
+  "license": "UNLICENSED",
+  "author": "Amar Hadzihasanovic",
   "version": "0.21.0",
   "type": "module",
   "scripts": {

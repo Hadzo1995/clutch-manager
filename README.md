@@ -9,8 +9,9 @@ Liquipedia (CC BY-SA 3.0); see the in-game credits.
 
 ## Play
 
-The live build is on GitHub Pages: https://hadzo1995.github.io/clutch-manager/ (updated on every push
-to `main`). To run it yourself, `npm ci && npm run build`, then open `dist/index.html` in a browser;
+The live build is on Cloudflare Pages: https://clutch-manager.pages.dev/ (Cloudflare builds and publishes
+every push to `main` through its GitHub connection; the old GitHub Pages address only works while the
+repository is public). To run it yourself, `npm ci && npm run build`, then open `dist/index.html` in a browser;
 it is one self-contained file and works offline. Saves live in the browser (Settings → Export save
 to back one up).
 
@@ -27,7 +28,9 @@ the cup in weeks 10–12 (final 16 Feb 2027), then a two-week off-season. Season
     npm test         # full suite (several minutes)
     npm run build    # single-file build in dist/
 
-Pushes to `main` deploy to GitHub Pages (`.github/workflows/pages.yml`).
+Pushes to `main` deploy to Cloudflare Pages (connected to this repository in the Cloudflare
+dashboard: build command `npm run build`, output folder `dist`, `NODE_VERSION=22`) and, while the
+repository is public, to GitHub Pages (`.github/workflows/pages.yml`).
 The database schema and rules are in `supabase/schema.sql` (plus `supabase/pvp.sql` and `supabase/league.sql` for 1-on-1 rooms and the Clutch League; run each once in the Supabase SQL editor); `tools/db-test` checks the rules
 against a local Postgres.
 
@@ -47,3 +50,11 @@ for anyone without a beta place. In the SQL editor:
 
 The career itself runs in the browser, so the gate keeps out people without a code but can't stop
 someone determined to edit the page; everything online is enforced by the database.
+
+## Licence
+
+Copyright (c) 2026 Amar Hadzihasanovic. All rights reserved. The source is public so the game can
+be built and hosted, but it is **not** open source: you may play the official build and read the
+code on GitHub, and nothing else without written permission. Liquipedia-derived player data stays
+under CC BY-SA 3.0, and logos, photos and other third-party assets belong to their owners. See
+[LICENSE](LICENSE).
