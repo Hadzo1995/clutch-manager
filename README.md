@@ -9,8 +9,8 @@ Liquipedia (CC BY-SA 3.0); see the in-game credits.
 
 ## Play
 
-The live build is on Cloudflare Pages: https://clutch-manager.pages.dev/ (updated on every push to
-`main` by `.github/workflows/cloudflare.yml`; the old GitHub Pages address only works while the
+The live build is on Cloudflare Pages: https://clutch-manager.pages.dev/ (Cloudflare builds and publishes
+every push to `main` through its GitHub connection; the old GitHub Pages address only works while the
 repository is public). To run it yourself, `npm ci && npm run build`, then open `dist/index.html` in a browser;
 it is one self-contained file and works offline. Saves live in the browser (Settings → Export save
 to back one up).
@@ -28,9 +28,9 @@ the cup in weeks 10–12 (final 16 Feb 2027), then a two-week off-season. Season
     npm test         # full suite (several minutes)
     npm run build    # single-file build in dist/
 
-Pushes to `main` deploy to Cloudflare Pages (`.github/workflows/cloudflare.yml`, needs the
-`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets) and, while the repository is
-public, to GitHub Pages (`.github/workflows/pages.yml`).
+Pushes to `main` deploy to Cloudflare Pages (connected to this repository in the Cloudflare
+dashboard: build command `npm run build`, output folder `dist`, `NODE_VERSION=22`) and, while the
+repository is public, to GitHub Pages (`.github/workflows/pages.yml`).
 The database schema and rules are in `supabase/schema.sql` (plus `supabase/pvp.sql` and `supabase/league.sql` for 1-on-1 rooms and the Clutch League; run each once in the Supabase SQL editor); `tools/db-test` checks the rules
 against a local Postgres.
 
