@@ -22,3 +22,15 @@
 .beta-scale { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; }
 .beta-scale button { min-height: 36px; padding: 0; border-radius: 6px; border: 1px solid var(--line-soft); background: var(--panel-2); color: var(--ink-2); font-family: var(--font-data); }
 .beta-scale button[aria-pressed='true'] { background: var(--t-soft); border-color: var(--t); color: var(--ink); }
+
+/* Private open beta: notes sheet (src/ui/beta/OpenBeta.tsx). */
+.beta-pill.open-beta .beta-badge { color: var(--ct, var(--t)); }
+.ob-field { display: grid; gap: 6px; }
+.ob-field textarea { width: 100%; resize: vertical; min-height: 72px; padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); font: inherit; }
+.ob-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ob-spacer { flex: 1; }
+.ob-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ob-notes li { border: 1px solid var(--line-soft); border-radius: 10px; padding: 10px; background: var(--panel-2); display: grid; gap: 6px; }
+.ob-notes li.done { opacity: 0.55; }
+.ob-notes li.done .ob-text { text-decoration: line-through; }
+.ob-text { white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -10,7 +10,8 @@
     "build": "tsc --noEmit && vite build && node tools/build-offline.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "balance": "vitest run tests/balance.test.ts"
+    "balance": "vitest run tests/balance.test.ts",
+    "open-beta": "tsc --noEmit && node tools/build-open-beta.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.0",

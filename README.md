@@ -56,6 +56,10 @@ for anyone without a beta place. In the SQL editor:
 The career itself runs in the browser, so the gate keeps out people without a code but can't stop
 someone determined to edit the page; everything online is enforced by the database.
 
+## Private open beta
+
+`npm run open-beta` builds `dist-open-beta/clutch-manager-open-beta-v<version>.html`: the whole game in one file, player photos included, with no sign-in, no closed-beta lock and no online features. It opens from a double-click with no internet. A corner pill holds a notes list for things to fix or improve; notes stay on that device and can be copied or saved as text. This build is never deployed, and it does not change the closed beta or the site.
+
 ## Licence
 
 Copyright (c) 2026 Amar Hadzihasanovic. All rights reserved. The source is public so the game can
