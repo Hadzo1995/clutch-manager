@@ -31,12 +31,15 @@ function Root() {
 const DevCards = import.meta.env.DEV ? lazy(() => import('./ui/dev/DevCards')) : null;
 const DevMap = import.meta.env.DEV ? lazy(() => import('./ui/dev/DevMap')) : null;
 
+/** The private open beta build (npm run open-beta) adds a notes pill; other builds leave it out. */
+const OpenBetaBar = import.meta.env.MODE === 'openbeta' ? lazy(() => import('./ui/beta/OpenBeta')) : null;
+
 // The native app first copies its saves back from native storage (see platform.ts), then hides the splash.
 void restoreFromNative().then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       {DevCards && location.hash === '#dev-cards' ? <Suspense fallback={null}><DevCards /></Suspense>
-        : DevMap && location.hash.startsWith('#dev-map') ? <Suspense fallback={null}><DevMap /></Suspense> : <BetaGate><Root /></BetaGate>}
+        : DevMap && location.hash.startsWith('#dev-map') ? <Suspense fallback={null}><DevMap /></Suspense> : <BetaGate><Root />{OpenBetaBar && <Suspense fallback={null}><OpenBetaBar /></Suspense>}</BetaGate>}
     </StrictMode>,
   );
   void setupNative();
