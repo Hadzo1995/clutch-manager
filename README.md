@@ -15,6 +15,11 @@ repository is public). To run it yourself, `npm ci && npm run build`, then open 
 it is one self-contained file and works offline. Saves live in the browser (Settings → Export save
 to back one up).
 
+**Offline edition:** https://clutch-manager.pages.dev/offline is the same game with no sign-in and none
+of the online features (no closed-beta lock, Clutch League, beta tournament or cloud save). It shares the
+career save with the main game in the same browser. Cloudflare builds it with each deploy
+(`tools/build-offline.mjs`); run `OFFLINE_PAGE=1 npm run build` to get `dist/offline.html` locally.
+
 **The calendar.** Season 1 of a new career kicks off on Tuesday 1 December 2026 and every game
 week is one calendar week: seven Bo1 league rounds (1 Dec – 12 Jan), Bo3 playoffs for the top four,
 the cup in weeks 10–12 (final 16 Feb 2027), then a two-week off-season. Season 2 starts 9 March

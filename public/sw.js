@@ -2,7 +2,8 @@
  * Offline support for the installed web app (not used inside the native Android/iPhone app,
  * which ships every file in the package).
  *  - The game itself (index.html, one file) is network-first: online you always get the latest
- *    version, offline the last one you played.
+ *    version, offline the last one you played. The offline edition (offline.html, served at
+ *    ./offline) is kept the same way under its own address.
  *  - Player photos, icons and the manifest are cache-first: they rarely change and there are hundreds.
  * Bump VERSION to drop old caches after a change to this file.
  */
@@ -28,10 +29,13 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // Supabase and other services are never cached.
   if (req.mode === 'navigate' || url.pathname.endsWith('/index.html')) {
+    // Each page is kept under its own address (the game at ./, the offline edition at ./offline),
+    // so one never stands in for the other when the network is down.
+    const page = url.pathname.endsWith('/index.html') ? url.pathname.slice(0, -'index.html'.length) : url.pathname;
     e.respondWith(
       fetch(req)
-        .then((res) => { if (res.ok) { const copy = res.clone(); caches.open(SHELL).then((c) => c.put('./', copy)); } return res; })
-        .catch(() => caches.match('./').then((r) => r || caches.match(req))),
+        .then((res) => { if (res.ok && !res.redirected) { const copy = res.clone(); caches.open(SHELL).then((c) => c.put(page, copy)); } return res; })
+        .catch(() => caches.match(page).then((r) => r || caches.match('./'))),
     );
     return;
   }
