@@ -24,7 +24,7 @@ let failed = false;
 /** Start loading the figure (once). Resolves when ready; never rejects. */
 export function loadHuman(): Promise<void> {
   if (loading) return loading;
-  // The file is packed with gltf-transform (meshopt geometry, WebP textures): about 0.7 MB instead of 2.2 MB.
+  // Packed by tools/pack-soldier.mjs (meshopt geometry, WebP textures, float positions): 0.55 MB instead of 2.2 MB.
   loading = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(soldierUrl).then((g) => {
     // Skinned bounding boxes ignore the armature's scale, so measure the skeleton instead:
     // the head joint of a 1.84 m figure sits about 1.6 m above the soles.
