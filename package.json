@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node tools/build-offline.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "balance": "vitest run tests/balance.test.ts"
