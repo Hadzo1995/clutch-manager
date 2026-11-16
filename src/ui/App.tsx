@@ -37,6 +37,7 @@ import { onlineAvailable } from '../online/supa';
 import { reducedMotion } from './motion';
 import { CommandBar, PhoneHud, SeasonTrack } from './CommandBar';
 import { formatDate, matchDate } from '../engine/calendar';
+import { CAPTURE } from '../capture';
 
 const openTournament = () => { location.hash = '#tournament'; };
 const openLeague = () => { location.hash = '#league'; };
@@ -54,6 +55,8 @@ function weekLabel(w: number): string {
 }
 
 function initialWorld(): World {
+  // Capture builds (marketing footage) only ever show the fictional demo players.
+  if (CAPTURE) return createWorld(generateSyntheticDataset());
   const imported = loadDataset();
   if (imported) return createWorld(imported);
   // Real players are the default for new careers; a career started on the demo players keeps them.

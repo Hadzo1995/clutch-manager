@@ -11,6 +11,7 @@ import type { TeamTendencies } from './team';
 import type { Coach, MapName, PlayerProfile, Role } from './types';
 import { MAPS, ROLES } from './types';
 import { realTeamMeta } from './data/realTeams';
+import { CAPTURE, CAPTURE_TOP_DIVISION } from '../capture';
 
 export interface Division {
   id: number;
@@ -25,7 +26,7 @@ export const DIVISIONS: Division[] = [
   { id: 0, name: 'Open Circuit', rankRange: [120, 200], aiSharpness: 62, winReward: 350, prizes: [2500, 1600, 1100, 1100, 500, 400, 300, 200] },
   { id: 1, name: 'Challenger Series', rankRange: [70, 170], aiSharpness: 72, winReward: 450, prizes: [3500, 2200, 1500, 1500, 700, 500, 400, 300] },
   { id: 2, name: 'Pro League', rankRange: [30, 120], aiSharpness: 86, winReward: 600, prizes: [5000, 3000, 2000, 2000, 1000, 800, 600, 400] },
-  { id: 3, name: 'ESL Pro League', rankRange: [1, 70], aiSharpness: 98, winReward: 800, prizes: [8000, 5000, 3200, 3200, 1500, 1200, 900, 600] },
+  { id: 3, name: CAPTURE ? CAPTURE_TOP_DIVISION : 'ESL Pro League', rankRange: [1, 70], aiSharpness: 98, winReward: 800, prizes: [8000, 5000, 3200, 3200, 1500, 1200, 900, 600] },
 ];
 
 const ORG_NAMES: [string, string][] = [
@@ -100,7 +101,7 @@ export const SEASON_WEEKS = 12;
 export const CUP_NAME = 'Clutch Cup';
 /** The cup's name in a division: the top tier plays a real S-tier event. */
 export function cupName(division: number): string {
-  return division === DIVISIONS.length - 1 ? 'IEM Cologne' : CUP_NAME;
+  return division === DIVISIONS.length - 1 && !CAPTURE ? 'IEM Cologne' : CUP_NAME;
 }
 /** Cup prize as a multiple of the division's win reward: winner, finalist, semifinal, quarterfinal. */
 export const CUP_PRIZE = [6, 3, 1.5, 0.5];

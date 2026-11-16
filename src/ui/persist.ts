@@ -3,9 +3,11 @@ import type { Career } from '../engine/career';
 import { deserializeCareer, serializeCareer } from '../engine/save';
 import type { Dataset } from '../engine/types';
 import { mirrorToNative } from '../platform';
+import { CAPTURE } from '../capture';
 
-const SAVE_KEY = 'clutch-manager.save.v1';
-const DATASET_KEY = 'clutch-manager.dataset.v1';
+// Capture builds keep their own saves so footage sessions never overwrite a real career.
+const SAVE_KEY = CAPTURE ? 'clutch-manager.capture.save.v1' : 'clutch-manager.save.v1';
+const DATASET_KEY = CAPTURE ? 'clutch-manager.capture.dataset.v1' : 'clutch-manager.dataset.v1';
 
 export function loadCareer(): Career | null {
   try {

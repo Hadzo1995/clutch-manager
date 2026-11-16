@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PLAYER_PHOTOS } from '../../engine/data/playerPhotos.generated';
 import { avatarDataUrl } from './portrait';
 import type { AvatarKind } from './portrait';
+import { CAPTURE } from '../../capture';
 
 export interface AvatarProps {
   /** The player's stable id (pro-<handle> for real players); also seeds the drawn portrait. */
@@ -21,6 +22,7 @@ export interface AvatarProps {
 
 /** URL of a real player's photo (served from public/players), or undefined. */
 export function playerPhotoUrl(id: string): string | undefined {
+  if (CAPTURE) return undefined; // capture builds show drawn portraits only
   const p = PLAYER_PHOTOS[id];
   return p ? p.src : undefined;
 }

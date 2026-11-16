@@ -7,6 +7,7 @@ import { Rng, clamp, hashString } from './rng';
 import { addToCollection, CASES, rollPlayer } from './cases';
 import type { CaseId, CaseOutcome } from './cases';
 import { generateCoaches } from './data/coaches';
+import { CAPTURE, CAPTURE_TOP_DIVISION } from '../capture';
 import type { MapResult, SeriesResult } from './match';
 import { matchRating, simulateSeries } from './match';
 import { defaultPairFamiliarity, pairKey } from './sim/synergy';
@@ -220,7 +221,7 @@ export const ACHIEVEMENTS: Record<string, { name: string; description: string }>
   'ten-cases': { name: 'Collector', description: 'Open 10 cases.' },
   champion: { name: 'Champions', description: 'Win a season final.' },
   promoted: { name: 'Moving up', description: 'Earn promotion.' },
-  'elite-series': { name: 'The big stage', description: 'Reach the ESL Pro League.' },
+  'elite-series': { name: 'The big stage', description: `Reach the ${CAPTURE ? CAPTURE_TOP_DIVISION : 'ESL Pro League'}.` },
   'cup-winner': { name: 'Cup run', description: 'Win the Clutch Cup.' },
   'clean-sheet': { name: 'Flawless', description: 'Win a map conceding 3 rounds or fewer.' },
   'five-stars': { name: 'Maxed out', description: 'Get any card to 5 stars.' },

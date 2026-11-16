@@ -39,6 +39,17 @@ repository is public, to GitHub Pages (`.github/workflows/pages.yml`).
 The database schema and rules are in `supabase/schema.sql` (plus `supabase/pvp.sql` and `supabase/league.sql` for 1-on-1 rooms and the Clutch League; run each once in the Supabase SQL editor); `tools/db-test` checks the rules
 against a local Postgres.
 
+## Capture builds (marketing footage)
+
+    npm run capture       # single-file build in dist-capture/
+    npm run capture:dev   # the same, as a dev server
+
+A capture build shows only the game's own content, for Instagram clips and screenshots: the fictional
+demo players, drawn portraits instead of player photos, generated crests instead of team logos, and
+"Elite League" / "Clutch Cup" instead of real league and event names. It runs offline (no sign-in or
+beta gate) and keeps its saves under separate keys, so it never touches a real career. The switch is
+`VITE_CAPTURE=1` in `.env.capture`; normal builds don't contain the capture code (`src/capture.ts`).
+
 ## Closed beta
 
 `supabase/beta.sql` turns on an invite-only beta: while its `beta_settings` row exists, the game
