@@ -3,6 +3,7 @@
  * colours (primary field, accent). Keys are the team names as they appear in the embedded
  * standings CSV. Colours are approximations used for badges, booths and jerseys; no logos.
  */
+import { CAPTURE } from '../../capture';
 export interface RealTeamMeta {
   name: string;
   tag: string;
@@ -84,6 +85,7 @@ for (const m of Object.values(REAL_TEAMS)) byName.set(m.name, m);
 
 /** Meta for a real org by its display name (as stored on AI teams), or undefined for fictional clubs. */
 export function realTeamByName(name: string): RealTeamMeta | undefined {
+  if (CAPTURE) return undefined; // capture builds: no real org logos, colours or badges
   return byName.get(name);
 }
 

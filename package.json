@@ -10,7 +10,9 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "balance": "vitest run tests/balance.test.ts"
+    "balance": "vitest run tests/balance.test.ts",
+    "capture": "vite build --mode capture --outDir dist-capture",
+    "capture:dev": "vite --mode capture"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.0",

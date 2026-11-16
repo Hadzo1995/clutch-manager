@@ -21,11 +21,12 @@ import { CountryTag } from '../common';
 import { saveClub, sendFirstEntry } from './clubStore';
 import { TournamentView } from './TournamentView';
 import '../styles/tournament.css';
+import { CAPTURE } from '../../capture';
 
 let tWorld: World | null = null;
 /** Every manager's club comes from the same built-in player list, whatever their career uses. */
 export function tournamentWorld(): World {
-  tWorld ??= createWorld(realDataset() ?? generateSyntheticDataset());
+  tWorld ??= createWorld((CAPTURE ? null : realDataset()) ?? generateSyntheticDataset());
   return tWorld;
 }
 

@@ -153,7 +153,7 @@ export function League() {
             <div><dt>{cupName(c.season.division)} winner</dt><dd className="num">{Math.round(div.winReward * CUP_PRIZE[0]!).toLocaleString('en-US')}</dd></div>
             <div><dt>Win / loss</dt><dd className="num">{div.winReward} / {Math.round(div.winReward * 0.4)}</dd></div>
           </dl>
-          <p className="small faint">Top 4 reach the Bo3 playoffs. Weeks {CUP_START}-{CUP_START + 2} are the {cupName(c.season.division)}: the top teams and you against 4 guests from {canUp ? `the ${DIVISIONS[c.season.division + 1]!.name}` : 'the ESL Pro League'}.{canUp ? ' Top 2 are promoted.' : ''}{canDown ? ' Bottom 2 are relegated.' : ''}</p>
+          <p className="small faint">Top 4 reach the Bo3 playoffs. Weeks {CUP_START}-{CUP_START + 2} are the {cupName(c.season.division)}: the top teams and you against 4 guests from {`the ${DIVISIONS[canUp ? c.season.division + 1 : DIVISIONS.length - 1]!.name}`}.{canUp ? ' Top 2 are promoted.' : ''}{canDown ? ' Bottom 2 are relegated.' : ''}</p>
         </section>
 
         <SeasonCalendar />
