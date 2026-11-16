@@ -19,6 +19,13 @@ function woff2Only(): Plugin {
   };
 }
 
+// UI PROTOTYPE BRANCH (ui-prototype): this copy is for local UI experiments only and must never be
+// published. Cloudflare Pages sets CF_PAGES on its build machines, so stop any build there; a failed
+// build means no preview deployment is made.
+if (process.env.CF_PAGES || process.env.GITHUB_ACTIONS) {
+  throw new Error('ui-prototype is a local-only UI prototype and must not be built or deployed by Cloudflare Pages or GitHub Actions.');
+}
+
 export default defineConfig({
   plugins: [woff2Only(), react(), viteSingleFile()],
   test: { globals: true, environment: 'node', include: ['tests/**/*.test.ts'] },

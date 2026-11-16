@@ -10,7 +10,12 @@ import type { Session, SupabaseClient } from '@supabase/supabase-js';
 interface Env { VITE_SUPABASE_URL?: string; VITE_SUPABASE_ANON_KEY?: string }
 const env: Env = (import.meta as unknown as { env?: Env }).env ?? {};
 
+// UI PROTOTYPE BRANCH (ui-prototype): online features are switched off for good, so this copy can
+// never sign in to or write to the live game's database, even if server settings reach the build.
+const UI_PROTOTYPE_OFFLINE = true;
+
 export function onlineAvailable(): boolean {
+  if (UI_PROTOTYPE_OFFLINE) return false;
   return !!(env.VITE_SUPABASE_URL && env.VITE_SUPABASE_ANON_KEY);
 }
 
