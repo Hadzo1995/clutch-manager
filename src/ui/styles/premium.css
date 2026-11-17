@@ -905,7 +905,7 @@ main > .overlay { animation: fade-in var(--med) var(--ease); }
     linear-gradient(rgba(240, 163, 58, 0.55), rgba(240, 163, 58, 0.55)) 0 0 / 1px 12px no-repeat,
     linear-gradient(rgba(160, 190, 220, 0.3), rgba(160, 190, 220, 0.3)) 100% 100% / 12px 1px no-repeat,
     linear-gradient(rgba(160, 190, 220, 0.3), rgba(160, 190, 220, 0.3)) 100% 100% / 1px 12px no-repeat,
-    var(--glass), color-mix(in srgb, var(--panel) 80%, transparent);
+    var(--glass), color-mix(in srgb, var(--panel) 90%, transparent);
 }
 .app.has-stadium .sidebar { background: linear-gradient(180deg, rgba(18, 25, 34, 0.88), rgba(8, 11, 16, 0.92)); }
 
@@ -934,3 +934,41 @@ main > .overlay { animation: fade-in var(--med) var(--ease); }
   .sheet.cl-sheet > .sheet-head, .sheet.cl-sheet > .cl-kpis, .sheet.cl-sheet > [aria-label='Sponsor'], .sheet.cl-sheet > [aria-label='Reputation and career'] { grid-column: 1 / -1; }
   .sheet.cl-sheet > .panel { align-self: start; }
 }
+
+/* ---------- Polish pass: live-match feedback and the lobby while it loads ---------- */
+/* Score bug: a won round lands with a short bright pop (the number remounts when it changes). */
+.tv-bug-team .sc { animation: tv-score 620ms var(--spring) both; }
+@keyframes tv-score {
+  0% { transform: scale(1.9); filter: brightness(2.2); text-shadow: 0 0 18px currentColor; }
+  55% { transform: scale(0.94); }
+  100% { transform: none; filter: none; text-shadow: none; }
+}
+/* Health: damage leaves a pale chip that drains a moment after the hit, so each hit reads. */
+.tv-hp::before { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--hp, 100%); border-radius: 3px; pointer-events: none;
+  background: rgba(255, 232, 205, 0.6); transition: width 520ms var(--ease-out) 280ms; }
+/* A player going down flashes their row red once before it greys out. */
+.tv-row { position: relative; }
+.tv-row.dead::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, rgba(255, 70, 60, 0.55), rgba(255, 70, 60, 0.12) 60%, transparent); animation: tv-down 760ms ease-out; }
+@keyframes tv-down { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Lineup lobby: while the five load, the stage shows lit floor marks and a quiet status line instead of an empty box. */
+.lb-lobby.loading .lb-stage::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(7% 3.2% at 18% 84%, rgba(255, 255, 255, 0.16), transparent),
+    radial-gradient(7% 3.2% at 34% 80%, rgba(255, 255, 255, 0.16), transparent),
+    radial-gradient(7% 3.2% at 50% 82%, rgba(255, 255, 255, 0.16), transparent),
+    radial-gradient(7% 3.2% at 66% 80%, rgba(255, 255, 255, 0.16), transparent),
+    radial-gradient(7% 3.2% at 82% 84%, rgba(255, 255, 255, 0.16), transparent),
+    radial-gradient(60% 70% at 50% 100%, color-mix(in srgb, var(--club, #f0a33a) 14%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 40%);
+  animation: lb-wait 1.4s ease-in-out infinite alternate; }
+.lb-lobby.loading .lb-stage::after { content: 'Setting the stage'; position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%); pointer-events: none;
+  font-family: var(--font-display); font-size: 0.7rem; letter-spacing: 0.26em; text-transform: uppercase; color: var(--ink-3, #8b97a5);
+  padding: 8px 16px 9px; border-top: 1px solid rgba(255, 255, 255, 0.08); border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent) 0 0 / 200% 100% no-repeat; animation: shimmer 1.6s linear infinite; }
+@keyframes lb-wait { from { opacity: 0.55; } to { opacity: 1; } }
+
+:root[data-motion="reduced"] .tv-bug-team .sc, :root[data-motion="reduced"] .tv-row.dead::after,
+:root[data-motion="reduced"] .lb-lobby.loading .lb-stage::before, :root[data-motion="reduced"] .lb-lobby.loading .lb-stage::after { animation: none; }
+:root[data-motion="reduced"] .tv-hp::before { transition: none; }

@@ -180,7 +180,7 @@ export function RoundViewer(props: RoundViewerProps) {
     let last = performance.now();
     let lastHud = 0;
     const frame = (now: number) => {
-      const dt = Math.min(0.1, (now - last) / 1000);
+      const dt = Math.max(0, Math.min(0.1, (now - last) / 1000));
       last = now;
       const L = live.current;
       const halted = L.paused || L.localPaused;
@@ -372,7 +372,7 @@ export function RoundViewer(props: RoundViewerProps) {
               <Crest name={teams[humanIdx].name} tag={teams[humanIdx].tag} mine size={26} className="bug-crest" />
               <span className="bug-tag">{teams[humanIdx].tag}</span>
               {alivePips(humanIdx)}
-              <span className="sc num">{score[humanIdx]}</span>
+              <span key={score[humanIdx]} className="sc num">{score[humanIdx]}</span>
             </div>
             <div className={`tv-clock ${clock.phase}`}>
               <span className="num tv-clock-time">{clock.phase === 'bomb' || (over && round.planted) ? <BombIcon /> : null}{clock.label}</span>
@@ -380,7 +380,7 @@ export function RoundViewer(props: RoundViewerProps) {
               {clock.phase === 'bomb' && <i className="tv-bombbar" style={{ width: `${Math.max(0, Math.min(1, clock.seconds / BOMB_SECONDS)) * 100}%` }} />}
             </div>
             <div className={`tv-bug-team right ${sideOf(oppIdx) === 'T' ? 't' : 'ct'}`}>
-              <span className="sc num">{score[oppIdx]}</span>
+              <span key={score[oppIdx]} className="sc num">{score[oppIdx]}</span>
               {alivePips(oppIdx)}
               <span className="bug-tag">{teams[oppIdx].tag}</span>
               <Crest name={teams[oppIdx].name} tag={teams[oppIdx].tag} size={26} className="bug-crest" />
@@ -488,7 +488,7 @@ export function RoundViewer(props: RoundViewerProps) {
   );
 }
 
-function fmt(s: number): string { const v = Math.floor(s); return `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`; }
+function fmt(s: number): string { const v = Math.max(0, Math.floor(s)); return `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`; }
 
 const UTIL_ORDER: UtilityKind[] = ['smoke', 'flash', 'molotov', 'he'];
 const UTIL_LABEL: Record<UtilityKind, string> = { smoke: 'Smoke', flash: 'Flash', molotov: 'Molotov', he: 'HE grenade' };
@@ -526,7 +526,7 @@ function PlayerRow({ p, t, tl, teams, kd, followed, mvp, onClick }: { p: PlayerT
           {mvp && <span className="tv-mvp">MVP</span>}
           <span className="tv-kd num">{killsNow ? <b>{killsNow}K</b> : null}<span>{kd[0] + killsNow}<i>/</i>{kd[1] + deathsNow}</span></span>
         </span>
-        <span className="tv-hp" aria-hidden="true">
+        <span className="tv-hp" aria-hidden="true" style={{ ['--hp' as string]: `${hp}%` }}>
           <i className={hp > 50 ? 'ok' : hp > 20 ? 'mid' : 'low'} style={{ width: `${hp}%` }} />
         </span>
         <span className="tv-sub">
